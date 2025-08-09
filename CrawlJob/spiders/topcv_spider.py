@@ -9,19 +9,17 @@ class TopcvSpider(scrapy.Spider):
     name = 'topcv'
     allowed_domains = ['topcv.vn']
     
-    def __init__(self, keyword=None, location=None, *args, **kwargs):
+    def __init__(self, keyword=None, *args, **kwargs):
         super(TopcvSpider, self).__init__(*args, **kwargs)
         self.keyword = keyword or 'python developer'  # default keyword
-        self.location = location or 'Hồ Chí Minh'  # default location
         
     def start_requests(self):
         """Generate search URLs based on keyword and location"""
-        base_url = 'https://www.topcv.vn/viec-lam'
+        base_url = 'https://www.topcv.vn/'
         
         # Create search parameters
         params = {
             'keyword': self.keyword,
-            'location': self.location
         }
         
         search_url = f"{base_url}?{urlencode(params)}"
@@ -29,7 +27,7 @@ class TopcvSpider(scrapy.Spider):
         yield scrapy.Request(
             url=search_url,
             callback=self.parse_search_results,
-            meta={'keyword': self.keyword, 'location': self.location}
+            meta={'keyword': self.keyword}
         )
     
     def parse_search_results(self, response):
@@ -55,7 +53,6 @@ class TopcvSpider(scrapy.Spider):
                     callback=self.parse_job_detail,
                     meta={
                         'keyword': response.meta['keyword'],
-                        'location': response.meta['location']
                     }
                 )
         

@@ -13,16 +13,15 @@ from CrawlJob.spiders.topcv_spider import TopcvSpider
 
 
 def main():
+    # Common practices advice of Scrapy
     parser = argparse.ArgumentParser(description='Run job scraping spiders')
     parser.add_argument('--spider', choices=['jobsgo', 'topcv', 'both'], 
                        default='jobsgo', help='Spider to run')
     parser.add_argument('--keyword', default='python developer', 
                        help='Job keyword to search for')
-    parser.add_argument('--location', default='Hồ Chí Minh', 
-                       help='Location to search in')
     parser.add_argument('--output', default='jobs.json', 
                        help='Output file for JSON results')
-    
+
     args = parser.parse_args()
     
     # Get project settings
@@ -42,16 +41,15 @@ def main():
     
     try:
         if args.spider == 'jobsgo':
-            process.crawl(JobsgoSpider, keyword=args.keyword, location=args.location)
+            process.crawl(JobsgoSpider, keyword=args.keyword)
         elif args.spider == 'topcv':
-            process.crawl(TopcvSpider, keyword=args.keyword, location=args.location)
+            process.crawl(TopcvSpider, keyword=args.keyword)
         elif args.spider == 'both':
-            process.crawl(JobsgoSpider, keyword=args.keyword, location=args.location)
-            process.crawl(TopcvSpider, keyword=args.keyword, location=args.location)
+            process.crawl(JobsgoSpider, keyword=args.keyword)
+            process.crawl(TopcvSpider, keyword=args.keyword)
         
         print(f"Starting spider: {args.spider}")
         print(f"Searching for: {args.keyword}")
-        print(f"Location: {args.location}")
         print(f"Output: {args.output}")
         print("-" * 50)
         

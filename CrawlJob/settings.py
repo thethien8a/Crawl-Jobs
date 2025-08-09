@@ -31,7 +31,7 @@ ROBOTSTXT_OBEY = True
 #CONCURRENT_REQUESTS_PER_IP = 16
 
 # Disable cookies (enabled by default)
-#COOKIES_ENABLED = False
+COOKIES_ENABLED = False
 
 # Disable Telnet Console (enabled by default)
 #TELNETCONSOLE_ENABLED = False
@@ -68,18 +68,18 @@ ITEM_PIPELINES = {
 }
 
 # SQL Server Database Configuration
-SQL_SERVER = "localhost"  # Change to your SQL Server instance
-SQL_DATABASE = "JobDatabase"  # Change to your database name
-SQL_USERNAME = "sa"  # Change to your username
-SQL_PASSWORD = "your_password"  # Change to your password
+SQL_SERVER = "localhost"  
+SQL_DATABASE = "JobDatabase"  
+SQL_USERNAME = "sa"  
+SQL_PASSWORD = "thethien8a"  
 
 # Scraping Configuration
-DOWNLOAD_DELAY = 2  # 2 second delay between requests
-CONCURRENT_REQUESTS = 8  # Limit concurrent requests
-ROBOTSTXT_OBEY = False  # Disable robots.txt for job sites
+DOWNLOAD_DELAY = 2  
+CONCURRENT_REQUESTS = 8  
+ROBOTSTXT_OBEY = False  
 
 # User Agent
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+USER_AGENT = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36"
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
