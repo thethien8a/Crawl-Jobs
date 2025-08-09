@@ -1,7 +1,7 @@
 ---
 applyTo: '**'
 ---
-## 🧠 PROJECT CONTEXT MANAGEMENT RULES
+## 🧠 PROJECT CONTEXT MANAGEMENT RULES (with Serena MCP)
 
 ### 🎯 Core Philosophy: Intelligent Project Context Capture
 
@@ -14,9 +14,87 @@ applyTo: '**'
 
 ---
 
-## 🚀 PROJECT INITIALIZATION WORKFLOW
+## 🚀 PROJECT INITIALIZATION WORKFLOW (Serena MCP)
 
-### Phase 1: Project Discovery (MANDATORY)
+### Phase 0: Pre-check (MANDATORY)
+```typescript
+// First, check if the project has already been onboarded by Serena
+mcp_serena_check_onboarding_performed({});
+// If this returns true, you can assume context exists and move to the update workflow or ask the user for the next task.
+// If it returns false or fails, proceed with the initialization workflow.
+```
+
+### Phase 1: Project Discovery (If not initialized)
+
+#### Step 1: Structure Discovery
+```typescript
+// Get comprehensive project overview using Serena
+mcp_serena_list_dir({ relative_path: ".", recursive: true });
+```
+
+#### Step 2: Technology Stack Identification
+```typescript
+// Find and read the requirements file
+mcp_serena_read_file({ relative_path: "requirements.txt" });
+// For deeper analysis in Python projects
+mcp_pylance_mcp_s_pylanceImports({ workspaceRoot: "." });
+```
+
+#### Step 3: Architecture Analysis
+```typescript
+// Get a high-level overview of all code symbols
+mcp_serena_get_symbols_overview({ relative_path: "." });
+
+// Find main entry points
+mcp_serena_find_symbol({ name_path: "main", include_kinds: [12] }); // 12 = Function
+
+// Find major code structures (e.g., all classes)
+mcp_serena_find_symbol({ include_kinds: [5] }); // 5 = Class
+```
+
+### Phase 2: Deep Context Analysis
+
+#### Step 4: Key Files Analysis
+```typescript
+// Analyze critical project files by reading them
+mcp_serena_read_file({ relative_path: "README.md" });
+mcp_serena_read_file({ relative_path: "CrawlJob/settings.py" }); // Example for this project
+```
+
+#### Step 5: Code Patterns Discovery
+```typescript
+// Find architectural patterns like Pipelines or specific Spider classes
+mcp_serena_find_symbol({ name_path: "Pipeline", substring_matching: true, include_kinds: [5] });
+mcp_serena_find_symbol({ name_path: "Spider", substring_matching: true, include_kinds: [5] });
+```
+
+#### Step 6: Database & Configuration Analysis
+```typescript
+// Use pattern search to find all database-related code
+mcp_serena_search_for_pattern({ substring_pattern: "database|sql|pymssql", relative_path: "." });
+
+// Find all configuration settings
+mcp_serena_search_for_pattern({ substring_pattern: "settings", relative_path: "." });
+```
+
+### Phase 3: Documentation & Summarization
+
+#### Step 7: Create Project Overview in Serena's Memory
+```typescript
+// After analysis, create a summary file for future reference in Serena's memory
+mcp_serena_write_memory({
+    memory_name: "project-overview.md",
+    content: "# Project Overview\n\n## Technology Stack\n- Python, Scrapy, pymssql\n\n## Architecture\n- Scrapy-based (Spiders, Items, Pipelines)\n- Data stored in SQL Server."
+});
+```
+
+---
+
+## ⚠️ FALLBACK WORKFLOW (If Serena MCP is unavailable)
+
+*If Serena MCP tools are not responding or available, revert to the standard VS Code tool workflow.*
+
+### Phase 1: Project Discovery (VS Code Tools)
 
 #### Step 1: Structure Discovery
 ```typescript
@@ -43,38 +121,18 @@ grep_search({ query: "class|interface|struct", isRegexp: true });
 grep_search({ query: "import|from|require|using", isRegexp: true });
 ```
 
-### Phase 2: Deep Context Analysis
+### Phase 2: Deep Context Analysis (VS Code Tools)
 
 #### Step 4: Key Files Analysis
 ```typescript
 // Analyze critical project files by reading them
-const critical_files = [
-    "README.md", "CHANGELOG.md", "LICENSE",
-    "requirements.txt", "package.json",
-    "Dockerfile", "docker-compose.yml", ".env.example",
-    "src/", "app/", "main/"
-];
-// Example for one file:
 read_file({ filePath: "README.md", startLine: 1, endLine: 9999});
+read_file({ filePath: "requirements.txt", startLine: 1, endLine: 9999});
 ```
 
-#### Step 5: Code Patterns Discovery
-```typescript
-// Find architectural patterns and conventions
-grep_search({ query: "def main|if __name__|public static void main|func main", isRegexp: true });
-grep_search({ query: "class.*Controller|class.*Service|class.*Repository|class.*Model", isRegexp: true });
-```
+### Phase 3: Documentation & Summarization (VS Code Tools)
 
-#### Step 6: Database & Configuration Analysis
-```typescript
-// Database and configuration patterns
-grep_search({ query: "database|db|sql|mongo|redis|postgres|mysql", isRegexp: true });
-grep_search({ query: "config|settings|environment|env|properties", isRegexp: true });
-```
-
-### Phase 3: Documentation & Summarization
-
-#### Step 7: Create Project Overview
+#### Step 5: Create Project Overview
 ```typescript
 // After analysis, create a summary file for future reference
 create_file({
@@ -91,8 +149,8 @@ create_file({
 
 #### Step 1: Current State Assessment
 ```typescript
-// Read existing overview to understand current context
-read_file({ filePath: ".github/PROJECT_OVERVIEW.md", startLine: 1, endLine: 9999 });
+// Read existing overview from Serena's memory
+mcp_serena_read_memory({ memory_file_name: "project-overview.md" });
 ```
 
 #### Step 2: Change Detection
@@ -101,22 +159,21 @@ read_file({ filePath: ".github/PROJECT_OVERVIEW.md", startLine: 1, endLine: 9999
 get_changed_files({});
 
 // Look for comments indicating changes
-grep_search({ query: "TODO|FIXME|HACK|NOTE|CHANGED|UPDATED", isRegexp: true });
+mcp_serena_search_for_pattern({ substring_pattern: "TODO|FIXME|HACK", relative_path: "." });
 ```
 
 #### Step 3: Incremental Analysis
 ```typescript
 // Focus on new or modified files identified in the previous step
-// Read and analyze the changed files
+// Read and analyze the changed files using mcp_serena_read_file or mcp_serena_get_symbols_overview
 ```
 
 #### Step 4: Update Documentation
 ```typescript
-// Update the project overview file with new information
-replace_string_in_file({
-    filePath: ".github/PROJECT_OVERVIEW.md",
-    oldString: "...",
-    newString: "..."
+// Update the project overview in Serena's memory
+mcp_serena_write_memory({
+    memory_name: "project-overview.md",
+    content: "..." // New, updated content
 });
 ```
 
