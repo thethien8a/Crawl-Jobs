@@ -2,7 +2,7 @@ import scrapy
 import re
 from datetime import datetime
 from ..items import JobItem
-from ..utils import encode_input
+from ..utils import encode_input, clean_location
 
 class JobsgoSpider(scrapy.Spider):
     name = 'jobsgo'
@@ -28,22 +28,32 @@ class JobsgoSpider(scrapy.Spider):
     
     def parse_search_results(self, response):
         """Parse the search results page"""
-        # Find job listing containers
-        job_listings = response.css('[class="job-list d-grid grid-2 gap-2 w-100"]')
+        # Find job listing links
+        job_links = response.css('a[href*="/viec-lam/"]::attr(href)').getall()
         
-        self.logger.info(f"Found {len(job_listings)} job listings")
+        job_urls = []
+        for link in job_links:
+            if link and 'viec-lam/' in link and link.endswith('.html') and len(link.split('-')) > 3:
+                job_urls.append(link)
         
-        for job in job_listings:
-            # Extract job URL
-            job_url = job.css('a::attr(href)').get()
-            if job_url:
-                yield scrapy.Request(
-                    url=job_url,
-                    callback=self.parse_job_detail,
-                    meta={
-                        'keyword': response.meta['keyword'],
-                    }
-                )
+        # Remove duplicates url link
+        seen = set()
+        unique_job_urls = []
+        for url in job_urls:
+            if url not in seen:
+                seen.add(url)
+                unique_job_urls.append(url)
+        
+        self.logger.info(f"Found {len(unique_job_urls)} job listings")
+        
+        for job_url in unique_job_urls:
+            yield scrapy.Request(
+                url=job_url,
+                callback=self.parse_job_detail,
+                meta={
+                    'keyword': response.meta['keyword'],
+                }
+            )
         
         # Handle pagination
         next_page = response.css('li[class="next"] a::attr(href)').get()
@@ -59,28 +69,25 @@ class JobsgoSpider(scrapy.Spider):
     def parse_job_detail(self, response):
         """Parse individual job detail page"""
         item = JobItem()
-        
-        # Basic job information
+
         # Title
-        title = response.xpath('normalize-space(//h1)').get()
-        item['job_title'] = title or self.extract_text(response, '[class="job-title mb-2 mb-sm-3 fs-4"]')
+        title = self.extract_text(response, '[class="job-title mb-2 mb-sm-3 fs-4"]')
+        item['job_title'] = title 
         
-        # Company name - lấy tên công ty từ link tới trang tuyển dụng công ty (nếu có)
-        company = response.xpath('(//a[contains(@href, "/tuyen-dung/")]/text())[1]').get()
-        item['company_name'] = (company or '').strip()
+        # Company name - lấy tên công ty từ link tới trang tuyển dụng công ty 
+        company = response.css('[class="fw-semibold pe-3 mb-0 pt-4 mt-2"]::text').get()
+        item['company_name'] = (company or '')
         
         # Meta list ngay dưới tiêu đề: Mức lương / Hạn nộp / Địa điểm
-        item['salary'] = self.extract_value_by_label(response, 'Mức lương') or self.extract_text(response, '[class="text-truncate d-inline-block"] strong')
+        item['salary'] = self.extract_value_by_label(response, 'Mức lương')
         item['job_deadline'] = self.extract_value_by_label(response, 'Hạn nộp')
-        # Địa điểm có thể là link trong <strong>
-        location_texts = response.xpath('//li[.//text()[contains(., "Địa điểm")]]//strong//text()').getall()
-        item['location'] = ' '.join([t.strip() for t in location_texts if t and t.strip()]) or self.extract_text(response, '[class="position-relative text-truncate d-inline-block"]')
+        item['location'] = clean_location(response.css('a[href="#places"].position-relative.text-truncate.d-inline-block::text').get()) 
         
         # Thông tin chung (panel bên dưới)
-        item['job_type'] = self.extract_common_section_value(response, 'Loại hình') or self.extract_text(response, '[class="text-muted"]')
-        item['experience_level'] = self.extract_common_section_value(response, 'Yêu cầu kinh nghiệm') or self.extract_text(response, '[class="experience"]')
-        item['education_level'] = self.extract_common_section_value(response, 'Yêu cầu bằng cấp') or self.extract_text(response, '[class="education"]')
-        item['job_industry'] = self.extract_common_section_links(response, 'Ngành nghề') or self.extract_text(response, '[class="fw-500"]')
+        item['job_type'] = self.extract_common_section_value(response, 'Loại hình') 
+        item['experience_level'] = self.extract_common_section_value(response, 'Yêu cầu kinh nghiệm')
+        item['education_level'] = self.extract_common_section_value(response, 'Yêu cầu bằng cấp')
+        item['job_industry'] = self.extract_common_section_links(response, 'Ngành nghề')
         
         # Job description and requirements (lấy từ các section tiêu đề h3)
         item['job_description'] = self.extract_section_list_text(response, 'Mô tả công việc')
@@ -93,9 +100,6 @@ class JobsgoSpider(scrapy.Spider):
         item['search_keyword'] = response.meta['keyword']
         item['scraped_at'] = datetime.now().isoformat()
         
-        # Clean and validate data
-        item = self.clean_item(item)
-        
         yield item
     
     def extract_text(self, response, selector):
@@ -107,8 +111,11 @@ class JobsgoSpider(scrapy.Spider):
     
     def extract_value_by_label(self, response, label_text):
         """Lấy giá trị trong thẻ <li> có chứa nhãn (ví dụ: Mức lương/Hạn nộp/Địa điểm)"""
-        texts = response.xpath(f'//li[.//text()[contains(., "{label_text}")]]//strong//text()').getall()
-        value = ' '.join([t.strip() for t in texts if t and t.strip()])
+        texts = response.xpath(f'//li[.//text()[contains(., "{label_text}")]]//strong//text()').get()
+        if texts:
+            value = texts.strip()
+        else:
+            value = ''
         return value
     
     def extract_common_section_value(self, response, label_text):
