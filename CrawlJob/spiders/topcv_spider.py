@@ -81,14 +81,17 @@ class TopcvSpider(scrapy.Spider):
         item['job_type'] = self.extract_text(response, '.job-type, [class*="type"]')
         item['experience_level'] = self.extract_text(response, '.experience, [class*="experience"]')
         item['education_level'] = self.extract_text(response, '.education, [class*="education"]')
+        item['job_industry'] = self.extract_text(response, '.job-industry, [class*="industry"]')
         
         # Job description and requirements
         item['job_description'] = self.extract_text(response, '.job-description, .description, [class*="description"]')
         item['requirements'] = self.extract_text(response, '.requirements, [class*="requirements"]')
         item['benefits'] = self.extract_text(response, '.benefits, [class*="benefits"]')
         
+        # Job deadline
+        item['job_deadline'] = self.extract_text(response, '.deadline, .expiry, .due-date, .application-deadline, [class*="deadline"], [class*="expiry"], [class*="due-date"]')
+        
         # Metadata
-        item['posted_date'] = self.extract_text(response, '.posted-date, [class*="date"]')
         item['source_site'] = 'topcv.vn'
         item['job_url'] = response.url
         item['search_keyword'] = response.meta['keyword']

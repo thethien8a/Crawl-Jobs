@@ -17,14 +17,17 @@ class JobItem(scrapy.Item):
     job_type = scrapy.Field()  # Full-time, Part-time, etc.
     experience_level = scrapy.Field()
     education_level = scrapy.Field()
+    job_industry = scrapy.Field()
     
     # Job description and requirements
     job_description = scrapy.Field()
     requirements = scrapy.Field()
     benefits = scrapy.Field()
     
+    # Job deadline
+    job_deadline = scrapy.Field()  # Hạn cuối nộp CV
+    
     # Metadata
-    posted_date = scrapy.Field()
     source_site = scrapy.Field()
     job_url = scrapy.Field()
     search_keyword = scrapy.Field()
