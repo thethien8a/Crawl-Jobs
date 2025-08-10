@@ -4,10 +4,10 @@ Dự án web scraping để lấy dữ liệu việc làm từ các trang tuyể
 
 ## 🎯 Tính năng
 
-- **Input**: Từ khóa việc làm và địa điểm
+- **Input**: Từ khóa việc làm
 - **Output**: Dữ liệu việc làm được lưu vào SQL Server
 - **Sites**: JobsGO, TopCV
-- **Data**: Job title, company, salary, location, requirements, etc.
+- **Data**: Job title, company, salary, location, requirements, job_deadline, etc.
 
 ## 📋 Cài đặt
 
@@ -39,13 +39,13 @@ Tạo database `JobDatabase` trong SQL Server. Spider sẽ tự động tạo b�
 
 ```bash
 # Chạy spider JobsGO
-python run_spider.py --spider jobsgo --keyword "python developer" --location "Hồ Chí Minh"
+python run_spider.py --spider jobsgo --keyword "python developer"
 
 # Chạy spider TopCV
-python run_spider.py --spider topcv --keyword "java developer" --location "Hà Nội"
+python run_spider.py --spider topcv --keyword "java developer"
 
 # Chạy cả hai spider
-python run_spider.py --spider both --keyword "data analyst" --location "Đà Nẵng"
+python run_spider.py --spider both --keyword "data analyst"
 
 # Lưu kết quả vào file JSON
 python run_spider.py --spider jobsgo --keyword "marketing" --output "marketing_jobs.json"
@@ -55,10 +55,10 @@ python run_spider.py --spider jobsgo --keyword "marketing" --output "marketing_j
 
 ```bash
 # Chạy spider JobsGO
-scrapy crawl jobsgo -a keyword="python developer" -a location="Hồ Chí Minh"
+scrapy crawl jobsgo -a keyword="python developer"
 
 # Chạy spider TopCV
-scrapy crawl topcv -a keyword="java developer" -a location="Hà Nội"
+scrapy crawl topcv -a keyword="java developer"
 ```
 
 ## 📊 Cấu trúc dữ liệu
@@ -75,10 +75,11 @@ Bảng `jobs` trong SQL Server:
 | job_type | NVARCHAR(100) | Loại công việc (Full-time, Part-time) |
 | experience_level | NVARCHAR(200) | Yêu cầu kinh nghiệm |
 | education_level | NVARCHAR(200) | Yêu cầu học vấn |
+| job_industry | NVARCHAR(200) | Ngành nghề |
 | job_description | NVARCHAR(MAX) | Mô tả công việc |
 | requirements | NVARCHAR(MAX) | Yêu cầu công việc |
 | benefits | NVARCHAR(MAX) | Phúc lợi |
-| posted_date | NVARCHAR(200) | Ngày đăng |
+| job_deadline | NVARCHAR(200) | Hạn cuối nộp CV |
 | source_site | NVARCHAR(100) | Nguồn dữ liệu |
 | job_url | NVARCHAR(1000) | URL công việc |
 | search_keyword | NVARCHAR(200) | Từ khóa tìm kiếm |
@@ -95,9 +96,12 @@ CrawlJob/
 │   │   └── topcv_spider.py     # Spider cho TopCV
 │   ├── items.py                # Định nghĩa cấu trúc dữ liệu
 │   ├── pipelines.py            # Pipeline xử lý dữ liệu
-│   └── settings.py             # Cấu hình project
+│   ├── settings.py             # Cấu hình project
+│   ├── middlewares.py          # Middleware xử lý request
+│   └── utils.py                # Tiện ích hỗ trợ (encode_input)
 ├── run_spider.py               # Script chạy spider
 ├── requirements.txt            # Dependencies
+├── scrapy.cfg                 # Cấu hình Scrapy
 └── README.md                  # Hướng dẫn sử dụng
 ```
 
@@ -120,7 +124,7 @@ CONCURRENT_REQUESTS = 8  # Số request đồng thời
 ### Thêm User Agent
 
 ```python
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+USER_AGENT = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36"
 ```
 
 ## 🔧 Troubleshooting
@@ -139,14 +143,19 @@ USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 
 ### Lỗi CSS selector
 
-Các spider sử dụng CSS selector linh hoạt để tìm dữ liệu. Nếu website thay đổi cấu trúc, cần cập nhật selector trong spider.
+Các spider sử dụng CSS selector và XPath linh hoạt để tìm dữ liệu:
+- **JobsGO**: Sử dụng XPath với label-based extraction cho các trường như Mức lương, Hạn nộp, Địa điểm
+- **TopCV**: Sử dụng CSS selector với fallback patterns
+
+Nếu website thay đổi cấu trúc, cần cập nhật selector trong spider.
 
 ## 📝 Ghi chú
 
-- Spider tuân thủ robots.txt và có delay giữa các request
+- Spider có delay giữa các request để tránh quá tải server
 - Dữ liệu được lưu vào SQL Server với encoding UTF-8
 - Có thể mở rộng thêm các trang tuyển dụng khác
-- Spider tự động tạo bảng nếu chưa tồn tại
+- Spider tự động tạo bảng và cột nếu chưa tồn tại
+- Pipeline tự động thêm cột `job_deadline` nếu cần thiết
 
 ## 🤝 Đóng góp
 
