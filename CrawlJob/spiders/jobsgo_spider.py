@@ -120,26 +120,14 @@ class JobsgoSpider(scrapy.Spider):
     
     def extract_common_section_value(self, response, label_text):
         """Trong khối 'Thông Tin Chung', lấy strong ngay sau nhãn label_text"""
-        texts = response.xpath(f'//*[contains(normalize-space(), "{label_text}")]/following-sibling::strong[1]//text()').getall()
-        return ' '.join([t.strip() for t in texts if t and t.strip()])
+        texts = response.xpath(f'//*[contains(normalize-space(), "{label_text}")]/following-sibling::strong[1]//text()').get()
+        return texts
     
     def extract_common_section_links(self, response, label_text):
-        """Trong khối 'Thông Tin Chung', lấy danh sách link text ngay sau nhãn (ví dụ: Ngành nghề)"""
-        link_texts = response.xpath(f'//*[contains(normalize-space(), "{label_text}")]/following-sibling::strong[1]//a/text()').getall()
-        if link_texts:
-            return ', '.join([' '.join(t.split()) for t in link_texts if t and t.strip()])
-        # Fallback: lấy mọi text trong strong
-        texts = response.xpath(f'//*[contains(normalize-space(), "{label_text}")]/following-sibling::strong[1]//text()').getall()
-        return ' '.join([t.strip() for t in texts if t and t.strip()])
+        """Lấy lĩnh vực"""
+        link_texts = response.css("class=[fw-500]::text").get()
+        return link_texts
     
     def extract_section_list_text(self, response, heading_text):
-        """Ghép các <li> nằm trong ul ngay sau tiêu đề h3 có chứa heading_text"""
-        parts = response.xpath(f'//h2[contains(normalize-space(.), "{heading_text}")]/following-sibling::ul[1]//li//text() | '
-                               f'//h3[contains(normalize-space(.), "{heading_text}")]/following-sibling::ul[1]//li//text()').getall()
-        if parts:
-            joined = ' '.join([' '.join(p.split()) for p in parts if p and p.strip()])
-            return joined
-        # Fallback: lấy đoạn văn đầu tiên sau heading
-        para = response.xpath(f'//h2[contains(normalize-space(.), "{heading_text}")]/following-sibling::*[1]//text() | '
-                              f'//h3[contains(normalize-space(.), "{heading_text}")]/following-sibling::*[1]//text()').getall()
+        para = response.xpath(f'//h3[contains(normalize-space(.), "{heading_text}")]/following-sibling::*[1]//text()').getall()
         return ' '.join([' '.join(p.split()) for p in para if p and p.strip()])
