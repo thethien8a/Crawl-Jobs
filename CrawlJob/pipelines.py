@@ -40,27 +40,10 @@ class SQLServerPipeline:
                 password=self.password
             )
             self.create_table_if_not_exists()
-            self.ensure_columns()
             spider.logger.info("Connected to SQL Server successfully")
         except Exception as e:
             spider.logger.error(f"Failed to connect to SQL Server: {e}")
 
-    def ensure_columns(self):
-        """Ensure required columns exist on the jobs table"""
-        try:
-            cursor = self.connection.cursor()
-            cursor.execute(
-                """
-                IF COL_LENGTH('jobs', 'job_deadline') IS NULL
-                BEGIN
-                    ALTER TABLE jobs ADD job_deadline NVARCHAR(200);
-                END
-                """
-            )
-            self.connection.commit()
-            cursor.close()
-        except Exception as e:
-            print(f"Error ensuring columns: {e}")
     
     def close_spider(self, spider):
         """Close database connection when spider ends"""
@@ -85,11 +68,11 @@ class SQLServerPipeline:
             job_description NVARCHAR(MAX),
             requirements NVARCHAR(MAX),
             benefits NVARCHAR(MAX),
-            job_deadline NVARCHAR(200),
-            source_site NVARCHAR(100),
-            job_url NVARCHAR(1000),
-            search_keyword NVARCHAR(200),
-            scraped_at NVARCHAR(50),
+            job_deadline NVARCHAR(200), 
+            source_site NVARCHAR(100), 
+            job_url NVARCHAR(1000), 
+            search_keyword NVARCHAR(200), 
+            scraped_at NVARCHAR(50), 
             created_at DATETIME DEFAULT GETDATE()
         )
         """
@@ -114,12 +97,11 @@ class SQLServerPipeline:
             insert_sql = """
             INSERT INTO jobs (
                 job_title, company_name, salary, location, job_type,
-                job_industry,
-                experience_level, education_level, job_description,
+                job_industry, experience_level, education_level, job_description,
                 requirements, benefits, job_deadline, source_site,
                 job_url, search_keyword, scraped_at
             ) VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
             )
             """
             
