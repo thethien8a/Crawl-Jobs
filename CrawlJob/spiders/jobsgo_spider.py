@@ -1,5 +1,4 @@
 import scrapy
-import re
 from datetime import datetime
 from ..items import JobItem
 from ..utils import encode_input, clean_location
@@ -10,7 +9,7 @@ class JobsgoSpider(scrapy.Spider):
     
     def __init__(self, keyword=None, *args, **kwargs):
         super(JobsgoSpider, self).__init__(*args, **kwargs)
-        self.keyword = keyword or 'python developer'  # default keyword
+        self.keyword = keyword or 'data analyst'  # default keyword
         
     def start_requests(self):
         """Generate search URLs based on keyword and location"""
@@ -87,7 +86,7 @@ class JobsgoSpider(scrapy.Spider):
         item['job_type'] = self.extract_common_section_value(response, 'Loại hình') 
         item['experience_level'] = self.extract_common_section_value(response, 'Yêu cầu kinh nghiệm')
         item['education_level'] = self.extract_common_section_value(response, 'Yêu cầu bằng cấp')
-        item['job_industry'] = self.extract_common_section_links(response, 'Ngành nghề')
+        item['job_industry'] = self.extract_common_section_links(response, "Lĩnh vực")
         
         # Job description and requirements (lấy từ các section tiêu đề h3)
         item['job_description'] = self.extract_section_list_text(response, 'Mô tả công việc')
@@ -120,14 +119,26 @@ class JobsgoSpider(scrapy.Spider):
     
     def extract_common_section_value(self, response, label_text):
         """Trong khối 'Thông Tin Chung', lấy strong ngay sau nhãn label_text"""
-        texts = response.xpath(f'//*[contains(normalize-space(), "{label_text}")]/following-sibling::strong[1]//text()').get()
-        return texts
+        try:
+            texts = response.xpath(f'//*[contains(normalize-space(), "{label_text}")]/following-sibling::strong[1]//text()').get()
+            return texts
+        except Exception as e:
+            self.logger.error(f"Error extracting common section value: {e}")
+            return ''
     
     def extract_common_section_links(self, response, label_text):
-        """Lấy lĩnh vực"""
-        link_texts = response.css("class=[fw-500]::text").get()
-        return link_texts
+        """Lấy lĩnh vực (job industry)"""
+        try:
+            link_texts = response.xpath(f'//*[contains(normalize-space(), "{label_text}")]/following-sibling::*[1]//text()').get()
+            return link_texts
+        except Exception as e:
+            self.logger.error(f"Error extracting common section links: {e}")
+            return ''
     
     def extract_section_list_text(self, response, heading_text):
-        para = response.xpath(f'//h3[contains(normalize-space(.), "{heading_text}")]/following-sibling::*[1]//text()').getall()
-        return ' '.join([' '.join(p.split()) for p in para if p and p.strip()])
+        try:
+            para = response.xpath(f'//h3[contains(normalize-space(.), "{heading_text}")]/following-sibling::*[1]//text()').getall()
+            return ' '.join([' '.join(p.split()) for p in para if p and p.strip()])
+        except Exception as e:
+            self.logger.error(f"Error extracting section list text: {e}")
+            return ''
