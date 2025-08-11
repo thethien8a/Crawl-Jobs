@@ -16,5 +16,5 @@ def encode_input(search_word):
 
 def clean_location(location):
     location = location.replace('\n', '')
-    location = location.replace(' ', '')
+    location = location.strip()
     return location

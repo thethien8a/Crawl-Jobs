@@ -50,9 +50,9 @@ COOKIES_ENABLED = False
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
-#DOWNLOADER_MIDDLEWARES = {
-#    "CrawlJob.middlewares.CrawljobDownloaderMiddleware": 543,
-#}
+DOWNLOADER_MIDDLEWARES = {
+    "CrawlJob.selenium_middleware.SeleniumMiddleware": 543,
+}
 
 # Enable or disable extensions
 # See https://docs.scrapy.org/en/latest/topics/extensions.html
@@ -75,7 +75,7 @@ SQL_PASSWORD = "thethien8a"
 
 # Scraping Configuration
 DOWNLOAD_DELAY = 2  
-CONCURRENT_REQUESTS = 8  
+CONCURRENT_REQUESTS = 1  # Reduced for Selenium stability
 ROBOTSTXT_OBEY = False  
 
 # User Agent

@@ -33,6 +33,7 @@ def main():
             'format': 'json',
             'encoding': 'utf8',
             'indent': 2,
+            'overwrite': True
         }
     })
     
