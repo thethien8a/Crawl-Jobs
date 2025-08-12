@@ -43,7 +43,6 @@ class TopcvSpider(scrapy.Spider):
                     'keyword': response.meta['keyword'],
                 }
             )
-            
             # Test 1 job
             break
         

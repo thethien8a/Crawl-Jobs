@@ -81,10 +81,10 @@ class SeleniumMiddleware:
                     EC.any_of(
                         EC.presence_of_element_located((By.CSS_SELECTOR, '[class*="job-list-search-result"]')),
                         EC.presence_of_element_located((By.CSS_SELECTOR, '.job-item')),
-                        EC.presence_of_element_located((By.CSS_SELECTOR, '[class*="job-detail"]')),
-                        EC.presence_of_element_located((By.TAG_NAME, 'body'))  # Fallback
+                        EC.presence_of_element_located((By.CSS_SELECTOR, '[class*="job-detail"]'))
                     )
                 )
+            
             except Exception as e:
                 logger.warning(f"Timeout waiting for elements, continuing anyway: {e}")
             
