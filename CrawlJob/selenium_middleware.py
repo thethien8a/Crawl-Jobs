@@ -1,5 +1,5 @@
 """
-Selenium middleware for handling JavaScript-heavy websites like TopCV
+Selenium middleware for handling JavaScript-heavy websites like JobOKO
 """
 
 import time
@@ -61,8 +61,8 @@ class SeleniumMiddleware:
     def process_request(self, request, spider):
         """Process request using Selenium for JavaScript rendering"""
         
-        # Only use Selenium for TopCV spider
-        if spider.name != 'topcv':
+        # Only use Selenium for JobOKO spider
+        if spider.name != 'joboko':
             return None
             
         try:
@@ -72,23 +72,23 @@ class SeleniumMiddleware:
             self.driver.get(request.url)
             
             # Wait for page to load
-            time.sleep(3)
+            WebDriverWait(self.driver, 10).until(
+                lambda d: d.execute_script('return document.readyState') == 'complete'
+            )
             
-            # Wait for specific elements (job listings) to load
+            # Try wait for either job list or job detail indicators
             try:
-                # Wait for job listings container or search results
                 WebDriverWait(self.driver, 10).until(
                     EC.any_of(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, '[class*="job-list-search-result"]')),
-                        EC.presence_of_element_located((By.CSS_SELECTOR, '.job-item')),
-                        EC.presence_of_element_located((By.CSS_SELECTOR, '[class*="job-detail"]'))
+                        EC.presence_of_element_located((By.CSS_SELECTOR, 'a[href*="-xvi"]')),
+                        EC.presence_of_element_located((By.CSS_SELECTOR, '[class*="job"]')),
+                        EC.presence_of_element_located((By.CSS_SELECTOR, '[class*="detail"]')),
                     )
                 )
-            
             except Exception as e:
                 logger.warning(f"Timeout waiting for elements, continuing anyway: {e}")
             
-            # Additional wait for dynamic content
+            # Additional small delay for dynamic content
             time.sleep(2)
             
             # Get page source after JavaScript execution

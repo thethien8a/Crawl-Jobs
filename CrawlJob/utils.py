@@ -1,4 +1,7 @@
 import numpy as np
+import re
+import unicodedata
+
 
 def encode_input(search_word):
     """Hàm này được sử dụng đễ mã hóa chuỗi đầu vào tìm kiếm thành dạng mong muốn
@@ -13,6 +16,22 @@ def encode_input(search_word):
     text_split = search_word.split()
     text_split = [word.lower() for word in text_split]
     return "-".join(text_split)
+
+
+def encode_joboko_input(search_word: str) -> str:
+    """Tạo slug tìm kiếm cho JobOKO: 'tim-viec-lam-<tukhoa>' dạng ASCII, từ cách nhau bằng '+'.
+    Ví dụ: 'Python Developer' -> 'tim-viec-lam-python+developer'
+    """
+    text = (search_word or '').strip().lower()
+    # Loại bỏ dấu tiếng Việt
+    text = unicodedata.normalize('NFD', text)
+    text = text.encode('ascii', 'ignore').decode('ascii')
+    # Chỉ giữ chữ số, chữ cái và khoảng trắng
+    text = re.sub(r'[^a-z0-9\s]+', ' ', text)
+    # Thu gọn khoảng trắng và nối bằng '+'
+    words = [w for w in text.split() if w]
+    return "+".join(words)
+
 
 def clean_location(location):
     location = location.replace('\n', '')

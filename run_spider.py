@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Script to run job scraping spiders with custom parameters
-Usage: python run_spider.py --spider jobsgo --keyword "python developer" --location "Hồ Chí Minh"
+Usage: python run_spider.py --spider joboko --keyword "python developer"
 """
 
 import argparse
@@ -9,13 +9,13 @@ import sys
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 from CrawlJob.spiders.jobsgo_spider import JobsgoSpider
-from CrawlJob.spiders.topcv_spider import TopcvSpider
+from CrawlJob.spiders.joboko_spider import JobokoSpider
 
 
 def main():
     # Common practices advice of Scrapy
     parser = argparse.ArgumentParser(description='Run job scraping spiders')
-    parser.add_argument('--spider', choices=['jobsgo', 'topcv', 'both'], 
+    parser.add_argument('--spider', choices=['jobsgo', 'joboko', 'both'], 
                        default='jobsgo', help='Spider to run')
     parser.add_argument('--keyword', default='python developer', 
                        help='Job keyword to search for')
@@ -43,11 +43,11 @@ def main():
     try:
         if args.spider == 'jobsgo':
             process.crawl(JobsgoSpider, keyword=args.keyword)
-        elif args.spider == 'topcv':
-            process.crawl(TopcvSpider, keyword=args.keyword)
+        elif args.spider == 'joboko':
+            process.crawl(JobokoSpider, keyword=args.keyword)
         elif args.spider == 'both':
             process.crawl(JobsgoSpider, keyword=args.keyword)
-            process.crawl(TopcvSpider, keyword=args.keyword)
+            process.crawl(JobokoSpider, keyword=args.keyword)
         
         print(f"Starting spider: {args.spider}")
         print(f"Searching for: {args.keyword}")

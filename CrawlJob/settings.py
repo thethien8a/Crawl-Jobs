@@ -50,9 +50,10 @@ COOKIES_ENABLED = False
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
-DOWNLOADER_MIDDLEWARES = {
-    "CrawlJob.selenium_middleware.SeleniumMiddleware": 543,
-}
+# NOTE: Selenium is disabled for JobOKO (use default Scrapy downloader)
+#DOWNLOADER_MIDDLEWARES = {
+#    "CrawlJob.selenium_middleware.SeleniumMiddleware": 543,
+#}
 
 # Enable or disable extensions
 # See https://docs.scrapy.org/en/latest/topics/extensions.html
@@ -75,7 +76,8 @@ SQL_PASSWORD = "thethien8a"
 
 # Scraping Configuration
 DOWNLOAD_DELAY = 2  
-CONCURRENT_REQUESTS = 1  # Reduced for Selenium stability
+# Use Scrapy default concurrency (remove Selenium-specific constraint)
+#CONCURRENT_REQUESTS = 1
 ROBOTSTXT_OBEY = False  
 
 # User Agent
