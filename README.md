@@ -1,12 +1,12 @@
 # Job Scraping Project
 
-Dự án web scraping để lấy dữ liệu việc làm từ các trang tuyển dụng Việt Nam như JobsGO và TopCV.
+Dự án web scraping để lấy dữ liệu việc làm từ các trang tuyển dụng Việt Nam như JobsGO và JobOKO.
 
 ## 🎯 Tính năng
 
 - **Input**: Từ khóa việc làm
 - **Output**: Dữ liệu việc làm được lưu vào SQL Server
-- **Sites**: JobsGO, TopCV
+- **Sites**: JobsGO, JobOKO
 - **Data**: Job title, company, salary, location, requirements, job_deadline, etc.
 
 ## 📋 Cài đặt
@@ -41,8 +41,8 @@ Tạo database `JobDatabase` trong SQL Server. Spider sẽ tự động tạo b�
 # Chạy spider JobsGO
 python run_spider.py --spider jobsgo --keyword "python developer"
 
-# Chạy spider TopCV
-python run_spider.py --spider topcv --keyword "java developer"
+# Chạy spider JobOKO
+python run_spider.py --spider joboko --keyword "java developer"
 
 # Chạy cả hai spider
 python run_spider.py --spider both --keyword "data analyst"
@@ -57,8 +57,8 @@ python run_spider.py --spider jobsgo --keyword "marketing" --output "marketing_j
 # Chạy spider JobsGO
 scrapy crawl jobsgo -a keyword="python developer"
 
-# Chạy spider TopCV
-scrapy crawl topcv -a keyword="java developer"
+# Chạy spider JobOKO
+scrapy crawl joboko -a keyword="java developer"
 ```
 
 ## 📊 Cấu trúc dữ liệu
@@ -92,17 +92,17 @@ Bảng `jobs` trong SQL Server:
 CrawlJob/
 ├── CrawlJob/
 │   ├── spiders/
-│   │   ├── jobsgo_spider.py    # Spider cho JobsGO
-│   │   └── topcv_spider.py     # Spider cho TopCV
-│   ├── items.py                # Định nghĩa cấu trúc dữ liệu
-│   ├── pipelines.py            # Pipeline xử lý dữ liệu
-│   ├── settings.py             # Cấu hình project
-│   ├── middlewares.py          # Middleware xử lý request
-│   └── utils.py                # Tiện ích hỗ trợ (encode_input)
-├── run_spider.py               # Script chạy spider
-├── requirements.txt            # Dependencies
-├── scrapy.cfg                 # Cấu hình Scrapy
-└── README.md                  # Hướng dẫn sử dụng
+│   │   ├── jobsgo_spider.py     # Spider cho JobsGO
+│   │   └── joboko_spider.py     # Spider cho JobOKO
+│   ├── items.py                 # Định nghĩa cấu trúc dữ liệu
+│   ├── pipelines.py             # Pipeline xử lý dữ liệu (SQL Server)
+│   ├── settings.py              # Cấu hình project
+│   ├── selenium_middleware.py   # (Tùy chọn) Middleware Selenium - hiện đang tắt
+│   └── utils.py                 # Tiện ích hỗ trợ (encode_input, encode_joboko_input)
+├── run_spider.py                # Script chạy spider
+├── requirements.txt             # Dependencies
+├── scrapy.cfg                   # Cấu hình Scrapy
+└── README.md                    # Hướng dẫn sử dụng
 ```
 
 ## ⚙️ Cấu hình nâng cao
@@ -118,7 +118,7 @@ DOWNLOAD_DELAY = 2  # Delay 2 giây giữa các request
 ### Thay đổi số lượng request đồng thời
 
 ```python
-CONCURRENT_REQUESTS = 8  # Số request đồng thời
+CONCURRENT_REQUESTS = 8  # Số request đồng thời (tuỳ chọn)
 ```
 
 ### Thêm User Agent
@@ -145,7 +145,7 @@ USER_AGENT = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit
 
 Các spider sử dụng CSS selector và XPath linh hoạt để tìm dữ liệu:
 - **JobsGO**: Sử dụng XPath với label-based extraction cho các trường như Mức lương, Hạn nộp, Địa điểm
-- **TopCV**: Sử dụng CSS selector với fallback patterns
+- **JobOKO**: Sử dụng CSS selector/XPath theo cấu trúc HTML hiện tại
 
 Nếu website thay đổi cấu trúc, cần cập nhật selector trong spider.
 
