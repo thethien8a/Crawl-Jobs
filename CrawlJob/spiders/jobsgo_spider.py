@@ -88,6 +88,9 @@ class JobsgoSpider(scrapy.Spider):
         item['education_level'] = self._extract_common_section_value(response, 'Yêu cầu bằng cấp')
         item['job_industry'] = self._extract_common_section_links(response, "Lĩnh vực")
         
+        # Chức danh (vị trí)
+        item["job_position"] = self._extract_common_section_value(response, 'chức vụ')
+ 
         # Job description and requirements (lấy từ các section tiêu đề h3)
         item['job_description'] = self._extract_section_list_text(response, 'Mô tả công việc')
         item['requirements'] = self._extract_section_list_text(response, 'Yêu cầu công việc')

@@ -18,6 +18,7 @@ class JobItem(scrapy.Item):
     experience_level = scrapy.Field()
     education_level = scrapy.Field()
     job_industry = scrapy.Field()
+    job_position = scrapy.Field()
     
     # Job description and requirements
     job_description = scrapy.Field()

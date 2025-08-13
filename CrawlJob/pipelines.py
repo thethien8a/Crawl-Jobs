@@ -65,6 +65,7 @@ class SQLServerPipeline:
             job_industry NVARCHAR(200),
             experience_level NVARCHAR(200),
             education_level NVARCHAR(200),
+            job_position NVARCHAR(200),
             job_description NVARCHAR(MAX),
             requirements NVARCHAR(MAX),
             benefits NVARCHAR(MAX),
@@ -97,11 +98,11 @@ class SQLServerPipeline:
             insert_sql = """
             INSERT INTO jobs (
                 job_title, company_name, salary, location, job_type,
-                job_industry, experience_level, education_level, job_description,
+                job_industry, experience_level, education_level, job_position, job_description,
                 requirements, benefits, job_deadline, source_site,
                 job_url, search_keyword, scraped_at
             ) VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
             )
             """
             
@@ -114,6 +115,7 @@ class SQLServerPipeline:
                 item.get('job_industry', ''),
                 item.get('experience_level', ''),
                 item.get('education_level', ''),
+                item.get('job_position', ''),
                 item.get('job_description', ''),
                 item.get('requirements', ''),
                 item.get('benefits', ''),
