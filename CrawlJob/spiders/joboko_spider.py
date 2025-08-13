@@ -14,7 +14,7 @@ class JobokoSpider(scrapy.Spider):
 		super(JobokoSpider, self).__init__(*args, **kwargs)
 		self.keyword = keyword or 'data analyst'
 		self._count_page = 0
-		self._max_page = 2
+		self._max_page = 1
 		
 	def start_requests(self):
 		base_url = 'https://vn.joboko.com/'
@@ -27,13 +27,13 @@ class JobokoSpider(scrapy.Spider):
 		)
 
 	def parse_search_results(self, response):
-		# Thu thập link chi tiết công việc: pattern đuôi -xvi<ID>
-		url_jobs = response.css('div.nw-job-list__list a::attr(href)').getall()
+		# Thu thập link chi tiết công việc: 
+		url_jobs = response.css('div.nw-job-list__list a[href*="viec-lam"]::attr(href)').getall()
 		if url_jobs:
 			self.logger.info(f"Found {len(url_jobs)} job links on {response.url}")
 			for job_url in url_jobs:
-				yield scrapy.Request(
-					url=job_url,
+				yield response.follow(
+					job_url,
 					callback=self.parse_job_detail,
 					meta={'keyword': response.meta.get('keyword', self.keyword)}
 				)
@@ -59,20 +59,19 @@ class JobokoSpider(scrapy.Spider):
 		# Company name
 		item["company_name"] = self._css_text(response, 'nw-company-hero__text')
 		# Salary
-		item["salary"] = self._xpath_text(response, 'Thu nhập:')
+		item["salary"] = self._xpath_text(response, 'Thu nhập')
 		# Location
-		item["location"] = self._xpath_text(response, 'Địa điểm làm việc:')
-		item["job_type"] = self._xpath_text(response, 'Loại hình:')
-		item["experience_level"] = self._xpath_text(response, 'Kinh nghiệm:')
+		item["location"] = self._xpath_text(response, 'Địa điểm làm việc')
+		item["job_type"] = self._xpath_text(response, 'Loại hình')
+		item["experience_level"] = self._xpath_text(response, 'Kinh nghiệm')
+
 		# Education level & industry không luôn có sẵn
 		item["education_level"] = item.get("education_level", '')
 		item['job_industry'] = item.get('job_industry', '')
-		# Job position (chức vụ/vị trí)
-		item['job_position'] = (
-			self._xpath_text(response, 'Chức vụ:') or
-			self._xpath_text(response, 'Vị trí:') or ''
-		)
-		
+
+		# Job position
+		item['job_position'] = self._xpath_text(response, 'Chức vụ')
+
 		item["job_description"] = self._xpath_paragraph(response, 'Mô tả công việc')
 		item["requirements"] = self._xpath_paragraph(response, 'Yêu cầu')
 		item["benefits"] = self._xpath_paragraph(response, 'Quyền lợi')
@@ -93,16 +92,17 @@ class JobokoSpider(scrapy.Spider):
 			return ''
 		
 	def _xpath_text(self, response, text_extract):
-		try: 
-			word_target = response.xpath(f'//*[contains(normalize-space(), "{text_extract}")]/following-sibling::*[1]//text()').get()
-			if word_target:
-				return word_target.strip()
+		try:
+			full = response.xpath(f'//text()[contains(., "{text_extract}")]/following-sibling::*/text()').get()
+			return full.strip()
 		except Exception:
 			return ''
 		
 	def _xpath_paragraph(self, response, text_extract):
 		try:
 			paragraphs = response.xpath(f'//*[contains(normalize-space(), "{text_extract}")]/following-sibling::*[1]//text()').getall()
+			if not paragraphs:
+				return "Có thể là không có hoặc Tiếng Anh"    
 			return ' '.join(p.strip() for p in paragraphs if p.strip())
 		except Exception:
 			return ''
