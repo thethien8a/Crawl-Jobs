@@ -70,7 +70,7 @@ class JobsgoSpider(scrapy.Spider):
         item = JobItem()
 
         # Title
-        title = self.extract_text(response, '[class="job-title mb-2 mb-sm-3 fs-4"]')
+        title = self._extract_text(response, '[class="job-title mb-2 mb-sm-3 fs-4"]')
         item['job_title'] = title 
         
         # Company name - lấy tên công ty từ link tới trang tuyển dụng công ty 
@@ -78,20 +78,20 @@ class JobsgoSpider(scrapy.Spider):
         item['company_name'] = (company or '')
         
         # Meta list ngay dưới tiêu đề: Mức lương / Hạn nộp / Địa điểm
-        item['salary'] = self.extract_value_by_label(response, 'Mức lương')
-        item['job_deadline'] = self.extract_value_by_label(response, 'Hạn nộp')
+        item['salary'] = self._extract_value_by_label(response, 'Mức lương')
+        item['job_deadline'] = self._extract_value_by_label(response, 'Hạn nộp')
         item['location'] = clean_location(response.css('a[href="#places"].position-relative.text-truncate.d-inline-block::text').get()) 
         
         # Thông tin chung (panel bên dưới)
-        item['job_type'] = self.extract_common_section_value(response, 'Loại hình') 
-        item['experience_level'] = self.extract_common_section_value(response, 'Yêu cầu kinh nghiệm')
-        item['education_level'] = self.extract_common_section_value(response, 'Yêu cầu bằng cấp')
-        item['job_industry'] = self.extract_common_section_links(response, "Lĩnh vực")
+        item['job_type'] = self._extract_common_section_value(response, 'Loại hình') 
+        item['experience_level'] = self._extract_common_section_value(response, 'Yêu cầu kinh nghiệm')
+        item['education_level'] = self._extract_common_section_value(response, 'Yêu cầu bằng cấp')
+        item['job_industry'] = self._extract_common_section_links(response, "Lĩnh vực")
         
         # Job description and requirements (lấy từ các section tiêu đề h3)
-        item['job_description'] = self.extract_section_list_text(response, 'Mô tả công việc')
-        item['requirements'] = self.extract_section_list_text(response, 'Yêu cầu công việc')
-        item['benefits'] = self.extract_section_list_text(response, 'Quyền lợi được hưởng')
+        item['job_description'] = self._extract_section_list_text(response, 'Mô tả công việc')
+        item['requirements'] = self._extract_section_list_text(response, 'Yêu cầu công việc')
+        item['benefits'] = self._extract_section_list_text(response, 'Quyền lợi được hưởng')
         
         # Metadata
         item['source_site'] = 'jobsgo.vn'
@@ -101,14 +101,14 @@ class JobsgoSpider(scrapy.Spider):
         
         yield item
     
-    def extract_text(self, response, selector):
+    def _extract_text(self, response, selector):
         """Extract text from CSS selector with fallbacks"""
         text = response.css(f'{selector}::text').get()
         if not text:
             self.logger.warning(f"No text found for selector: {selector}")
         return text.strip() if text else ''
     
-    def extract_value_by_label(self, response, label_text):
+    def _extract_value_by_label(self, response, label_text):
         """Lấy giá trị trong thẻ <li> có chứa nhãn (ví dụ: Mức lương/Hạn nộp/Địa điểm)"""
         texts = response.xpath(f'//li[.//text()[contains(., "{label_text}")]]//strong//text()').get()
         if texts:
@@ -117,7 +117,7 @@ class JobsgoSpider(scrapy.Spider):
             value = ''
         return value
     
-    def extract_common_section_value(self, response, label_text):
+    def _extract_common_section_value(self, response, label_text):
         """Trong khối 'Thông Tin Chung', lấy strong ngay sau nhãn label_text"""
         try:
             texts = response.xpath(f'//*[contains(normalize-space(), "{label_text}")]/following-sibling::strong[1]//text()').get()
@@ -126,7 +126,7 @@ class JobsgoSpider(scrapy.Spider):
             self.logger.error(f"Error extracting common section value: {e}")
             return ''
     
-    def extract_common_section_links(self, response, label_text):
+    def _extract_common_section_links(self, response, label_text):
         """Lấy lĩnh vực (job industry)"""
         try:
             link_texts = response.xpath(f'//*[contains(normalize-space(), "{label_text}")]/following-sibling::*[1]//text()').get()
@@ -135,7 +135,7 @@ class JobsgoSpider(scrapy.Spider):
             self.logger.error(f"Error extracting common section links: {e}")
             return ''
     
-    def extract_section_list_text(self, response, heading_text):
+    def _extract_section_list_text(self, response, heading_text):
         try:
             para = response.xpath(f'//h3[contains(normalize-space(.), "{heading_text}")]/following-sibling::*[1]//text()').getall()
             return ' '.join([' '.join(p.split()) for p in para if p and p.strip()])

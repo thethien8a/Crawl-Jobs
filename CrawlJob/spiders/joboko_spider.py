@@ -12,7 +12,8 @@ class JobokoSpider(scrapy.Spider):
     def __init__(self, keyword=None, *args, **kwargs):
         super(JobokoSpider, self).__init__(*args, **kwargs)
         self.keyword = keyword or 'data analyst'
-        self.page = 0
+        self._count_page = 0
+        self._max_page = 2
         
     def start_requests(self):
         base_url = 'https://vn.joboko.com/'
@@ -38,13 +39,17 @@ class JobokoSpider(scrapy.Spider):
                 )
 
         # Trang tiếp theo
-        next_page = response.css('div.nw-job-list__more a::attr(href)').get()
-        if next_page:
-            yield scrapy.Request(
-                url=urljoin(response.url, next_page),
-                callback=self.parse_search_results,
-                meta=response.meta
-            )
+        if self._count_page < self._max_page:
+            next_page = response.css('div.nw-job-list__more a::attr(href)').get()
+            if next_page:
+                yield scrapy.Request(
+                    url=urljoin(response.url, next_page),
+                    callback=self.parse_search_results,
+                    meta=response.meta
+                )
+            self._count_page += 1
+        else:
+            self.logger.info(f"Reached max page {self._max_page}")
 
     def parse_job_detail(self, response):
         item = JobItem()
@@ -57,7 +62,7 @@ class JobokoSpider(scrapy.Spider):
         ])
         item['job_title'] = title
 
-        # Tên công ty - nhiều trang liên kết về trang công ty có hậu tố -xci<ID>
+        # Tên công ty 
         company = self._first_non_empty([
             self._css_text(response, 'a[href*="-xci"]'),
             self._label_value(response, 'Công ty'),
@@ -111,7 +116,7 @@ class JobokoSpider(scrapy.Spider):
 
         yield item
 
-    # ---------- Helper methods ----------
+    
     def _css_text(self, response, selector):
         txts = response.css(f'{selector}::text').getall()
         return ' '.join([t.strip() for t in txts if t and t.strip()]) if txts else ''
