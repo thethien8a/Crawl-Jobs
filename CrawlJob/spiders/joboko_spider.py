@@ -12,10 +12,11 @@ class JobokoSpider(scrapy.Spider):
     def __init__(self, keyword=None, *args, **kwargs):
         super(JobokoSpider, self).__init__(*args, **kwargs)
         self.keyword = keyword or 'data analyst'
-
+        self.page = 0
+        
     def start_requests(self):
         base_url = 'https://vn.joboko.com/'
-        search_path = f"tim-viec-lam-{encode_joboko_input(self.keyword)}"
+        search_path = f"jobs?q={encode_joboko_input(self.keyword)}"
         search_url = urljoin(base_url, search_path)
         yield scrapy.Request(
             url=search_url,
@@ -25,41 +26,19 @@ class JobokoSpider(scrapy.Spider):
 
     def parse_search_results(self, response):
         # Thu thập link chi tiết công việc: pattern đuôi -xvi<ID>
-        job_links = response.css('a[href*="-xvi"]::attr(href)').getall()
-        seen = set()
-        unique_links = []
-        for link in job_links:
-            if not link:
-                continue
-            full_url = urljoin(response.url, link)
-            if full_url not in seen:
-                seen.add(full_url)
-                unique_links.append(full_url)
+        job_container = response.css('div.nw-job-list__list')
+        self.logger.info(f"Found {len(job_container)} job links on {response.url}")
+        for job in job_container:
+            job_url = job.css('a::attr(href)').get()
+            if job_url:
+                yield scrapy.Request(
+                    url=job_url,
+                    callback=self.parse_job_detail,
+                    meta={'keyword': response.meta.get('keyword', self.keyword)}
+                )
 
-        self.logger.info(f"Found {len(unique_links)} job links on {response.url}")
-
-        for job_url in unique_links:
-            yield scrapy.Request(
-                url=job_url,
-                callback=self.parse_job_detail,
-                meta={'keyword': response.meta.get('keyword', self.keyword)}
-            )
-
-        # Phân trang: ưu tiên rel=next, fallback bắt '?p='
-        next_page = response.css('a[rel="next"]::attr(href)').get()
-        if not next_page:
-            candidates = response.css('a[href*="?p="]::attr(href)').getall()
-            if candidates:
-                # Nếu có nhiều link, ưu tiên link chứa p lớn nhất để tiến tới
-                try:
-                    def extract_p(u):
-                        from urllib.parse import urlparse, parse_qs
-                        qs = parse_qs(urlparse(u).query)
-                        return int(qs.get('p', ['0'])[0])
-                    candidates_sorted = sorted(candidates, key=extract_p)
-                    next_page = candidates_sorted[-1]
-                except Exception:
-                    next_page = candidates[-1]
+        # Trang tiếp theo
+        next_page = response.css('div.nw-job-list__more a::attr(href)').get()
         if next_page:
             yield scrapy.Request(
                 url=urljoin(response.url, next_page),
