@@ -3,7 +3,7 @@ from datetime import datetime
 from urllib.parse import urljoin
 import re
 from ..items import JobItem
-from ..utils import encode_joboko_input, clean_location, regex_find_date
+from ..utils import encode_joboko_input, regex_find_date
 
 
 class JobokoSpider(scrapy.Spider):

@@ -48,7 +48,7 @@ python run_spider.py --spider joboko --keyword "java developer"
 python run_spider.py --spider 123job --keyword "data analyst"
 
 # Chạy tất cả spider
-python run_spider.py --spider both --keyword "developer"
+python run_spider.py --spider all --keyword "developer"
 
 # Lưu kết quả vào file JSON
 python run_spider.py --spider jobsgo --keyword "marketing" --output "marketing_jobs.json"

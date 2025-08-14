@@ -14,15 +14,13 @@ class Job123Spider(scrapy.Spider):
         super(Job123Spider, self).__init__(*args, **kwargs)
         self.keyword = keyword or 'data analyst'
         self._pages_crawled = 0
-        self._max_pages = 2
+        self._max_pages = 1
 
     def start_requests(self):
-        base_url = 'https://123job.vn/'
-        # Tạo slug đơn giản từ keyword: ghép bằng dấu '-'; giữ Unicode để 123job xử lý
-        slug = '-'.join(self.keyword.split()).lower()
-        search_path = f'việc-làm-{slug}'
-        # Encode path để an toàn khi có ký tự Unicode
-        search_url = urljoin(base_url, quote(search_path, safe='/-'))
+        base_url = 'https://123job.vn/tuyen-dung'
+        encoded_keyword = quote(self.keyword)
+        search_url = f"{base_url}?q={encoded_keyword}"
+        
         yield scrapy.Request(
             url=search_url,
             callback=self.parse_search_results,
@@ -30,7 +28,6 @@ class Job123Spider(scrapy.Spider):
         )
 
     def parse_search_results(self, response):
-        # Thu thập link chi tiết công việc (pattern /viec-lam/<slug>-<id>)
         job_links = response.css('a[href*="/viec-lam/"]::attr(href)').getall()
         seen = set()
         for href in job_links:
@@ -45,16 +42,11 @@ class Job123Spider(scrapy.Spider):
                 meta={'keyword': response.meta.get('keyword', self.keyword)}
             )
 
+        self._pages_crawled += 1
         # Phân trang (nếu có)
-        next_page = response.css('a[rel="next"]::attr(href)').get()
-        if not next_page:
-            next_page = response.css('a[aria-label="Next"]::attr(href)').get()
-        if not next_page:
-            # Fallback: bất kỳ link có page=
-            next_page = response.css('a[href*="page="]::attr(href)').get()
+        next_page = response.css('a[rel="Next"]::attr(href)').get()
         if next_page and self._pages_crawled < self._max_pages:
-            self._pages_crawled += 1
-            yield response.follow(
+            yield scrapy.Request(
                 next_page,
                 callback=self.parse_search_results,
                 meta=response.meta
@@ -64,58 +56,35 @@ class Job123Spider(scrapy.Spider):
         item = JobItem()
 
         # Tiêu đề
-        item['job_title'] = self._first_non_empty([
-            self._css_text(response, 'h1'),
-            self._meta_property(response, 'og:title'),
-        ])
+        item['job_title'] = self._parse_text_in_class(response, 'job-title')
 
         # Công ty
-        item['company_name'] = self._first_non_empty([
-            self._css_text(response, 'h2 a'),
-            self._label_value(response, 'Công ty'),
-        ])
+        item['company_name'] = self._parse_text_in_class(response, 'company-name')
 
         # Lương / Thu nhập
-        item['salary'] = self._first_non_empty([
-            self._label_value(response, 'Thu nhập'),
-            self._label_value(response, 'Mức lương'),
-        ])
+        item['salary'] = self._parse_text_in_follow_sibling(response, 'Mức lương')
 
         # Địa điểm
-        item['location'] = self._first_non_empty([
-            self._label_value(response, 'Địa điểm làm việc'),
-            self._label_value(response, 'Địa điểm'),
-        ])
+        item['location'] = self._parse_text_in_follow_sibling(response, 'Địa điểm làm việc')
 
         # Chi tiết
-        item['job_type'] = self._first_non_empty([
-            self._label_value(response, 'Loại hình'),
-            self._label_value(response, 'Hình thức làm việc'),
-        ])
-        item['experience_level'] = self._label_value(response, 'Kinh nghiệm')
-        item['education_level'] = self._first_non_empty([
-            self._label_value(response, 'Trình độ học vấn'),
-            self._label_value(response, 'Học vấn'),
-        ])
-        item['job_industry'] = self._first_non_empty([
-            self._label_value(response, 'Ngành nghề'),
-            self._label_value(response, 'Lĩnh vực'),
-        ])
-        item['job_position'] = self._first_non_empty([
-            self._label_value(response, 'Chức vụ'),
-            self._label_value(response, 'Cấp bậc'),
-        ])
-
+        item['job_type'] = self._parse_text_in_follow_sibling(response, 'Hình thức làm việc')
+        
+        item['experience_level'] = self._parse_text_in_follow_sibling(response, 'Kinh nghiệm yêu cầu')
+        
+        item['education_level'] = self._parse_text_in_follow_sibling(response, 'Trình độ yêu cầu')
+        
+        item['job_industry'] = self._parse_text_in_follow_sibling(response, 'Ngành nghề')
+        
+        item['job_position'] = self._parse_text_in_follow_sibling(response, 'Cấp bậc')
+        
         # Nội dung mô tả, yêu cầu, quyền lợi
-        item['job_description'] = self._section_text(response, 'Mô tả công việc')
-        item['requirements'] = self._section_text(response, 'Yêu cầu')
-        item['benefits'] = self._section_text(response, 'Quyền lợi')
+        item['job_description'] = self._parse_paragraph_in_follow_sibling(response, 'Mô tả công việc')
+        item['requirements'] = self._parse_paragraph_in_follow_sibling(response, 'Yêu cầu')
+        item['benefits'] = self._parse_paragraph_in_follow_sibling(response, 'Quyền lợi')
 
         # Hạn nộp
-        item['job_deadline'] = self._first_non_empty([
-            self._label_value(response, 'Hạn nộp'),
-            self._label_value(response, 'Hạn nộp hồ sơ'),
-        ])
+        item['job_deadline'] = self._parse_text_in_follow_sibling(response, 'Hạn nộp')
 
         # Metadata
         item['source_site'] = '123job.vn'
@@ -125,47 +94,21 @@ class Job123Spider(scrapy.Spider):
 
         return item
 
-    # ---------- Helpers ----------
-    def _css_text(self, response, selector):
-        texts = response.css(f'{selector} ::text').getall() if '::' not in selector else response.css(selector).getall()
-        if not texts:
-            # Try exact selector text only
-            texts = response.css(f'{selector}::text').getall()
-        return ' '.join(t.strip() for t in texts if t and t.strip())
-
-    def _meta_property(self, response, prop):
-        return response.css(f'meta[property="{prop}"]::attr(content)').get() or ''
-
-    def _label_value(self, response, label_text):
-        # 1) span label → next span value
-        vals = response.xpath(f'//span[normalize-space()="{label_text}:"]/following-sibling::span[1]//text()').getall()
-        if not vals:
-            vals = response.xpath(f'//span[normalize-space()="{label_text}"]/following-sibling::span[1]//text()').getall()
-        if not vals:
-            # 2) any element containing label → first following sibling value
-            vals = response.xpath(f'//*[contains(normalize-space(), "{label_text}")]/following-sibling::*[1]//text()').getall()
-        if not vals:
-            # 3) list item variant
-            vals = response.xpath(f'//li[.//text()[contains(normalize-space(), "{label_text}")]]//text()').getall()
-        joined = ' '.join(v.strip() for v in vals if v and v.strip())
-        # Remove label prefix if present
-        if joined and joined.lower().startswith(label_text.lower()):
-            return joined[len(label_text):].lstrip(':').strip()
-        return joined
-
-    def _section_text(self, response, heading_text):
-        for xp in (
-            f'//h2[contains(normalize-space(), "{heading_text}")]/following-sibling::*[1]//text()',
-            f'//h3[contains(normalize-space(), "{heading_text}")]/following-sibling::*[1]//text()',
-        ):
-            vals = response.xpath(xp).getall()
-            if vals:
-                return ' '.join(' '.join(v.split()) for v in vals if v and v.strip())
+    def _parse_text_in_class(self, reponse, class_name):
+        text = reponse.css(f"[class*='{class_name}'] ::text").get()
+        if text:
+            return text.strip()
         return ''
-
-    def _first_non_empty(self, candidates):
-        for c in candidates:
-            if c and str(c).strip():
-                return str(c).strip()
+    
+    def _parse_text_in_follow_sibling(self, response, text_extract):
+        text = response.xpath(f"//*[contains(text(), '{text_extract}')]/following-sibling::*[1]/text()").get()
+        if text:
+            return text.strip()
         return ''
-        
+    
+    def _parse_paragraph_in_follow_sibling(self, response, text_extract):
+        para = response.xpath(f'//h2[contains(normalize-space(.), "{text_extract}")]/following-sibling::*[1]//text()').getall()
+        if para:
+            return ' '.join([' '.join(p.split()) for p in para if p and p.strip()])
+        return ''
+    
