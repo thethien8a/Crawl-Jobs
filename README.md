@@ -1,12 +1,12 @@
 # Job Scraping Project
 
-Dự án web scraping để lấy dữ liệu việc làm từ các trang tuyển dụng Việt Nam như JobsGO, JobOKO và 123job.
+Dự án web scraping để lấy dữ liệu việc làm từ các trang tuyển dụng Việt Nam như JobsGO, JobOKO, 123job và CareerViet.
 
 ## 🎯 Tính năng
 
 - **Input**: Từ khóa việc làm
 - **Output**: Dữ liệu việc làm được lưu vào SQL Server
-- **Sites**: JobsGO, JobOKO, 123job
+- **Sites**: JobsGO, JobOKO, 123job, CareerViet
 - **Data**: Job title, company, salary, location, requirements, job_deadline, etc.
 
 ## 📋 Cài đặt
@@ -47,6 +47,9 @@ python run_spider.py --spider joboko --keyword "java developer"
 # Chạy spider 123job
 python run_spider.py --spider 123job --keyword "data analyst"
 
+# Chạy spider CareerViet
+python run_spider.py --spider careerviet --keyword "data analyst"
+
 # Chạy tất cả spider
 python run_spider.py --spider all --keyword "developer"
 
@@ -65,6 +68,9 @@ scrapy crawl joboko -a keyword="java developer"
 
 # Chạy spider 123job
 scrapy crawl 123job -a keyword="data analyst"
+
+# Chạy spider CareerViet
+scrapy crawl careerviet -a keyword="data analyst"
 ```
 
 ## 📊 Cấu trúc dữ liệu
@@ -101,7 +107,8 @@ CrawlJob/
 │   ├── spiders/
 │   │   ├── jobsgo_spider.py     # Spider cho JobsGO
 │   │   ├── joboko_spider.py     # Spider cho JobOKO
-│   │   └── job123_spider.py     # Spider cho 123job
+│   │   ├── job123_spider.py     # Spider cho 123job
+│   │   └── careerviet_spider.py # Spider cho CareerViet
 │   ├── items.py                 # Định nghĩa cấu trúc dữ liệu
 │   ├── pipelines.py             # Pipeline xử lý dữ liệu (SQL Server)
 │   ├── settings.py              # Cấu hình project
@@ -155,6 +162,7 @@ Các spider sử dụng CSS selector và XPath linh hoạt để tìm dữ liệ
 - **JobsGO**: Sử dụng XPath với label-based extraction cho các trường như Mức lương, Hạn nộp, Địa điểm
 - **JobOKO**: Sử dụng CSS selector/XPath theo cấu trúc HTML hiện tại
 - **123job**: Sử dụng URL slug tìm kiếm và label-based extraction trên trang chi tiết
+- **CareerViet**: Sử dụng query `tim-viec-lam?keyword=...` và label-based extraction
 
 Nếu website thay đổi cấu trúc, cần cập nhật selector trong spider.
 

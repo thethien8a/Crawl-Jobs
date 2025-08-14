@@ -11,12 +11,13 @@ from scrapy.utils.project import get_project_settings
 from CrawlJob.spiders.jobsgo_spider import JobsgoSpider
 from CrawlJob.spiders.joboko_spider import JobokoSpider
 from CrawlJob.spiders.job123_spider import Job123Spider
+from CrawlJob.spiders.careerviet_spider import CareervietSpider
 
 
 def main():
 	# Common practices advice of Scrapy
 	parser = argparse.ArgumentParser(description='Run job scraping spiders')
-	parser.add_argument('--spider', choices=['jobsgo', 'joboko', '123job', 'all'], 
+	parser.add_argument('--spider', choices=['jobsgo', 'joboko', '123job', 'careerviet', 'all'], 
 					   default='jobsgo', help='Spider to run')
 	parser.add_argument('--keyword', default='python developer', 
 					   help='Job keyword to search for')
@@ -48,10 +49,13 @@ def main():
 			process.crawl(JobokoSpider, keyword=args.keyword)
 		elif args.spider == '123job':
 			process.crawl(Job123Spider, keyword=args.keyword)
+		elif args.spider == 'careerviet':
+			process.crawl(CareervietSpider, keyword=args.keyword)
 		elif args.spider == 'all':
 			process.crawl(JobsgoSpider, keyword=args.keyword)
 			process.crawl(JobokoSpider, keyword=args.keyword)
 			process.crawl(Job123Spider, keyword=args.keyword)
+			process.crawl(CareervietSpider, keyword=args.keyword)
 		
 		print(f"Starting spider: {args.spider}")
 		print(f"Searching for: {args.keyword}")

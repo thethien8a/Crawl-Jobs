@@ -10,6 +10,8 @@ class JobsgoSpider(scrapy.Spider):
     def __init__(self, keyword=None, *args, **kwargs):
         super(JobsgoSpider, self).__init__(*args, **kwargs)
         self.keyword = keyword or 'data analyst'  # default keyword
+        self._count_page = 0
+        self._max_page = 5
         
     def start_requests(self):
         """Generate search URLs based on keyword and location"""
@@ -54,9 +56,10 @@ class JobsgoSpider(scrapy.Spider):
                 }
             )
         
+        self._count_page += 1
         # Handle pagination
         next_page = response.css('li[class="next"] a::attr(href)').get()
-        if next_page:
+        if next_page and self._count_page < self._max_page:
             yield scrapy.Request(
                 url=next_page,
                 callback=self.parse_search_results,
