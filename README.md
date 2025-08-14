@@ -1,12 +1,12 @@
 # Job Scraping Project
 
-Dự án web scraping để lấy dữ liệu việc làm từ các trang tuyển dụng Việt Nam như JobsGO và JobOKO.
+Dự án web scraping để lấy dữ liệu việc làm từ các trang tuyển dụng Việt Nam như JobsGO, JobOKO và 123job.
 
 ## 🎯 Tính năng
 
 - **Input**: Từ khóa việc làm
 - **Output**: Dữ liệu việc làm được lưu vào SQL Server
-- **Sites**: JobsGO, JobOKO
+- **Sites**: JobsGO, JobOKO, 123job
 - **Data**: Job title, company, salary, location, requirements, job_deadline, etc.
 
 ## 📋 Cài đặt
@@ -44,8 +44,11 @@ python run_spider.py --spider jobsgo --keyword "python developer"
 # Chạy spider JobOKO
 python run_spider.py --spider joboko --keyword "java developer"
 
-# Chạy cả hai spider
-python run_spider.py --spider both --keyword "data analyst"
+# Chạy spider 123job
+python run_spider.py --spider 123job --keyword "data analyst"
+
+# Chạy tất cả spider
+python run_spider.py --spider both --keyword "developer"
 
 # Lưu kết quả vào file JSON
 python run_spider.py --spider jobsgo --keyword "marketing" --output "marketing_jobs.json"
@@ -59,6 +62,9 @@ scrapy crawl jobsgo -a keyword="python developer"
 
 # Chạy spider JobOKO
 scrapy crawl joboko -a keyword="java developer"
+
+# Chạy spider 123job
+scrapy crawl 123job -a keyword="data analyst"
 ```
 
 ## 📊 Cấu trúc dữ liệu
@@ -76,6 +82,7 @@ Bảng `jobs` trong SQL Server:
 | experience_level | NVARCHAR(200) | Yêu cầu kinh nghiệm |
 | education_level | NVARCHAR(200) | Yêu cầu học vấn |
 | job_industry | NVARCHAR(200) | Ngành nghề |
+| job_position | NVARCHAR(200) | Chức vụ/Vị trí |
 | job_description | NVARCHAR(MAX) | Mô tả công việc |
 | requirements | NVARCHAR(MAX) | Yêu cầu công việc |
 | benefits | NVARCHAR(MAX) | Phúc lợi |
@@ -93,7 +100,8 @@ CrawlJob/
 ├── CrawlJob/
 │   ├── spiders/
 │   │   ├── jobsgo_spider.py     # Spider cho JobsGO
-│   │   └── joboko_spider.py     # Spider cho JobOKO
+│   │   ├── joboko_spider.py     # Spider cho JobOKO
+│   │   └── job123_spider.py     # Spider cho 123job
 │   ├── items.py                 # Định nghĩa cấu trúc dữ liệu
 │   ├── pipelines.py             # Pipeline xử lý dữ liệu (SQL Server)
 │   ├── settings.py              # Cấu hình project
@@ -146,6 +154,7 @@ USER_AGENT = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit
 Các spider sử dụng CSS selector và XPath linh hoạt để tìm dữ liệu:
 - **JobsGO**: Sử dụng XPath với label-based extraction cho các trường như Mức lương, Hạn nộp, Địa điểm
 - **JobOKO**: Sử dụng CSS selector/XPath theo cấu trúc HTML hiện tại
+- **123job**: Sử dụng URL slug tìm kiếm và label-based extraction trên trang chi tiết
 
 Nếu website thay đổi cấu trúc, cần cập nhật selector trong spider.
 
@@ -155,7 +164,7 @@ Nếu website thay đổi cấu trúc, cần cập nhật selector trong spider.
 - Dữ liệu được lưu vào SQL Server với encoding UTF-8
 - Có thể mở rộng thêm các trang tuyển dụng khác
 - Spider tự động tạo bảng và cột nếu chưa tồn tại
-- Pipeline tự động thêm cột `job_deadline` nếu cần thiết
+- Pipeline tự động thêm cột `job_deadline` (và `job_position`) nếu cần thiết
 
 ## 🤝 Đóng góp
 
