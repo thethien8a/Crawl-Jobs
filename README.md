@@ -31,7 +31,7 @@ SQL_PASSWORD = "your_password"  # Thay đổi thành password
 
 ### 3. Tạo database
 
-Tạo database `JobDatabase` trong SQL Server. Spider sẽ tự động tạo bảng `jobs` khi chạy lần đầu.
+Tạo database `JobDatabase` trong SQL Server. Pipeline sẽ **tạo bảng `jobs` nếu chưa tồn tại** khi chạy lần đầu.
 
 ## 🚀 Sử dụng
 
@@ -99,6 +99,13 @@ Bảng `jobs` trong SQL Server:
 | scraped_at | NVARCHAR(50) | Thời gian scrape |
 | created_at | DATETIME | Thời gian tạo record |
 
+Lưu ý: Nếu bảng `jobs` đã tồn tại trước khi thêm cột mới (ví dụ `job_position`) thì cần ALTER thủ công:
+
+```sql
+IF COL_LENGTH('dbo.jobs','job_position') IS NULL
+    ALTER TABLE dbo.jobs ADD job_position NVARCHAR(200) NULL;
+```
+
 ## 🛠️ Cấu trúc project
 
 ```
@@ -162,7 +169,7 @@ Các spider sử dụng CSS selector và XPath linh hoạt để tìm dữ liệ
 - **JobsGO**: Sử dụng XPath với label-based extraction cho các trường như Mức lương, Hạn nộp, Địa điểm
 - **JobOKO**: Sử dụng CSS selector/XPath theo cấu trúc HTML hiện tại
 - **123job**: Sử dụng URL slug tìm kiếm và label-based extraction trên trang chi tiết
-- **CareerViet**: Sử dụng query `tim-viec-lam?keyword=...` và label-based extraction
+- **CareerViet**: Sử dụng query path tìm kiếm và label-based extraction
 
 Nếu website thay đổi cấu trúc, cần cập nhật selector trong spider.
 
@@ -171,8 +178,7 @@ Nếu website thay đổi cấu trúc, cần cập nhật selector trong spider.
 - Spider có delay giữa các request để tránh quá tải server
 - Dữ liệu được lưu vào SQL Server với encoding UTF-8
 - Có thể mở rộng thêm các trang tuyển dụng khác
-- Spider tự động tạo bảng và cột nếu chưa tồn tại
-- Pipeline tự động thêm cột `job_deadline` (và `job_position`) nếu cần thiết
+- Pipeline **không** tự thêm cột mới nếu bảng cũ đã tồn tại; cần ALTER như ví dụ ở trên
 
 ## 🤝 Đóng góp
 
