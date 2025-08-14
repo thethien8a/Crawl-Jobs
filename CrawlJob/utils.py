@@ -37,3 +37,9 @@ def clean_location(location):
     location = location.replace('\n', '')
     location = location.strip()
     return location
+
+def regex_find_date(text):
+    pattern = r"(\d{1,2})/(\d{1,2})/(\d{4})"
+    match = re.search(pattern, text)
+    if match:
+        return match.group(0)

@@ -3,7 +3,7 @@ from datetime import datetime
 from urllib.parse import urljoin
 import re
 from ..items import JobItem
-from ..utils import encode_joboko_input, clean_location
+from ..utils import encode_joboko_input, clean_location, regex_find_date
 
 
 class JobokoSpider(scrapy.Spider):
@@ -14,7 +14,7 @@ class JobokoSpider(scrapy.Spider):
 		super(JobokoSpider, self).__init__(*args, **kwargs)
 		self.keyword = keyword or 'data analyst'
 		self._count_page = 0
-		self._max_page = 1
+		self._max_page = 5
 		
 	def start_requests(self):
 		base_url = 'https://vn.joboko.com/'
@@ -56,7 +56,10 @@ class JobokoSpider(scrapy.Spider):
 
 		# Job title
 		item['job_title'] = self._css_text(response, 'nw-company-hero__title')
-		# Company name
+		
+		# Job deadline
+		item['job_deadline'] = regex_find_date(self._css_text(response, 'mt-1 fz-16'))
+  		# Company name
 		item["company_name"] = self._css_text(response, 'nw-company-hero__text')
 		# Salary
 		item["salary"] = self._xpath_text(response, 'Thu nhập')
@@ -64,7 +67,7 @@ class JobokoSpider(scrapy.Spider):
 		item["location"] = self._xpath_text(response, 'Địa điểm làm việc')
 		item["job_type"] = self._xpath_text(response, 'Loại hình')
 		item["experience_level"] = self._xpath_text(response, 'Kinh nghiệm')
-
+		
 		# Education level & industry không luôn có sẵn
 		item["education_level"] = item.get("education_level", '')
 		item['job_industry'] = item.get('job_industry', '')
