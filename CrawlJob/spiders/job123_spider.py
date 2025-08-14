@@ -109,6 +109,6 @@ class Job123Spider(scrapy.Spider):
     def _parse_paragraph_in_follow_sibling(self, response, text_extract):
         para = response.xpath(f'//h2[contains(normalize-space(.), "{text_extract}")]/following-sibling::*[1]//text()').getall()
         if para:
-            return ' '.join([' '.join(p.split()) for p in para if p and p.strip()])
+            return ' '.join(para)
         return ''
     

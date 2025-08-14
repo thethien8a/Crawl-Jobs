@@ -43,3 +43,8 @@ def regex_find_date(text):
     match = re.search(pattern, text)
     if match:
         return match.group(0)
+
+def clean_text_with_tab(text):
+    # Loại bỏ các ký tự không mong muốn và khoảng trắng thừa
+    cleaned_text = text.replace('\n', '').replace('\t', '').replace('\r', '').strip()
+    return cleaned_text
