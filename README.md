@@ -29,6 +29,17 @@ SQL_USERNAME = "sa"  # Thay đổi thành username
 SQL_PASSWORD = "your_password"  # Thay đổi thành password
 ```
 
+Hoặc tạo file `.env` ở thư mục gốc (khuyến nghị an toàn):
+
+```env
+SQL_SERVER=localhost
+SQL_DATABASE=JobDatabase
+SQL_USERNAME=sa
+SQL_PASSWORD=your_password
+```
+
+Ghi chú: `settings.py` đã tự động đọc biến môi trường (qua `python-dotenv`) nếu có file `.env`.
+
 ### 3. Tạo database
 
 Tạo database `JobDatabase` trong SQL Server. Pipeline sẽ **tạo bảng `jobs` nếu chưa tồn tại** khi chạy lần đầu.

@@ -1,2 +1,3 @@
 .serena/
 __pycache__/
+.env

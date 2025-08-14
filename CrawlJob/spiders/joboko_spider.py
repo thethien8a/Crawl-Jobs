@@ -14,7 +14,7 @@ class JobokoSpider(scrapy.Spider):
 		super(JobokoSpider, self).__init__(*args, **kwargs)
 		self.keyword = keyword or 'data analyst'
 		self._count_page = 0
-		self._max_page = 5
+		self._max_page = 10
 		
 	def start_requests(self):
 		base_url = 'https://vn.joboko.com/'

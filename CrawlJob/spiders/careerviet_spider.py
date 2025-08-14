@@ -13,7 +13,7 @@ class CareervietSpider(scrapy.Spider):
         super(CareervietSpider, self).__init__(*args, **kwargs)
         self.keyword = keyword or 'data analyst'
         self._pages_crawled = 0
-        self._max_pages = 5
+        self._max_pages = 10
 
     def start_requests(self):
         base_url = 'https://careerviet.vn/'

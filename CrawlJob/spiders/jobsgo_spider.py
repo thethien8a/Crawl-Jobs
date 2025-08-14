@@ -11,7 +11,7 @@ class JobsgoSpider(scrapy.Spider):
         super(JobsgoSpider, self).__init__(*args, **kwargs)
         self.keyword = keyword or 'data analyst'  # default keyword
         self._count_page = 0
-        self._max_page = 5
+        self._max_page = 10
         
     def start_requests(self):
         """Generate search URLs based on keyword and location"""

@@ -7,6 +7,12 @@
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from a .env file if present
+load_dotenv()
+
 BOT_NAME = "CrawlJob"
 
 SPIDER_MODULES = ["CrawlJob.spiders"]
@@ -68,11 +74,11 @@ ITEM_PIPELINES = {
     "CrawlJob.pipelines.SQLServerPipeline": 400,
 }
 
-# SQL Server Database Configuration
-SQL_SERVER = "localhost"  
-SQL_DATABASE = "JobDatabase"  
-SQL_USERNAME = "sa"  
-SQL_PASSWORD = "thethien8a"  
+# SQL Server Database Configuration (loaded from environment)
+SQL_SERVER = os.getenv("SQL_SERVER", "localhost")
+SQL_DATABASE = os.getenv("SQL_DATABASE", "JobDatabase")
+SQL_USERNAME = os.getenv("SQL_USERNAME", "sa")
+SQL_PASSWORD = os.getenv("SQL_PASSWORD", "")
 
 # Scraping Configuration
 DOWNLOAD_DELAY = 2  
