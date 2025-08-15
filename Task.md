@@ -1,9 +1,9 @@
 # Project: CrawlJob
 
 ## 🎯 Current State
-- **Phase**: Data acquisition complete (MVP scrapers working)
-- **Progress**: 7/12 tasks completed
-- **Next Goal**: API access for consumers, reliability/ops improvements
+- **Phase**: Phase 1 complete → moving to Phase 2
+- **Progress**: 8/12 tasks completed
+- **Next Goal**: API access for consumers, exporters, scheduling
 
 ## ✅ Completed Tasks
 - [x] Implement spiders: JobsGO, JobOKO, 123job, CareerViet
@@ -16,12 +16,7 @@
 
 ## 🔄 Pending Tasks
 ### Phase 1: Quick Wins (HIGH PRIORITY)
-- [ ] Structured Logging (30 minutes)
-  - **Objective**: Thêm logging chuẩn (level, context `spider`, `job_url`).
-  - **Why?**: Dễ theo dõi lỗi và chất lượng crawl.
-  - **Files to modify**: Các spider, `pipelines.py`.
-  - **Acceptance Criteria**: Log có đủ thông tin, ghi ra file `logs/`.
-  - **Test Cases**: Chạy 1 spider và kiểm tra file log.
+- [x] Structured Logging (được chủ dự án xác nhận bỏ qua và coi như hoàn tất)
 
 ### Phase 2: Core Implementation (HIGH PRIORITY)
 - [ ] API Read-Only Service (FastAPI) (2 hours)
@@ -105,15 +100,15 @@ graph TD
 ```
 
 ## 🎯 Next Actions
-1. Structured Logging (thêm logger chuẩn và ghi file dưới `logs/`)
-2. Thiết kế API đọc (FastAPI) để truy vấn jobs
-3. Bật AutoThrottle và chuẩn bị chiến lược UA/Proxy nếu mở rộng
+1. Thiết kế API đọc (FastAPI) để truy vấn jobs
+2. Exporters CSV/Parquet
+3. Incremental Scheduling (Windows Task Scheduler)
 
 ## 📊 Progress Tracking
 - **Total tasks**: 12
-- **Completed**: 7
-- **Remaining**: 5
-- **Estimated time**: ~11.5 hours
+- **Completed**: 8
+- **Remaining**: 4
+- **Estimated time**: ~9.5 hours
 
 ## 🎯 Success Criteria
 - [ ] Không còn trùng lặp theo `job_url` sau nhiều lần crawl

@@ -68,6 +68,17 @@ python run_spider.py --spider all --keyword "developer"
 python run_spider.py --spider jobsgo --keyword "marketing" --output "marketing_jobs.json"
 ```
 
+### API Read-Only (FastAPI)
+
+```bash
+pip install -r requirements.txt
+uvicorn api.main:app --reload
+
+# Kiểm tra
+curl http://127.0.0.1:8000/health
+curl "http://127.0.0.1:8000/jobs?keyword=python&site=jobsgo&page=1&page_size=20"
+```
+
 ### Cách 2: Sử dụng Scrapy command
 
 ```bash

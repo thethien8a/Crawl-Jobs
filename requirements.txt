@@ -6,3 +6,5 @@ itemadapter==0.8.0
 selenium==4.15.0
 webdriver-manager==4.0.1
 python-dotenv==1.0.1
+fastapi==0.112.2
+uvicorn==0.30.6
