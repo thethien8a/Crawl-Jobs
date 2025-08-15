@@ -82,6 +82,10 @@ scrapy crawl 123job -a keyword="data analyst"
 
 # Chạy spider CareerViet
 scrapy crawl careerviet -a keyword="data analyst"
+
+# Chạy spider ITViec (từ khóa tiếng Việt sẽ được tự động chuyển slug không dấu)
+python run_spider.py --spider itviec --keyword "phân tích dữ liệu"
+scrapy crawl itviec -a keyword="phân tích dữ liệu"
 ```
 
 ## 📊 Cấu trúc dữ liệu
