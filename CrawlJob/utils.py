@@ -32,8 +32,6 @@ def encode_joboko_input(search_word: str) -> str:
     return "+".join(words)
 
 
-    
-
 
 def clean_location(location):
     location = location.replace('\n', '')
