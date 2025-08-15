@@ -12,13 +12,12 @@ from CrawlJob.spiders.jobsgo_spider import JobsgoSpider
 from CrawlJob.spiders.joboko_spider import JobokoSpider
 from CrawlJob.spiders.job123_spider import Job123Spider
 from CrawlJob.spiders.careerviet_spider import CareervietSpider
-from CrawlJob.spiders.itviec_spider import ItViecSpider
 
 
 def main():
 	# Common practices advice of Scrapy
 	parser = argparse.ArgumentParser(description='Run job scraping spiders')
-	parser.add_argument('--spider', choices=['jobsgo', 'joboko', '123job', 'careerviet', 'itviec', 'all'], 
+	parser.add_argument('--spider', choices=['jobsgo', 'joboko', '123job', 'careerviet', 'all'], 
 					   default='jobsgo', help='Spider to run')
 	parser.add_argument('--keyword', default='python developer', 
 					   help='Job keyword to search for')
@@ -52,14 +51,11 @@ def main():
 			process.crawl(Job123Spider, keyword=args.keyword)
 		elif args.spider == 'careerviet':
 			process.crawl(CareervietSpider, keyword=args.keyword)
-		elif args.spider == 'itviec':
-			process.crawl(ItViecSpider, keyword=args.keyword)
 		elif args.spider == 'all':
 			process.crawl(JobsgoSpider, keyword=args.keyword)
 			process.crawl(JobokoSpider, keyword=args.keyword)
 			process.crawl(Job123Spider, keyword=args.keyword)
 			process.crawl(CareervietSpider, keyword=args.keyword)
-			process.crawl(ItViecSpider, keyword=args.keyword)
 		
 		print(f"Starting spider: {args.spider}")
 		print(f"Searching for: {args.keyword}")

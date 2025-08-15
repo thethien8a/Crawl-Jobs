@@ -32,16 +32,7 @@ def encode_joboko_input(search_word: str) -> str:
     return "+".join(words)
 
 
-def encode_ascii_slug(search_word: str, separator: str = '-') -> str:
-    """Tạo slug ASCII không dấu, các từ nối bằng `separator` (mặc định '-')
-    Ví dụ: 'Phân tích dữ liệu' -> 'phan-tich-du-lieu'
-    """
-    text = (search_word or '').strip().lower()
-    text = unicodedata.normalize('NFD', text)
-    text = text.encode('ascii', 'ignore').decode('ascii')
-    text = re.sub(r'[^a-z0-9\s]+', ' ', text)
-    words = [w for w in text.split() if w]
-    return separator.join(words)
+    
 
 
 def clean_location(location):
