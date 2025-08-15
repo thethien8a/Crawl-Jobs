@@ -77,10 +77,22 @@ class SQLServerPipeline:
             created_at DATETIME DEFAULT GETDATE()
         )
         """
+        # Additive migrations: ensure updated_at column and unique index for dedup
+        migration_sql = """
+        IF COL_LENGTH('dbo.jobs','updated_at') IS NULL
+            ALTER TABLE dbo.jobs ADD updated_at DATETIME NULL;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM sys.indexes 
+            WHERE name = 'UQ_jobs_source_url' AND object_id = OBJECT_ID('dbo.jobs')
+        )
+            CREATE UNIQUE INDEX UQ_jobs_source_url ON dbo.jobs(source_site, job_url);
+        """
         
         try:
             cursor = self.connection.cursor()
             cursor.execute(create_table_sql)
+            cursor.execute(migration_sql)
             self.connection.commit()
             cursor.close()
         except Exception as e:
@@ -94,43 +106,108 @@ class SQLServerPipeline:
         
         try:
             cursor = self.connection.cursor()
-            
-            insert_sql = """
-            INSERT INTO jobs (
-                job_title, company_name, salary, location, job_type,
-                job_industry, experience_level, education_level, job_position, job_description,
-                requirements, benefits, job_deadline, source_site,
-                job_url, search_keyword, scraped_at
-            ) VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-            )
-            """
-            
-            values = (
-                item.get('job_title', ''),
-                item.get('company_name', ''),
-                item.get('salary', ''),
-                item.get('location', ''),
-                item.get('job_type', ''),
-                item.get('job_industry', ''),
-                item.get('experience_level', ''),
-                item.get('education_level', ''),
-                item.get('job_position', ''),
-                item.get('job_description', ''),
-                item.get('requirements', ''),
-                item.get('benefits', ''),
-                item.get('job_deadline', ''),
-                item.get('source_site', ''),
-                item.get('job_url', ''),
-                item.get('search_keyword', ''),
-                item.get('scraped_at', '')
-            )
-            
-            cursor.execute(insert_sql, values)
+            # Build safe values with defaults
+            job_title = item.get('job_title', '')
+            company_name = item.get('company_name', '')
+            salary = item.get('salary', '')
+            location = item.get('location', '')
+            job_type = item.get('job_type', '')
+            job_industry = item.get('job_industry', '')
+            experience_level = item.get('experience_level', '')
+            education_level = item.get('education_level', '')
+            job_position = item.get('job_position', '')
+            job_description = item.get('job_description', '')
+            requirements = item.get('requirements', '')
+            benefits = item.get('benefits', '')
+            job_deadline = item.get('job_deadline', '')
+            source_site = item.get('source_site', '')
+            job_url = item.get('job_url', '')
+            search_keyword = item.get('search_keyword', '')
+            scraped_at = item.get('scraped_at', '')
+
+            # Dedup/Upsert by (source_site, job_url)
+            select_sql = "SELECT id FROM jobs WHERE job_url=%s AND source_site=%s"
+            cursor.execute(select_sql, (job_url, source_site))
+            row = cursor.fetchone()
+
+            if row:
+                job_id = row[0]
+                update_sql = """
+                UPDATE jobs SET
+                    job_title=%s,
+                    company_name=%s,
+                    salary=%s,
+                    location=%s,
+                    job_type=%s,
+                    job_industry=%s,
+                    experience_level=%s,
+                    education_level=%s,
+                    job_position=%s,
+                    job_description=%s,
+                    requirements=%s,
+                    benefits=%s,
+                    job_deadline=%s,
+                    search_keyword=%s,
+                    scraped_at=%s,
+                    updated_at=GETDATE()
+                WHERE id=%s
+                """
+                update_values = (
+                    job_title,
+                    company_name,
+                    salary,
+                    location,
+                    job_type,
+                    job_industry,
+                    experience_level,
+                    education_level,
+                    job_position,
+                    job_description,
+                    requirements,
+                    benefits,
+                    job_deadline,
+                    search_keyword,
+                    scraped_at,
+                    job_id,
+                )
+                cursor.execute(update_sql, update_values)
+                action = "updated"
+            else:
+                insert_sql = """
+                INSERT INTO jobs (
+                    job_title, company_name, salary, location, job_type,
+                    job_industry, experience_level, education_level, job_position, job_description,
+                    requirements, benefits, job_deadline, source_site,
+                    job_url, search_keyword, scraped_at
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                )
+                """
+                insert_values = (
+                    job_title,
+                    company_name,
+                    salary,
+                    location,
+                    job_type,
+                    job_industry,
+                    experience_level,
+                    education_level,
+                    job_position,
+                    job_description,
+                    requirements,
+                    benefits,
+                    job_deadline,
+                    source_site,
+                    job_url,
+                    search_keyword,
+                    scraped_at,
+                )
+                cursor.execute(insert_sql, insert_values)
+                action = "inserted"
+
             self.connection.commit()
             cursor.close()
-            
-            spider.logger.info(f"Saved job: {item.get('job_title', 'Unknown')}")
+            spider.logger.info(f"{action.capitalize()} job: {job_title or 'Unknown'}")
             
         except Exception as e:
             spider.logger.error(f"Error saving item to database: {e}")

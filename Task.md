@@ -2,8 +2,8 @@
 
 ## 🎯 Current State
 - **Phase**: Data acquisition complete (MVP scrapers working)
-- **Progress**: 4/4 spiders, pipeline insert, JSON export, env-based DB config
-- **Next Goal**: Data reliability, dedup/upsert, and API access for consumers
+- **Progress**: 7/12 tasks completed
+- **Next Goal**: API access for consumers, reliability/ops improvements
 
 ## ✅ Completed Tasks
 - [x] Implement spiders: JobsGO, JobOKO, 123job, CareerViet
@@ -11,30 +11,11 @@
 - [x] CLI runner `run_spider.py` with FEEDS to export JSON
 - [x] Environment-based DB configuration via `.env` (python-dotenv)
 - [x] Basic throttling config and custom User-Agent
+- [x] Dedup & Unique Constraint — unique on `(source_site, job_url)`; prevent duplicates (completed)
+- [x] Upsert (Insert-or-Update) + `updated_at` — update existing rows and set `updated_at` (completed)
 
 ## 🔄 Pending Tasks
 ### Phase 1: Quick Wins (HIGH PRIORITY)
-- [ ] Dedup & Unique Constraint (45 minutes)
-  - **Objective**: Ngăn chèn trùng job theo `job_url` (hoặc `job_url` + `source_site`).
-  - **Why?**: Tránh dữ liệu trùng lặp khi crawl nhiều lần.
-  - **Files to modify**: `CrawlJob/pipelines.py` (check tồn tại trước khi insert), README (hướng dẫn unique index).
-  - **Dependencies**: Bảng `jobs` hiện có.
-  - **Inputs & Outputs**: Input: `JobItem`; Output: insert mới hoặc skip/update.
-  - **Acceptance Criteria**: Không có bản ghi trùng theo `job_url` trong kết quả mới.
-  - **Definition of Done**: 
-    - Tạo unique index (tài liệu SQL trong README) hoặc kiểm tra tồn tại bằng SELECT trước insert.
-    - Pipeline bỏ qua hoặc cập nhật bản ghi đã có.
-  - **Test Cases**: Crawl 2 lần cùng keyword; số bản ghi không tăng trùng.
-
-- [ ] Upsert (Insert-or-Update) + `updated_at` (45 minutes)
-  - **Objective**: Nếu job đã tồn tại, cập nhật các trường thay đổi và set `updated_at`.
-  - **Why?**: Duy trì dữ liệu mới nhất theo thời gian.
-  - **Files to modify**: `CrawlJob/pipelines.py` (logic upsert), README (mô tả cột `updated_at`).
-  - **Dependencies**: Dedup/unique key.
-  - **Acceptance Criteria**: Cùng `job_url` ghi đè trường thay đổi, không tạo bản ghi mới.
-  - **Definition of Done**: Tồn tại hàm upsert; thêm cột `updated_at` vào schema.
-  - **Test Cases**: Sửa mô tả job giả lập và crawl lại → record được cập nhật.
-
 - [ ] Structured Logging (30 minutes)
   - **Objective**: Thêm logging chuẩn (level, context `spider`, `job_url`).
   - **Why?**: Dễ theo dõi lỗi và chất lượng crawl.
@@ -124,15 +105,15 @@ graph TD
 ```
 
 ## 🎯 Next Actions
-1. Implement Dedup + Upsert in `CrawlJob/pipelines.py` (ưu tiên cao)
+1. Structured Logging (thêm logger chuẩn và ghi file dưới `logs/`)
 2. Thiết kế API đọc (FastAPI) để truy vấn jobs
 3. Bật AutoThrottle và chuẩn bị chiến lược UA/Proxy nếu mở rộng
 
 ## 📊 Progress Tracking
 - **Total tasks**: 12
-- **Completed**: 5
-- **Remaining**: 7
-- **Estimated time**: ~14 hours
+- **Completed**: 7
+- **Remaining**: 5
+- **Estimated time**: ~11.5 hours
 
 ## 🎯 Success Criteria
 - [ ] Không còn trùng lặp theo `job_url` sau nhiều lần crawl
