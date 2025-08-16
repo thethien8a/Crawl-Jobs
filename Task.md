@@ -1,9 +1,9 @@
 # Project: CrawlJob
 
 ## 🎯 Current State
-- **Phase**: Phase 1 complete → moving to Phase 2
-- **Progress**: 8/12 tasks completed
-- **Next Goal**: API access for consumers, exporters, scheduling
+- **Phase**: Phase 2 in progress (FastAPI completed)
+- **Progress**: 9/12 tasks completed
+- **Next Goal**: Public web app (search UI) and deployment
 
 ## ✅ Completed Tasks
 - [x] Implement spiders: JobsGO, JobOKO, 123job, CareerViet
@@ -13,105 +13,135 @@
 - [x] Basic throttling config and custom User-Agent
 - [x] Dedup & Unique Constraint — unique on `(source_site, job_url)`; prevent duplicates (completed)
 - [x] Upsert (Insert-or-Update) + `updated_at` — update existing rows and set `updated_at` (completed)
+- [x] Structured Logging (được chủ dự án xác nhận bỏ qua và coi như hoàn tất)
+- [x] API Read-Only Service (FastAPI) — implemented with /health and /jobs endpoints (completed)
 
 ## 🔄 Pending Tasks
-### Phase 1: Quick Wins (HIGH PRIORITY)
-- [x] Structured Logging (được chủ dự án xác nhận bỏ qua và coi như hoàn tất)
+### Phase 2: Web App MVP (HIGH PRIORITY)
+- [ ] Frontend approach decision (15 minutes)
+  - **Objective**: Chọn A hoặc B
+  - **Option A (khuyến nghị nhanh)**: FastAPI + Jinja2 SSR (đơn giản, 1 repo, SEO ổn)
+  - **Option B**: Next.js (SSR) ở thư mục `web/`, tách frontend/backend, UX tốt hơn
+  - **Acceptance Criteria**: Ghi rõ lựa chọn vào README, cập nhật plan bên dưới tương ứng
 
-### Phase 2: Core Implementation (HIGH PRIORITY)
-- [ ] API Read-Only Service (FastAPI) (2 hours)
-  - **Objective**: Cung cấp endpoint tìm kiếm job theo `keyword`, `location`, `source_site`.
-  - **Why?**: Cho phép ứng dụng/đối tác tiêu thụ dữ liệu qua HTTP.
-  - **Files to modify**: Thư mục `api/` mới (`main.py`), thêm deps: `fastapi`, `uvicorn`.
-  - **Acceptance Criteria**: 
-    - GET `/jobs?keyword=...&site=...` trả JSON (paging).
-    - Kết nối SQL Server read-only, filter cơ bản, sort theo `created_at`.
-  - **Test Cases**: Gọi API trả danh sách, status 200, thời gian phản hồi < 500ms nội bộ.
+- [ ] Backend API enhancements (45 minutes)
+  - **Objective**: Bổ sung filter/sort cho web: `site`, `location`, `job_type`, `experience_level`, `date_range`, sort theo `updated_at/created_at`
+  - **Files to modify**: `api/main.py`
+  - **Acceptance Criteria**: `/jobs` hỗ trợ các query mới; tài liệu query trong README
 
+- [ ] Web UI (Option A - Jinja2) (1.5 hours)
+  - **Objective**: Tạo giao diện cơ bản: Trang chủ (search), Trang kết quả, Trang chi tiết
+  - **Files to modify**: `api/templates/` (`base.html`, `index.html`, `results.html`, `job.html`), `api/main.py` route render templates
+  - **Acceptance Criteria**: Tìm kiếm được; phân trang; filter theo site/location; SEO meta cơ bản
+  - **Test Cases**: Truy cập trang chủ, nhập từ khóa, thấy kết quả phân trang
+
+- [ ] Web UI (Option B - Next.js) (3 hours)
+  - **Objective**: Tạo app `web/` (Next.js), trang chủ + kết quả + chi tiết
+  - **Files to modify**: `web/` mới; fetch API từ `api/`
+  - **Acceptance Criteria**: Tìm kiếm/Phân trang/Filter hoạt động; SEO cơ bản
+
+- [ ] CORS + basic rate-limit (30 minutes)
+  - **Objective**: Cho phép frontend truy cập API, hạn chế abuse đơn giản
+  - **Files to modify**: `api/main.py` (CORS middleware); README (origin cấu hình)
+  - **Acceptance Criteria**: CORS pass; rate-limit tối thiểu ở cấp reverse proxy hoặc app
+
+- [ ] Smoke tests UI (30 minutes)
+  - **Objective**: Kiểm thử flow tìm kiếm end-to-end
+  - **Acceptance Criteria**: 3 ca kiểm thử tay: keyword phổ biến, filter site, chuyển trang
+
+### Phase 3: Deployment (HIGH PRIORITY)
+- [ ] Infra selection (15 minutes)
+  - **Objective**: Chọn nơi host: Render/Azure App Service/Railway
+  - **Acceptance Criteria**: Ghi rõ trong README + file `deploy/README.md`
+
+- [ ] Database hosting (45 minutes)
+  - **Objective**: Sử dụng Azure SQL (khuyến nghị) hoặc SQL Server tự host; đặt IP/firewall
+  - **Acceptance Criteria**: API kết nối được DB public qua ENV; không commit secrets
+
+- [ ] Backend deployment (45 minutes)
+  - **Objective**: Deploy FastAPI (uvicorn) lên cloud
+  - **Files**: `deploy/` hướng dẫn; config ENV
+  - **Acceptance Criteria**: `/health` public 200 OK; `/jobs` trả dữ liệu
+
+- [ ] Domain + HTTPS (30 minutes)
+  - **Objective**: Gắn domain và SSL
+  - **Acceptance Criteria**: Truy cập domain HTTPS chạy OK
+
+- [ ] Monitoring & logging (30 minutes)
+  - **Objective**: Bật access/error logs, health check monitor
+  - **Acceptance Criteria**: Có log lưu; health check cảnh báo được (tối thiểu manual)
+
+### Phase 4: Exporters & Scheduling (MEDIUM PRIORITY)
 - [ ] Exporters: CSV/Parquet (45 minutes)
-  - **Objective**: Hỗ trợ xuất CSV/Parquet ngoài JSON.
-  - **Why?**: Linh hoạt tích hợp BI/ML.
-  - **Files to modify**: `run_spider.py` (tham số `--output-format`), README.
-  - **Acceptance Criteria**: Tạo được file `.csv`/`.parquet` với schema ổn định.
-  - **Test Cases**: So sánh số bản ghi giữa DB và file export.
+  - **Objective**: Hỗ trợ xuất CSV/Parquet ngoài JSON
+  - **Files to modify**: `run_spider.py` (`--output-format`), README
+  - **Acceptance Criteria**: Xuất file `.csv`/`.parquet` với schema ổn định
 
 - [ ] Incremental Crawling & Scheduling (1 hour)
-  - **Objective**: Lập lịch chạy (Windows Task Scheduler) và chỉ crawl job mới/cập nhật.
-  - **Why?**: Duy trì dữ liệu cập nhật theo ngày/giờ.
-  - **Files to modify**: README hướng dẫn lập lịch; spider chấp nhận tham số `since` (nếu cần).
-  - **Acceptance Criteria**: Lên lịch chạy định kỳ; crawl ít dữ liệu dư thừa.
-  - **Test Cases**: Lên lịch chạy thử, kiểm tra log và số bản ghi tăng hợp lý.
+  - **Objective**: Lập lịch chạy (Windows Task Scheduler) và chỉ crawl job mới/cập nhật
+  - **Acceptance Criteria**: Lên lịch định kỳ; log cho mỗi lần chạy; dữ liệu tăng hợp lý
 
-### Phase 3: Optimization (MEDIUM PRIORITY)
+### Phase 5: Optimization (MEDIUM PRIORITY)
 - [ ] AutoThrottle & Rotating User-Agent/Proxies (1.5 hours)
-  - **Objective**: Giảm rate-limit/ràng buộc bot.
-  - **Why?**: Ổn định crawl khi quy mô lớn.
-  - **Files to modify**: `settings.py` (AutoThrottle), middleware UA/proxy.
-  - **Acceptance Criteria**: Giảm lỗi 429/ban; tốc độ crawl ổn định.
-  - **Test Cases**: So sánh thời gian/ lỗi trước-sau.
+- [ ] API caching (Redis hoặc in-memory cho top query) (1 hour)
+- [ ] DB indexes & query tuning (45 minutes)
+- [ ] Selector resilience (1.5 hours)
 
-- [ ] Selector Resilience (1.5 hours)
-  - **Objective**: Chuẩn hoá selector theo module và fallback đa chiến lược.
-  - **Why?**: Giảm vỡ khi HTML thay đổi nhỏ.
-  - **Files to modify**: `spiders/` (trích chung hàm extract, regex labels), `utils.py`.
-  - **Acceptance Criteria**: 90% trang thay đổi nhẹ vẫn parse được các trường chính.
-  - **Test Cases**: Bộ trang mẫu (cũ/mới) parse ổn.
-
-- [ ] Basic Tests (1 hour)
-  - **Objective**: Thêm unit test cho utils và pipeline; fake HTML cho parser.
-  - **Why?**: Bảo vệ chức năng cốt lõi.
-  - **Files to modify**: `tests/` mới; CI cân nhắc sau.
-  - **Acceptance Criteria**: `pytest` pass; coverage tối thiểu cho utils/pipeline.
-
-### Phase 4: Advanced Features (LOW PRIORITY)
-- [ ] Enrichment & NLP (4 hours)
-  - **Objective**: Chuẩn hoá trường (mức lương, địa điểm), trích kỹ năng, phân loại ngành.
-  - **Why?**: Tăng giá trị phân tích downstream.
-  - **Files to modify**: Module `enrichment/` (chuẩn hoá, mapping, NLP cơ bản), thêm cột mới nếu cần.
-  - **Acceptance Criteria**: Tỷ lệ parse chuẩn hoá >80% cho mẫu thử.
-
-- [ ] Analytics Dashboard (2 hours)
-  - **Objective**: Metabase/PowerBI/Streamlit dashboard nhanh.
-  - **Why?**: Trực quan hoá số liệu.
-  - **Files to modify**: Tài liệu cấu hình + script kết nối.
-  - **Acceptance Criteria**: Xem được top công ty, mức lương theo vị trí.
+### Phase 6: Advanced Features (LOW PRIORITY)
+- [ ] Full-text search (SQL Server Full-Text) (2 hours)
+- [ ] Saved jobs & email alerts (2 hours)
+- [ ] Sitemap/RSS for SEO (45 minutes)
+- [ ] Analytics Dashboard integration (2 hours)
 
 ## 📊 Workflow Visualization
 ```mermaid
 graph TD
-    subgraph "Phase 1: Quick Wins"
-        A[Dedup & Unique] --> B[Upsert + updated_at]
-        B --> C[Structured Logging]
+    subgraph "Phase 2: Web App MVP"
+        A[Choose Frontend Approach] --> B[API Enhancements]
+        B --> C[Jinja2 UI]
+        B --> D[Next.js UI]
+        C --> E[CORS & Rate-limit]
+        D --> E
+        E --> F[Smoke Tests]
     end
-    subgraph "Phase 2: Core Implementation"
-        C --> D[FastAPI Read API]
-        D --> E[CSV/Parquet Export]
-        E --> F[Incremental & Scheduling]
+    subgraph "Phase 3: Deployment"
+        F --> G[Infra Selection]
+        G --> H[DB Hosting]
+        H --> I[Backend Deployment]
+        I --> J[Domain + HTTPS]
+        J --> K[Monitoring & Logging]
     end
-    subgraph "Phase 3: Optimization"
-        F --> G[AutoThrottle & Rotating UA/Proxies]
-        G --> H[Selector Resilience]
-        H --> I[Basic Tests]
+    subgraph "Phase 4: Exporters & Scheduling"
+        K --> L[CSV/Parquet]
+        L --> M[Incremental Scheduling]
     end
-    subgraph "Phase 4: Advanced"
-        I --> J[Enrichment & NLP]
-        J --> K[Analytics Dashboard]
+    subgraph "Phase 5: Optimization"
+        M --> N[AutoThrottle/UA/Proxies]
+        N --> O[API Caching]
+        O --> P[DB Indexes]
+        P --> Q[Selector Resilience]
+    end
+    subgraph "Phase 6: Advanced"
+        Q --> R[Full-text Search]
+        R --> S[Saved jobs & Alerts]
+        S --> T[Sitemap/RSS]
+        T --> U[Analytics Dashboard]
     end
 ```
 
 ## 🎯 Next Actions
-1. Thiết kế API đọc (FastAPI) để truy vấn jobs
-2. Exporters CSV/Parquet
-3. Incremental Scheduling (Windows Task Scheduler)
+1. Quyết định frontend (Option A: Jinja2 SSR — nhanh; Option B: Next.js — giàu UX)
+2. Bổ sung filter/sort cho `/jobs` phục vụ UI
+3. Khởi tạo UI tương ứng (templates hoặc Next.js app)
 
 ## 📊 Progress Tracking
-- **Total tasks**: 12
-- **Completed**: 8
-- **Remaining**: 4
-- **Estimated time**: ~9.5 hours
+- **Total tasks**: 20
+- **Completed**: 9
+- **Remaining**: 11
+- **Estimated time**: ~12–15 hours (tuỳ Option A/B)
 
 ## 🎯 Success Criteria
-- [ ] Không còn trùng lặp theo `job_url` sau nhiều lần crawl
-- [ ] Có API read-only để tiêu thụ dữ liệu
-- [ ] Crawl ổn định với AutoThrottle và UA/Proxy
-- [ ] Có test cơ bản bảo vệ pipeline và utils
+- [ ] Người dùng có thể tìm kiếm công việc, lọc, phân trang trên web công khai
+- [ ] Triển khai public với HTTPS + domain
+- [ ] Tối thiểu 3 minutes MTTR nhờ log/monitoring
+- [ ] Không rò rỉ secrets; dùng ENV ở server
