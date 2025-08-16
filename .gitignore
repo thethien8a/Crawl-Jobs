@@ -1,3 +1,53 @@
 .serena/
 __pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.venv*/
+
+# Build / packaging
+build/
+dist/
+.eggs/
+*.egg-info/
+
+# Scrapy caches
+.scrapy/
+httpcache/
+
+# Logs & outputs
+logs/
+outputs/
+logs/*.log
+outputs/*.json
+
+# Environment files
 .env
+.env.*
+!.env.example
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Testing / coverage
+.pytest_cache/
+.coverage*
+htmlcov/
+.tox/
+
+# FastAPI/UVicorn runtime logs
+*.log
+
+# Future web app (Next.js / frontend)
+node_modules/
+web/node_modules/
+.next/
+web/.next/
