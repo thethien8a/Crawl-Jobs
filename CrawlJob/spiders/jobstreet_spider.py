@@ -12,7 +12,7 @@ class JobStreetSpider(scrapy.Spider):
         super(JobStreetSpider, self).__init__(*args, **kwargs)
         self.keyword = keyword or 'data analyst'
         self._pages_crawled = 0
-        self._max_pages = 10
+        self._max_pages = 5
 
     def start_requests(self):
         base_url = 'https://www.jobstreet.vn/j'
@@ -46,14 +46,13 @@ class JobStreetSpider(scrapy.Spider):
 
         
         self._pages_crawled += 1
-        if self._pages_crawled < self._max_pages:
-            next_href = response.css('a[class*="next-page-button"]::attr(href)').get()
-            if next_href:
-                yield response.follow(
-                    next_href,
-                    callback=self.parse_search_results,
-                    meta=response.meta
-                )
+        next_href = response.css('a[class*="next-page-button"]::attr(href)').get()
+        if self._pages_crawled < self._max_pages and next_href:
+            yield response.follow(
+                next_href,
+                callback=self.parse_search_results,
+                meta=response.meta
+            )
 
     def parse_job_detail(self, response):
         item = JobItem()
