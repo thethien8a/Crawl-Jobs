@@ -1,12 +1,12 @@
 # Job Scraping Project
 
-Dự án web scraping để lấy dữ liệu việc làm từ các trang tuyển dụng Việt Nam như JobsGO, JobOKO, 123job và CareerViet.
+Dự án web scraping để lấy dữ liệu việc làm từ các trang tuyển dụng Việt Nam như JobsGO, JobOKO, 123job, CareerViet và JobStreet.
 
 ## 🎯 Tính năng
 
 - **Input**: Từ khóa việc làm
 - **Output**: Dữ liệu việc làm được lưu vào SQL Server
-- **Sites**: JobsGO, JobOKO, 123job, CareerViet
+- **Sites**: JobsGO, JobOKO, 123job, CareerViet, JobStreet
 - **Data**: Job title, company, salary, location, requirements, job_deadline, etc.
 
 ## 📋 Cài đặt
@@ -61,6 +61,9 @@ python run_spider.py --spider 123job --keyword "data analyst"
 # Chạy spider CareerViet
 python run_spider.py --spider careerviet --keyword "data analyst"
 
+# Chạy spider JobStreet
+python run_spider.py --spider jobstreet --keyword "data analyst"
+
 # Chạy tất cả spider
 python run_spider.py --spider all --keyword "developer"
 
@@ -93,6 +96,9 @@ scrapy crawl 123job -a keyword="data analyst"
 
 # Chạy spider CareerViet
 scrapy crawl careerviet -a keyword="data analyst"
+
+# Chạy spider JobStreet
+scrapy crawl jobstreet -a keyword="data analyst"
 ```
 
 ## 📊 Cấu trúc dữ liệu
