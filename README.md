@@ -1,12 +1,12 @@
 # Job Scraping Project
 
-Dự án web scraping để lấy dữ liệu việc làm từ các trang tuyển dụng Việt Nam như JobsGO, JobOKO, 123job, CareerViet và JobStreet.
+Dự án web scraping để lấy dữ liệu việc làm từ các trang tuyển dụng Việt Nam như JobsGO, JobOKO, 123job, CareerViet, JobStreet và LinkedIn (public panel).
 
 ## 🎯 Tính năng
 
 - **Input**: Từ khóa việc làm
 - **Output**: Dữ liệu việc làm được lưu vào SQL Server
-- **Sites**: JobsGO, JobOKO, 123job, CareerViet, JobStreet
+- **Sites**: JobsGO, JobOKO, 123job, CareerViet, JobStreet, LinkedIn (public)
 - **Data**: Job title, company, salary, location, requirements, job_deadline, etc.
 
 ## 📋 Cài đặt
@@ -49,27 +49,11 @@ Tạo database `JobDatabase` trong SQL Server. Pipeline sẽ **tạo bảng `job
 ### Cách 1: Sử dụng script run_spider.py
 
 ```bash
-# Chạy spider JobsGO
-python run_spider.py --spider jobsgo --keyword "python developer"
-
-# Chạy spider JobOKO
-python run_spider.py --spider joboko --keyword "java developer"
-
-# Chạy spider 123job
-python run_spider.py --spider 123job --keyword "data analyst"
-
-# Chạy spider CareerViet
-python run_spider.py --spider careerviet --keyword "data analyst"
-
-# Chạy spider JobStreet
-python run_spider.py --spider jobstreet --keyword "data analyst"
-
-# Chạy tất cả spider
-python run_spider.py --spider all --keyword "developer"
-
-# Lưu kết quả vào file JSON
-python run_spider.py --spider jobsgo --keyword "marketing" --output "marketing_jobs.json"
+# Chạy spider LinkedIn (public): click list → đọc panel phải
+python run_spider.py --spider linkedin --keyword "Data Analyst" --output linkedin.json
 ```
+
+Ghi chú: LinkedIn là site động; spider dùng Selenium click từng job ở danh sách để hiển thị panel phải và trích xuất mô tả/chi tiết cơ bản (không đăng nhập). UI có thể thay đổi theo thời gian, cần điều chỉnh selector khi cần.
 
 ### API Read-Only (FastAPI)
 
