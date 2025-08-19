@@ -72,7 +72,7 @@ class JobStreetSpider(scrapy.Spider):
         location = response.css('[class*="location"]::text').get()
         item['location'] = (location or '').strip()
         
-        item['job_type'] = response.css('div[class*="content"]::text').get()
+        item['job_type'] = response.css('div.badge.-default-badge div[class*="content"]::text').get()
         
         # No have
         item['experience_level'] = ''
