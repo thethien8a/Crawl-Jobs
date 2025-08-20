@@ -83,13 +83,16 @@ class LinkedinSpider(scrapy.Spider):
             if not load_more_btn:
                 break
             try:
+                
                 self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", load_more_btn)
                 time.sleep(0.5)
                 load_more_btn.click()
+                
                 # wait for new items to load (count increases)
                 self._wait_for_more_items(prev_count, timeout=15)
                 batches += 1
                 time.sleep(random.uniform(*self._click_delay_range))
+            
             except Exception as e:
                 self.logger.info(f"Stop loading more due to: {e}")
                 break
@@ -165,6 +168,7 @@ class LinkedinSpider(scrapy.Spider):
                     yield item
 
                 time.sleep(random.uniform(*self._click_delay_range))
+                
             except Exception as e:
                 self.logger.warning(f"Skip job due to error: {e}")
                 continue
