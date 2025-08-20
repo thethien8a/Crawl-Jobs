@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrawlJob - Job Search Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 1200px;
+        }
+        .search-box {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .job-card {
+            background: white;
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .job-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        .source-badge {
+            font-size: 0.8rem;
+            padding: 4px 8px;
+        }
+        .salary-highlight {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+        .stats-card {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .pagination-custom {
+            justify-content: center;
+            margin-top: 30px;
+        }
+        .job-description {
+            max-height: 100px;
+            overflow: hidden;
+            position: relative;
+        }
+        .job-description.expanded {
+            max-height: none;
+        }
+        .expand-btn {
+            background: none;
+            border: none;
+            color: #007bff;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="main-container">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h1 class="display-4 fw-bold text-primary">
+                    <i class="fas fa-briefcase me-3"></i>CrawlJob Dashboard
+                </h1>
+                <p class="lead text-muted">Tìm kiếm và khám phá cơ hội việc làm từ nhiều nguồn</p>
+            </div>
+
+            <!-- Search Section -->
+            <div class="search-box">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="keyword" class="form-label fw-bold">
+                            <i class="fas fa-search me-2"></i>Từ khóa tìm kiếm
+                        </label>
+                        <input type="text" class="form-control form-control-lg" id="keyword" 
+                               placeholder="VD: Python Developer, Data Analyst..." value="python">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="pageSize" class="form-label fw-bold">
+                            <i class="fas fa-list me-2"></i>Số kết quả/trang
+                        </label>
+                        <select class="form-select form-select-lg" id="pageSize">
+                            <option value="10">10 jobs</option>
+                            <option value="20" selected>20 jobs</option>
+                            <option value="50">50 jobs</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button class="btn btn-primary btn-lg w-100" onclick="searchJobs(1)">
+                            <i class="fas fa-search me-2"></i>Tìm kiếm
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Section -->
+            <div id="stats" class="row" style="display: none;">
+                <!-- Stats cards will be populated by JS -->
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+                <p class="mt-3 text-muted">Đang tải dữ liệu việc làm...</p>
+            </div>
+
+            <!-- Results -->
+            <div id="results">
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-search fa-3x mb-3"></i>
+                    <h4>Nhập từ khóa và nhấn tìm kiếm để bắt đầu</h4>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <nav id="pagination" style="display: none;">
+                <ul class="pagination pagination-custom">
+                    <!-- Pagination will be populated by JS -->
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000';
+        let currentPage = 1;
+        let currentKeyword = '';
+        let currentPageSize = 20;
+
+        // Search jobs function
+        async function searchJobs(page = 1) {
+            const keyword = document.getElementById('keyword').value.trim();
+            const pageSize = parseInt(document.getElementById('pageSize').value);
+            
+            currentPage = page;
+            currentKeyword = keyword;
+            currentPageSize = pageSize;
+
+            showLoading(true);
+            hideResults();
+
+            try {
+                const params = new URLSearchParams({
+                    page: page,
+                    page_size: pageSize
+                });
+                
+                if (keyword) {
+                    params.append('keyword', keyword);
+                }
+
+                const response = await fetch(`${API_BASE}/jobs?${params}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                displayResults(data);
+                updateStats(data);
+                updatePagination(data);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showError(`Lỗi kết nối API: ${error.message}. Đảm bảo API đang chạy tại ${API_BASE}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Display results
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (!data.items || data.items.length === 0) {
+                resultsDiv.innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                        <h4>Không tìm thấy việc làm phù hợp</h4>
+                        <p>Thử thay đổi từ khóa tìm kiếm</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const jobsHTML = data.items.map(job => `
+                <div class="job-card card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h5 class="card-title mb-1 text-primary fw-bold">
+                                        ${job.job_title || 'Chưa có tiêu đề'}
+                                    </h5>
+                                    <span class="badge source-badge ${getSourceBadgeClass(job.source_site)}">
+                                        ${formatSourceSite(job.source_site)}
+                                    </span>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <i class="fas fa-building text-muted me-2"></i>
+                                    <strong>${job.company_name || 'Chưa có thông tin'}</strong>
+                                </div>
+                                
+                                <div class="row mb-2">
+                                    <div class="col-sm-6">
+                                        <i class="fas fa-map-marker-alt text-muted me-2"></i>
+                                        <span>${job.location || 'Chưa có thông tin'}</span>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <i class="fas fa-money-bill-wave text-muted me-2"></i>
+                                        <span class="salary-highlight">${job.salary || 'Thỏa thuận'}</span>
+                                    </div>
+                                </div>
+                                
+                                ${job.job_type ? `
+                                <div class="mb-2">
+                                    <i class="fas fa-clock text-muted me-2"></i>
+                                    <span class="badge bg-secondary">${job.job_type}</span>
+                                    ${job.experience_level ? `<span class="badge bg-info ms-1">${job.experience_level}</span>` : ''}
+                                </div>
+                                ` : ''}
+                            </div>
+                            
+                            <div class="col-md-4 text-md-end">
+                                <div class="mb-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar text-muted me-1"></i>
+                                        ${formatDate(job.updated_at || job.created_at)}
+                                    </small>
+                                </div>
+                                
+                                ${job.job_url ? `
+                                <a href="${job.job_url}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-external-link-alt me-1"></i>Xem chi tiết
+                                </a>
+                                ` : ''}
+                            </div>
+                        </div>
+                        
+                        ${job.job_description ? `
+                        <div class="mt-3">
+                            <div class="job-description" id="desc-${job.job_url ? job.job_url.split('/').pop() : Math.random()}">
+                                <strong class="text-muted">Mô tả:</strong>
+                                <p class="mt-1 mb-0">${job.job_description.substring(0, 200)}${job.job_description.length > 200 ? '...' : ''}</p>
+                            </div>
+                            ${job.job_description.length > 200 ? `
+                            <button class="expand-btn mt-1" onclick="toggleDescription(this)">
+                                <i class="fas fa-chevron-down me-1"></i>Xem thêm
+                            </button>
+                            ` : ''}
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            resultsDiv.innerHTML = jobsHTML;
+        }
+
+        // Update stats
+        function updateStats(data) {
+            const statsDiv = document.getElementById('stats');
+            const totalJobs = data.items.length;
+            const sources = [...new Set(data.items.map(job => job.source_site))];
+            const companies = [...new Set(data.items.map(job => job.company_name))].filter(c => c);
+
+            statsDiv.innerHTML = `
+                <div class="col-md-4">
+                    <div class="stats-card text-center">
+                        <h3><i class="fas fa-briefcase me-2"></i>${totalJobs}</h3>
+                        <p class="mb-0">Việc làm tìm thấy</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stats-card text-center">
+                        <h3><i class="fas fa-globe me-2"></i>${sources.length}</h3>
+                        <p class="mb-0">Nguồn dữ liệu</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stats-card text-center">
+                        <h3><i class="fas fa-building me-2"></i>${companies.length}</h3>
+                        <p class="mb-0">Công ty</p>
+                    </div>
+                </div>
+            `;
+            
+            statsDiv.style.display = 'flex';
+        }
+
+        // Update pagination
+        function updatePagination(data) {
+            const paginationDiv = document.getElementById('pagination');
+            const paginationList = paginationDiv.querySelector('ul');
+            
+            // Simple pagination (previous/next only since we don't have total count)
+            let paginationHTML = '';
+            
+            // Previous button
+            if (currentPage > 1) {
+                paginationHTML += `
+                    <li class="page-item">
+                        <a class="page-link" href="#" onclick="searchJobs(${currentPage - 1})">
+                            <i class="fas fa-chevron-left me-1"></i>Trước
+                        </a>
+                    </li>
+                `;
+            }
+            
+            // Current page
+            paginationHTML += `
+                <li class="page-item active">
+                    <span class="page-link">Trang ${currentPage}</span>
+                </li>
+            `;
+            
+            // Next button (show if we got full page of results)
+            if (data.items && data.items.length === currentPageSize) {
+                paginationHTML += `
+                    <li class="page-item">
+                        <a class="page-link" href="#" onclick="searchJobs(${currentPage + 1})">
+                            Sau<i class="fas fa-chevron-right ms-1"></i>
+                        </a>
+                    </li>
+                `;
+            }
+            
+            paginationList.innerHTML = paginationHTML;
+            paginationDiv.style.display = paginationHTML ? 'block' : 'none';
+        }
+
+        // Helper functions
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function hideResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('pagination').style.display = 'none';
+            document.getElementById('stats').style.display = 'none';
+        }
+
+        function showError(message) {
+            document.getElementById('results').innerHTML = `
+                <div class="alert alert-danger text-center">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    ${message}
+                </div>
+            `;
+        }
+
+        function getSourceBadgeClass(source) {
+            const classes = {
+                'linkedin.com': 'bg-primary',
+                'jobsgo.vn': 'bg-success',
+                'joboko.com': 'bg-warning',
+                '123job.vn': 'bg-info',
+                'careerviet.vn': 'bg-secondary',
+                'jobstreet.vn': 'bg-dark'
+            };
+            return classes[source] || 'bg-light text-dark';
+        }
+
+        function formatSourceSite(source) {
+            const names = {
+                'linkedin.com': 'LinkedIn',
+                'jobsgo.vn': 'JobsGO',
+                'joboko.com': 'JobOKO',
+                '123job.vn': '123Job',
+                'careerviet.vn': 'CareerViet',
+                'jobstreet.vn': 'JobStreet'
+            };
+            return names[source] || source;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'Chưa có thông tin';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('vi-VN');
+        }
+
+        function toggleDescription(button) {
+            const descDiv = button.previousElementSibling;
+            const isExpanded = descDiv.classList.contains('expanded');
+            
+            if (isExpanded) {
+                descDiv.classList.remove('expanded');
+                button.innerHTML = '<i class="fas fa-chevron-down me-1"></i>Xem thêm';
+            } else {
+                descDiv.classList.add('expanded');
+                button.innerHTML = '<i class="fas fa-chevron-up me-1"></i>Thu gọn';
+            }
+        }
+
+        // Enter key search
+        document.getElementById('keyword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchJobs(1);
+            }
+        });
+
+        // Check API health on load
+        window.addEventListener('load', async function() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                if (response.ok) {
+                    console.log('API connection successful');
+                } else {
+                    showError('Không thể kết nối tới API. Vui lòng kiểm tra API server.');
+                }
+            } catch (error) {
+                console.log('API not available yet:', error);
+            }
+        });
+    </script>
+</body>
+</html>

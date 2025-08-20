@@ -3,6 +3,10 @@ from typing import Optional
 import os
 import pymssql
 from dotenv import load_dotenv
+# Thêm vào api/main.py
+from fastapi.middleware.cors import CORSMiddleware
+
+
 
 load_dotenv()
 
@@ -16,7 +20,13 @@ def get_conn():
             user=os.getenv("SQL_USERNAME", "sa"),
             password=os.getenv("SQL_PASSWORD", "thethien8a"),
         )
-
+    
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/health")
 def health():
