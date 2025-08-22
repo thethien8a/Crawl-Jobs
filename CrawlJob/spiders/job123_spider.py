@@ -62,10 +62,10 @@ class Job123Spider(scrapy.Spider):
         item['company_name'] = self._parse_text_in_class(response, 'company-name')
 
         # Lương / Thu nhập
-        item['salary'] = self._parse_text_in_follow_sibling(response, 'Mức lương')
+        item['salary'] = self._parse_salary(response)
 
         # Địa điểm
-        item['location'] = self._parse_text_in_follow_sibling(response, 'Địa điểm làm việc')
+        item['location'] = self._parse_text_in_follow_sibling(response, 'Khu vực')
 
         # Chi tiết
         item['job_type'] = self._parse_text_in_follow_sibling(response, 'Hình thức làm việc')
@@ -92,7 +92,7 @@ class Job123Spider(scrapy.Spider):
         item['search_keyword'] = response.meta.get('keyword', self.keyword)
         item['scraped_at'] = datetime.now().isoformat()
 
-        return item
+        yield item
 
     def _parse_text_in_class(self, reponse, class_name):
         text = reponse.css(f"[class*='{class_name}'] ::text").get()
@@ -101,7 +101,7 @@ class Job123Spider(scrapy.Spider):
         return ''
     
     def _parse_text_in_follow_sibling(self, response, text_extract):
-        text = response.xpath(f"//*[contains(text(), '{text_extract}')]/following-sibling::*[1]/text()").get()
+        text = response.xpath(f"//*[contains(text(), '{text_extract}')]/following-sibling::*[1]//text()").get()
         if text:
             return text.strip()
         return ''
@@ -112,3 +112,14 @@ class Job123Spider(scrapy.Spider):
             return ' '.join(para)
         return ''
     
+    def _parse_salary(self, response):
+        # Tìm div.attr-item có chứa span với text cần tìm
+        salary_container = response.xpath(
+            f'//div[contains(@class, "attr-item") and .//i[contains(@class, "la-money")]]'
+        )
+        
+        if salary_container:
+            # Lấy text từ span bên trong div.value
+            salary_value = salary_container.css('div[class*="value"] ::text').get()
+            return salary_value.strip() if salary_value else ''
+        return ''
