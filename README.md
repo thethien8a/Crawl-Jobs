@@ -6,7 +6,7 @@ Dự án web scraping để lấy dữ liệu việc làm từ các trang tuyể
 
 - **Input**: Từ khóa việc làm
 - **Output**: Dữ liệu việc làm được lưu vào SQL Server
-- **Sites**: JobsGO, JobOKO, 123job, CareerViet, JobStreet, LinkedIn (public)
+- **Sites**: JobsGO, JobOKO, 123job, CareerViet, JobStreet, LinkedIn (public), TopCV, ITviec, CareerLink, VietnamWorks
 - **Data**: Job title, company, salary, location, requirements, job_deadline, etc.
 
 ## 📋 Cài đặt
@@ -51,6 +51,21 @@ Tạo database `JobDatabase` trong SQL Server. Pipeline sẽ **tạo bảng `job
 ```bash
 # Chạy spider LinkedIn (public): click list → đọc panel phải
 python run_spider.py --spider linkedin --keyword "Data Analyst" --output linkedin.json
+
+# Chạy spider TopCV
+python run_spider.py --spider topcv --keyword "Data Analyst" --output topcv.json
+
+# Chạy spider ITviec
+python run_spider.py --spider itviec --keyword "Data Analyst" --output itviec.json
+
+# Chạy spider CareerLink
+python run_spider.py --spider careerlink --keyword "Data Analyst" --output careerlink.json
+
+# Chạy spider VietnamWorks
+python run_spider.py --spider vietnamworks --keyword "Data Analyst" --output vietnamworks.json
+
+# Chạy tất cả spider
+python run_spider.py --spider all --keyword "Data Analyst" --output all_jobs.json
 ```
 
 Ghi chú: LinkedIn là site động; spider dùng Selenium click từng job ở danh sách để hiển thị panel phải và trích xuất mô tả/chi tiết cơ bản (không đăng nhập). UI có thể thay đổi theo thời gian, cần điều chỉnh selector khi cần.
@@ -83,6 +98,18 @@ scrapy crawl careerviet -a keyword="data analyst"
 
 # Chạy spider JobStreet
 scrapy crawl jobstreet -a keyword="data analyst"
+
+# Chạy spider TopCV
+scrapy crawl topcv -a keyword="data analyst"
+
+# Chạy spider ITviec
+scrapy crawl itviec -a keyword="data analyst"
+
+# Chạy spider CareerLink
+scrapy crawl careerlink -a keyword="data analyst"
+
+# Chạy spider VietnamWorks
+scrapy crawl vietnamworks -a keyword="data analyst"
 ```
 
 ## 📊 Cấu trúc dữ liệu
@@ -127,7 +154,13 @@ CrawlJob/
 │   │   ├── jobsgo_spider.py     # Spider cho JobsGO
 │   │   ├── joboko_spider.py     # Spider cho JobOKO
 │   │   ├── job123_spider.py     # Spider cho 123job
-│   │   └── careerviet_spider.py # Spider cho CareerViet
+│   │   ├── careerviet_spider.py # Spider cho CareerViet
+│   │   ├── jobstreet_spider.py  # Spider cho JobStreet
+│   │   ├── linkedin_spider.py   # Spider cho LinkedIn (Selenium)
+│   │   ├── topcv_spider.py      # Spider cho TopCV
+│   │   ├── itviec_spider.py     # Spider cho ITviec
+│   │   ├── careerlink_spider.py # Spider cho CareerLink
+│   │   └── vietnamworks_spider.py # Spider cho VietnamWorks
 │   ├── items.py                 # Định nghĩa cấu trúc dữ liệu
 │   ├── pipelines.py             # Pipeline xử lý dữ liệu (SQL Server, dedup/upsert)
 │   ├── settings.py              # Cấu hình project
