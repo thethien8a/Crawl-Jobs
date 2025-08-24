@@ -84,9 +84,9 @@ class SQLServerPipeline:
 
         IF NOT EXISTS (
             SELECT 1 FROM sys.indexes 
-            WHERE name = 'UQ_jobs_source_url' AND object_id = OBJECT_ID('dbo.jobs')
+            WHERE name = 'UQ_title_company_source' AND object_id = OBJECT_ID('dbo.jobs')
         )
-            CREATE UNIQUE INDEX UQ_jobs_source_url ON dbo.jobs(source_site, job_url);
+            CREATE UNIQUE INDEX UQ_jobs_title_company_source ON dbo.jobs(job_title, company_name, source_site);
         """
         
         try:
@@ -125,9 +125,9 @@ class SQLServerPipeline:
             search_keyword = item.get('search_keyword', '')
             scraped_at = item.get('scraped_at', '')
 
-            # Dedup/Upsert by (source_site, job_url)
-            select_sql = "SELECT id FROM jobs WHERE job_url=%s AND source_site=%s"
-            cursor.execute(select_sql, (job_url, source_site))
+            # Dedup/Upsert by (job_title, company_name, source_site)
+            select_sql = "SELECT id FROM jobs WHERE job_title=%s AND company_name=%s AND source_site=%s"
+            cursor.execute(select_sql, (job_title, company_name, source_site))
             row = cursor.fetchone()
 
             if row:

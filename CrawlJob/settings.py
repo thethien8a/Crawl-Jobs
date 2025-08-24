@@ -71,7 +71,7 @@ COOKIES_ENABLED = False
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
     "CrawlJob.pipelines.CrawljobPipeline": 300,
-    "CrawlJob.pipelines.SQLServerPipeline": 400,
+    # "CrawlJob.pipelines.SQLServerPipeline": 400,
 }
 
 # SQL Server Database Configuration (loaded from environment)

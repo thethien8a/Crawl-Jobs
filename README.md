@@ -1,13 +1,16 @@
 # Job Scraping Project
 
-Dự án web scraping để lấy dữ liệu việc làm từ các trang tuyển dụng Việt Nam như JobsGO, JobOKO, 123job, CareerViet, JobStreet và LinkedIn (public panel).
+Dự án web scraping để lấy dữ liệu việc làm từ **10 trang tuyển dụng Việt Nam** với kiến trúc **modular** và **production-ready**.
 
 ## 🎯 Tính năng
 
-- **Input**: Từ khóa việc làm
-- **Output**: Dữ liệu việc làm được lưu vào SQL Server
+- **Input**: Từ khóa việc làm (VD: "Python Developer", "Data Analyst")
+- **Output**: Dữ liệu việc làm được lưu vào SQL Server với deduplication
 - **Sites**: JobsGO, JobOKO, 123job, CareerViet, JobStreet, LinkedIn (public), TopCV, ITviec, CareerLink, VietnamWorks
-- **Data**: Job title, company, salary, location, requirements, job_deadline, etc.
+- **Data**: Job title, company, salary, location, requirements, job_deadline, benefits, etc.
+- **API**: FastAPI REST endpoints với pagination và search
+- **Web Dashboard**: Bootstrap UI với search và pagination
+- **Automation**: Windows Task Scheduler cho daily crawling
 
 ## 📋 Cài đặt
 
@@ -149,30 +152,46 @@ IF COL_LENGTH('dbo.jobs','job_position') IS NULL
 
 ```
 CrawlJob/
-├── CrawlJob/
-│   ├── spiders/
-│   │   ├── jobsgo_spider.py     # Spider cho JobsGO
-│   │   ├── joboko_spider.py     # Spider cho JobOKO
-│   │   ├── job123_spider.py     # Spider cho 123job
-│   │   ├── careerviet_spider.py # Spider cho CareerViet
-│   │   ├── jobstreet_spider.py  # Spider cho JobStreet
-│   │   ├── linkedin_spider.py   # Spider cho LinkedIn (Selenium)
-│   │   ├── topcv_spider.py      # Spider cho TopCV
-│   │   ├── itviec_spider.py     # Spider cho ITviec
-│   │   ├── careerlink_spider.py # Spider cho CareerLink
-│   │   └── vietnamworks_spider.py # Spider cho VietnamWorks
-│   ├── items.py                 # Định nghĩa cấu trúc dữ liệu
-│   ├── pipelines.py             # Pipeline xử lý dữ liệu (SQL Server, dedup/upsert)
-│   ├── settings.py              # Cấu hình project
-│   ├── selenium_middleware.py   # (Tùy chọn) Middleware Selenium - hiện đang tắt
-│   └── utils.py                 # Tiện ích hỗ trợ (encode_input, encode_joboko_input)
-├── api/main.py                  # FastAPI read-only (/health, /jobs)
-├── run_spider.py                # Script chạy spider
-├── requirements.txt             # Dependencies
-├── scrapy.cfg                   # Cấu hình Scrapy
-├── crawl_daily.bat              # Script batch chạy định kỳ (logs/outputs có timestamp)
-└── README.md                    # Hướng dẫn sử dụng
+├── 📁 CrawlJob/                 # Main Scrapy project
+│   ├── 📁 spiders/              # 10 Job site spiders
+│   │   ├── jobsgo_spider.py     # JobsGO.vn (Simple Scrapy)
+│   │   ├── joboko_spider.py     # JobOKO.vn (Simple Scrapy)
+│   │   ├── job123_spider.py     # 123job.vn (Simple Scrapy)
+│   │   ├── careerviet_spider.py # CareerViet.vn (Simple Scrapy)
+│   │   ├── jobstreet_spider.py  # JobStreet.vn (Simple Scrapy)
+│   │   ├── careerlink_spider.py # CareerLink.vn (Simple Scrapy)
+│   │   ├── topcv_spider.py      # TopCV.vn (Enhanced Scrapy + JS extraction)
+│   │   ├── vietnamworks_spider.py # VietnamWorks.com (Advanced Scrapy)
+│   │   ├── linkedin_spider.py   # LinkedIn.com (Selenium + authentication ready)
+│   │   └── itviec_spider.py     # ITviec.com (Selenium + click navigation)
+│   ├── items.py                 # JobItem data model (18+ fields)
+│   ├── pipelines.py             # SQL Server pipeline với deduplication
+│   ├── settings.py              # Scrapy configuration & database settings
+│   ├── selenium_middleware.py   # Selenium integration middleware
+│   └── utils.py                 # Helper functions (encode_input, clean_location)
+├── 📁 api/                      # FastAPI backend
+│   └── main.py                  # REST API endpoints (/health, /jobs)
+├── 📁 debug/                    # Debug utilities (NEW)
+│   └── HTML_export_debug.py     # HTML export tool cho selector testing
+├── 📁 web/                      # Web dashboard
+│   ├── index.html               # Bootstrap 5 dashboard với search
+│   └── README.md                # Dashboard documentation
+├── 📁 logs/                     # Crawling logs (timestamped)
+├── 📁 outputs/                  # JSON output files (timestamped)
+├── 📄 run_spider.py             # CLI runner cho tất cả spiders
+├── 📄 requirements.txt          # Python dependencies (11 packages)
+├── 📄 scrapy.cfg                # Scrapy project configuration
+├── 📄 crawl_daily.bat           # Windows Task Scheduler automation
+├── 📄 env.example               # Environment variables template
+├── 📄 test.ipynb                # Jupyter notebook cho testing
+├── 📄 vietnamworks.json         # VietnamWorks output sample
+└── 📄 README.md                 # Hướng dẫn sử dụng
 ```
+
+### 🆕 **Spider Categories**
+- **Simple Scrapy** (6 sites): JobsGO, JobOKO, 123job, CareerViet, JobStreet, CareerLink
+- **Enhanced Scrapy** (2 sites): TopCV (JavaScript extraction), VietnamWorks (Advanced selectors)
+- **Selenium-Based** (2 sites): LinkedIn (Browser automation), ITviec (Click navigation)
 
 ## ⚙️ Cấu hình nâng cao
 
@@ -195,6 +214,28 @@ CONCURRENT_REQUESTS = 16  # Số request đồng thời
 ```python
 USER_AGENT = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36"
 ```
+
+## 🐛 Debug & Testing Tools
+
+### HTML Export Tool
+Script `debug/HTML_export_debug.py` để export HTML từ job sites cho việc testing selectors:
+
+```bash
+cd debug
+python HTML_export_debug.py
+```
+
+### Jupyter Notebook Testing
+File `test.ipynb` cho testing và development:
+
+```bash
+jupyter notebook test.ipynb
+```
+
+### Sample Output Files
+- `vietnamworks.json` - Sample output từ VietnamWorks spider
+- `outputs/jobs_*.json` - Timestamped output files
+- `logs/crawl_*.log` - Timestamped log files
 
 ## 🗓️ Scheduling (Windows Task Scheduler)
 
@@ -290,20 +331,78 @@ SCHTASKS /Create /TN "CrawlJob SYSTEM" /TR "cmd.exe /c \"D:\\Practice\\Scrapy\\C
 1. Kiểm tra SQL Server đang chạy
 2. Kiểm tra `.env`: `SQL_SERVER=localhost,1433` hoặc `localhost\SQLEXPRESS`
 3. Bật TCP/IP và mở firewall port 1433
+4. Kiểm tra database permissions cho user
 
 ### Lỗi scraping
 1. Kiểm tra internet connection
-2. Thử tăng `DOWNLOAD_DELAY`
+2. Thử tăng `DOWNLOAD_DELAY` trong `settings.py`
 3. Kiểm tra website có thay đổi cấu trúc HTML không
+4. Sử dụng debug tools để export HTML: `python debug/HTML_export_debug.py`
 
 ### Lỗi CSS selector
-- Cập nhật selector trong spider nếu website đổi HTML.
+- Cập nhật selector trong spider nếu website đổi HTML
+- Sử dụng `debug/HTML_export_debug.py` để test selectors
+- Check `logs/crawl_*.log` cho error messages
+
+### Spider-Specific Issues
+
+#### Selenium Spiders (LinkedIn, ITviec)
+- **ChromeDriver issues**: Cài đặt `webdriver-manager` hoặc update Chrome
+- **Anti-detection**: Spiders có anti-detection measures built-in
+- **Login required**: Một số sites yêu cầu authentication (ITviec)
+- **Slow performance**: Selenium spiders chậm hơn Scrapy spiders
+
+#### JavaScript-Heavy Sites (TopCV)
+- **Dynamic content**: Sử dụng enhanced parsing với JavaScript extraction
+- **Missing data**: Một số fields có thể missing do dynamic loading
+- **Rate limiting**: TopCV có strict rate limiting
+
+#### Advanced Scrapy (VietnamWorks)
+- **Complex selectors**: Sử dụng multiple fallback selectors
+- **Pagination**: Limited to 5 pages để tránh blocking
+- **Data quality**: High quality data với comprehensive fields
+
+### Debug Tools Usage
+```bash
+# Export HTML để debug selectors
+cd debug
+python HTML_export_debug.py
+
+# Check logs cho errors
+type logs\crawl_*.log
+
+# Test individual spider
+python run_spider.py --spider topcv --keyword "python" --output debug.json
+```
+
+### Performance Optimization
+1. **Rate Limiting**: Adjust `DOWNLOAD_DELAY` based on site restrictions
+2. **Concurrent Requests**: Reduce `CONCURRENT_REQUESTS` nếu bị block
+3. **Memory Usage**: Monitor RAM usage với large datasets
+4. **Database Performance**: Ensure SQL Server có đủ resources
 
 ## 📝 Ghi chú
 
-- Spider có delay giữa các request để tránh quá tải server
-- Dữ liệu lưu vào SQL Server (UTF-8); dedup theo `(source_site, job_url)` và upsert `updated_at`
-- Có thể mở rộng thêm các trang tuyển dụng khác
+- **10 Job Sites**: Coverage toàn diện các trang tuyển dụng lớn tại Việt Nam
+- **Smart Deduplication**: Loại bỏ duplicate dựa trên `(job_title, company_name, source_site)`
+- **Rate Limiting**: Respectful crawling với 2s delay giữa requests
+- **Error Resilience**: Graceful handling cho individual spider failures
+- **Production Ready**: Windows Task Scheduler integration
+- **Modular Architecture**: Dễ dàng thêm job sites mới
+- **Debug Tools**: Built-in tools cho testing và troubleshooting
+- **Data Quality**: Comprehensive 18+ field data model
+
+### 🆕 **Recent Updates**
+- **New Spiders**: ITviec (Selenium), VietnamWorks (Advanced Scrapy)
+- **Debug Tools**: HTML export utility cho selector testing
+- **Enhanced Documentation**: Detailed troubleshooting guides
+- **Performance Optimization**: Better memory management và error handling
+
+### 🚀 **Future Enhancements**
+- **ML Integration**: Job matching algorithms
+- **Real-time Notifications**: Push notifications cho new jobs
+- **Advanced Analytics**: Salary analysis và trend detection
+- **API Rate Limiting**: Production-ready API management
 
 ## 📄 License
 

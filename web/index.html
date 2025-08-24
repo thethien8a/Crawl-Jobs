@@ -39,8 +39,11 @@
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
         }
         .source-badge {
-            font-size: 0.8rem;
-            padding: 4px 8px;
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            border-radius: 12px;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .salary-highlight {
             color: #28a745;
@@ -75,6 +78,60 @@
             color: #007bff;
             cursor: pointer;
             font-size: 0.9rem;
+        }
+        .job-title-link:hover {
+            color: #0056b3 !important;
+            text-decoration: underline !important;
+        }
+        .job-title-link:hover i {
+            opacity: 1;
+        }
+        .job-title-link i {
+            opacity: 0.6;
+            transition: opacity 0.2s ease;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 576px) {
+            .main-container {
+                padding: 16px;
+                margin: 10px auto;
+            }
+            .display-4 {
+                font-size: 1.75rem;
+            }
+            .search-box {
+                padding: 12px;
+            }
+            .job-card .card-body {
+                padding: 16px;
+            }
+            .job-title-link {
+                font-size: 1.05rem;
+                line-height: 1.25;
+                word-break: break-word;
+            }
+            .source-badge {
+                margin-top: 8px;
+            }
+            .stats-card h3 {
+                font-size: 1.25rem;
+            }
+            .stats-card p {
+                font-size: 0.9rem;
+            }
+            .pagination .page-link {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.9rem;
+            }
+            .job-description {
+                max-height: 140px;
+            }
+        }
+        /* Allow company row to wrap nicely on small screens */
+        .company-row {
+            flex-wrap: wrap;
+            gap: 6px 8px;
         }
     </style>
 </head>
@@ -213,18 +270,28 @@
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-8">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h5 class="card-title mb-1 text-primary fw-bold">
-                                        ${job.job_title || 'Chưa có tiêu đề'}
-                                    </h5>
+                                <div class="mb-2">
+                                    ${job.job_url ?
+                                        `<h5 class="card-title mb-1">
+                                            <a href="${job.job_url}" target="_blank" class="text-primary fw-bold text-decoration-none job-title-link">
+                                                ${job.job_title || 'Chưa có tiêu đề'}
+                                                <i class="fas fa-external-link-alt ms-1 small"></i>
+                                            </a>
+                                        </h5>` :
+                                        `<h5 class="card-title mb-1 text-primary fw-bold">
+                                            ${job.job_title || 'Chưa có tiêu đề'}
+                                        </h5>`
+                                    }
+                                </div>
+                                
+                                <div class="d-flex justify-content-between align-items-center mb-2 company-row">
+                                    <div>
+                                        <i class="fas fa-building text-muted me-2"></i>
+                                        <strong>${job.company_name || 'Chưa có thông tin'}</strong>
+                                    </div>
                                     <span class="badge source-badge ${getSourceBadgeClass(job.source_site)}">
                                         ${formatSourceSite(job.source_site)}
                                     </span>
-                                </div>
-                                
-                                <div class="mb-2">
-                                    <i class="fas fa-building text-muted me-2"></i>
-                                    <strong>${job.company_name || 'Chưa có thông tin'}</strong>
                                 </div>
                                 
                                 <div class="row mb-2">
@@ -382,7 +449,11 @@
                 'joboko.com': 'bg-warning',
                 '123job.vn': 'bg-info',
                 'careerviet.vn': 'bg-secondary',
-                'jobstreet.vn': 'bg-dark'
+                'jobstreet.vn': 'bg-dark',
+                'topcv.vn': 'bg-danger',
+                'itviec.com': 'bg-info',
+                'careerlink.vn': 'bg-success',
+                'vietnamworks.com': 'bg-warning'
             };
             return classes[source] || 'bg-light text-dark';
         }
@@ -394,7 +465,11 @@
                 'joboko.com': 'JobOKO',
                 '123job.vn': '123Job',
                 'careerviet.vn': 'CareerViet',
-                'jobstreet.vn': 'JobStreet'
+                'jobstreet.vn': 'JobStreet',
+                'topcv.vn': 'TopCV',
+                'itviec.com': 'ITviec',
+                'careerlink.vn': 'CareerLink',
+                'vietnamworks.com': 'VietnamWorks'
             };
             return names[source] || source;
         }
