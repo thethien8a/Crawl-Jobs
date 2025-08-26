@@ -1,0 +1,10 @@
+CrawlJob Project:
++ Check lại careerviet
++ Xử lý trường hợp nếu job_title là NULL thì ta sẽ không cho dữ lieu vào SQL
++ Xử lý jobstreet ERROR:
+[jobstreet] ERROR: Error saving item to database: Cannot commit transaction: 
+(3902, 
+b'The COMMIT TRANSACTION request has no corresponding BEGIN TRANSACTION.DB-Lib error message 20018, 
+severity 16:\nGeneral SQL Server error: Check messages from the SQL Server\n')
++ Xử lý nốt ITViec
++ Xây dung lại front end có lọc theo tiêu chí
