@@ -23,10 +23,10 @@ class LinkedinSpider(scrapy.Spider):
         'CONCURRENT_REQUESTS': 1,
     }
 
-    def __init__(self, keyword=None, location=None, *args, **kwargs):
+    def __init__(self, keyword=None,  *args, **kwargs):
         super(LinkedinSpider, self).__init__(*args, **kwargs)
         self.keyword = keyword or 'Data Analyst'
-        self.location = location or 'Vietnam'
+        self.location = 'Vietnam'
         self._max_batches = 3  # Number of times to click "See more jobs/Xem thêm việc làm"
         self._click_delay_range = (2, 5)
         self.driver = None
