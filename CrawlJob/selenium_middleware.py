@@ -60,9 +60,9 @@ class SeleniumMiddleware:
     
     def process_request(self, request, spider):
         """Process request using Selenium for JavaScript rendering"""
-        
-        # Only use Selenium for JobOKO spider
-        if spider.name != 'joboko':
+
+        # Use Selenium for JobOKO and VietnamWorks spiders
+        if spider.name not in ['joboko', 'vietnamworks']:
             return None
             
         try:

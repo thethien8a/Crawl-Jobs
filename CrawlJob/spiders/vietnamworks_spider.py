@@ -25,7 +25,7 @@ class VietnamworksSpider(scrapy.Spider):
     }    
     def __init__(self, keyword=None):
         self.keyword = keyword or 'data analyst'
-        self._max_page = 2
+        self._max_page = 3
         self._processed_urls = set()
         self._driver = None
         self._init_selenium_driver()
@@ -35,7 +35,7 @@ class VietnamworksSpider(scrapy.Spider):
         try:
             # Use centralized chrome options configuration
             chrome_options = create_stealth_chrome_options(
-                headless=False,  # Set to True for headless mode
+                headless=True,  # Set to True for headless mode
                 window_size="1920,1080"
             )
 

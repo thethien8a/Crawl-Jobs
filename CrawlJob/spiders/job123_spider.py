@@ -14,7 +14,7 @@ class Job123Spider(scrapy.Spider):
         super(Job123Spider, self).__init__(*args, **kwargs)
         self.keyword = keyword or 'data analyst'
         self._pages_crawled = 0
-        self._max_pages = 10
+        self._max_pages = 3
 
     def start_requests(self):
         base_url = 'https://123job.vn/tuyen-dung'

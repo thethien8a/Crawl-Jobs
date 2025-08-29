@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-Quick script để xuất HTML ra file HTML_parse
+Quick script để xuất HTML ra file HTML_parse với Beautiful Soup formatting
 """
 
 import requests
 import os
+from bs4 import BeautifulSoup
 
 # URL cần xuất
-url = 'https://www.topcv.vn/viec-lam/nhan-vien-kinh-doanh-thi-truong-sales-thu-nhap-upto-25-trieu-ho-tro-an-trua-xang-xe-dien-thoai-tai-ha-noi/1834873.html?ta_source=BoxFeatureJob_LinkDetail'
+url = 'https://itviec.com/it-jobs/cv-phan-tich-va-thiet-ke-mo-hinh-du-lieu-data-analyst-mb-bank-4214?lab_feature=preview_jd_page'   
 
 # Headers
 headers = {
@@ -21,15 +22,23 @@ try:
     response = requests.get(url, headers=headers, timeout=30)
 
     if response.status_code == 200:
+        # Parse HTML với Beautiful Soup
+        print("🔄 Parsing HTML with Beautiful Soup...")
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Format HTML đẹp hơn
+        formatted_html = soup.prettify()
+        
         # Lưu file vào thư mục mà file Python này đang nằm trong
         script_dir = os.path.dirname(os.path.abspath(__file__))
         filename = os.path.join(script_dir, 'HTML_parse_debug.html')
         
         with open(filename, 'w', encoding='utf-8') as f:
-            f.write(response.text)
+            f.write(formatted_html)
 
-        print(f"✅ Saved HTML to: {filename}")
-        print(f"📄 Size: {len(response.text)} characters")
+        print(f"✅ Saved formatted HTML to: {filename}")
+        print(f"📄 Original size: {len(response.text)} characters")
+        print(f"📄 Formatted size: {len(formatted_html)} characters")
 
     else:
         print(f"❌ HTTP Error: {response.status_code}")

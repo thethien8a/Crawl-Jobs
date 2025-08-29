@@ -10,6 +10,8 @@ from datetime import datetime
 
 class CrawljobPipeline:
     def process_item(self, item, spider):
+        if not item.get('job_title'):
+            return None
         return item
 
 
@@ -205,11 +207,18 @@ class SQLServerPipeline:
                 cursor.execute(insert_sql, insert_values)
                 action = "inserted"
 
-            self.connection.commit()
+            # With autocommit=True, data is already committed automatically
+            # No need to call commit() manually - this causes the error
             cursor.close()
             spider.logger.info(f"{action.capitalize()} job: {job_title or 'Unknown'}")
-            
+
         except Exception as e:
             spider.logger.error(f"Error saving item to database: {e}")
-        
+            # Log additional context
+            spider.logger.error(f"Error type: {type(e).__name__}")
+            spider.logger.error(f"Job details: title='{job_title}', company='{company_name}', source='{source_site}'")
+            # Check if this is a commit error (data still saved)
+            if "3902" in str(e):
+                spider.logger.warning("This is a commit error - data may still be saved due to autocommit")
+
         return item

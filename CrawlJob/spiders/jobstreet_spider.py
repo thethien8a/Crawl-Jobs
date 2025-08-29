@@ -12,7 +12,7 @@ class JobStreetSpider(scrapy.Spider):
         super(JobStreetSpider, self).__init__(*args, **kwargs)
         self.keyword = keyword or 'data analyst'
         self._pages_crawled = 0
-        self._max_pages = 5
+        self._max_pages = 3
 
     def start_requests(self):
         base_url = 'https://www.jobstreet.vn/j'

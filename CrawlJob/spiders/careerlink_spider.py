@@ -12,7 +12,7 @@ class CareerlinkSpider(scrapy.Spider):
         super(CareerlinkSpider, self).__init__(*args, **kwargs)
         self.keyword = keyword or 'data analyst'
         self._count_page = 0
-        self._max_page = 1
+        self._max_page = 3
         self._unique_job_urls = set()
         
     def start_requests(self):

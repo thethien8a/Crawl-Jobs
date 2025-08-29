@@ -1,19 +1,18 @@
+import os
 import time
 import random
 from datetime import datetime
-from urllib.parse import urlencode
+from selenium.common.exceptions import TimeoutException
 import scrapy
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
+import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import TimeoutException
-from webdriver_manager.chrome import ChromeDriverManager
 from ..items import JobItem
+from dotenv import load_dotenv
+load_dotenv()
 
+uc.Chrome.__del__ = lambda self: None
 class ItviecSpider(scrapy.Spider):
     """
     ITviec spider using Selenium - similar to LinkedIn spider approach
@@ -25,68 +24,137 @@ class ItviecSpider(scrapy.Spider):
         'CONCURRENT_REQUESTS': 1,
     }
 
-    def __init__(self, keyword=None, username=None, password=None, *args, **kwargs):
+    def __init__(self, keyword=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.keyword = keyword or 'data analyst'
-        self.username = username
-        self.password = password
+        self._pages_crawled = 1
         self._max_pages = 3
         self._click_delay_range = (2, 5)
         self.driver = None
         self._processed_urls = set()
-
+        self.__username = os.getenv('ITVIEC_EMAIL')
+        self.__password = os.getenv('ITVIEC_PASS')
+    
     def _init_driver(self):
-        """Initialize Chrome driver with anti-detection"""
-        chrome_options = Options()
-        chrome_options.add_argument('--headless')
-        chrome_options.add_argument('--no-sandbox')
-        chrome_options.add_argument('--disable-dev-shm-usage')
-        chrome_options.add_argument('--disable-blink-features=AutomationControlled')
-        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        chrome_options.add_experimental_option('useAutomationExtension', False)
-        chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
-        chrome_options.add_argument('--window-size=1366,900')
+        """Initialize undetected Chrome driver with Cloudflare bypass"""
+        # Configure undetected chromedriver options
+        options = uc.ChromeOptions()
 
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=chrome_options)
-        driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        # Basic configuration for stability
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--disable-gpu')
+        options.add_argument('--disable-software-rasterizer')
+        options.add_argument('--disable-background-timer-throttling')
+        options.add_argument('--disable-backgrounding-occluded-windows')
+        options.add_argument('--disable-renderer-backgrounding')
+
+        # Anti-detection measures (undetected-chromedriver already has most of these built-in)
+        options.add_argument('--disable-blink-features=AutomationControlled')
+        options.add_argument('--disable-extensions')
+        options.add_argument('--disable-plugins')
+        options.add_argument('--disable-default-apps')
+        options.add_argument('--disable-sync')
+        options.add_argument('--disable-translate')
+        options.add_argument('--hide-scrollbars')
+        options.add_argument('--no-first-run')
+        options.add_argument('--disable-prompt-on-repost')
+        options.add_argument('--disable-web-security')
+        options.add_argument('--allow-running-insecure-content')
+
+        # Set window size for consistency
+        options.add_argument('--window-size=1920,1080')
+        driver = uc.Chrome(options=options, version_main=None)
+
+        # Additional stealth scripts (optional, as undetected-chromedriver already provides most stealth)
+        stealth_scripts = [
+            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})",
+            "Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]})",
+            "Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']})",
+            """
+            const originalQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (parameters) => (
+                parameters.name === 'notifications' ?
+                Promise.resolve({ state: Notification.permission }) :
+                originalQuery(parameters)
+            );
+            """,
+        ]
+
+        for script in stealth_scripts:
+            driver.execute_script(script)
+
         return driver
 
-    def start_requests(self):
-        """Start with search page URL"""
-        params = {
-            'keywords': self.keyword,
-        }
-        url = f"https://itviec.com/it-jobs/{self.keyword}"
-        yield scrapy.Request(url=url, callback=self.parse, dont_filter=True)
-
-    def parse(self, response):
-        """Parse search results page"""
+    def _login(self):
+        """Fast login to ITviec"""
         if self.driver is None:
             self.driver = self._init_driver()
+        
+        # Navigate to login page
+        self.driver.get("https://itviec.com/sign_in")
+        
+        # Quick wait for page load
+        time.sleep(1)
+        
+        # Wait for email input to be visible
+        wait = WebDriverWait(self.driver, 10)
+        email_input = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "input[id='user_email']")))
+        
+        # Quick email input
+        email_input.click()
+        email_input.clear()
+        email_input.send_keys(self.__username)
+        
+        # Quick password input
+        password_input = self.driver.find_element(By.CSS_SELECTOR, "input[id='user_password']")
+        password_input.click()
+        password_input.clear()
+        password_input.send_keys(self.__password)
+        
+        # Quick submit
+        submit_button = self.driver.find_element(By.XPATH, "//button[@type='submit' and .//span[contains(text(),'Sign In with Email')]]")
+        submit_button.click()
+        
+        # Wait for login to complete (minimal wait)
+        time.sleep(2)
+        
+        # Quick login verification
+        try:
+            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "input[id='query']")))
+            self.logger.info("Successfully logged in to ITviec")
+        except TimeoutException:
+            self.logger.warning("Login verification timeout - proceeding anyway")
 
-        self.driver.get(response.url)
+    def start_requests(self):
+        """Start crawling with direct Selenium navigation"""
+        self._login()
+        url = f"https://itviec.com/it-jobs/{self.keyword}"
+
+    
+        self.driver.get(url)
         wait = WebDriverWait(self.driver, 15)
-
+        
         # Wait for job cards to load
-        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "h3 a[href*='/it-jobs/']")))
+        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "h1[class*='headline-total-jobs']")))
+        
+        # Process job cards and yield items
+        yield from self._process_job_cards()
 
-        # Process job cards and load details
-        self._process_job_cards()
-
-        return
-
+        
     def _process_job_cards(self):
         """Process all visible job cards on current page"""
         wait = WebDriverWait(self.driver, 10)
 
         # Find all job card links
-        job_links = self.driver.find_elements(By.CSS_SELECTOR, "h3 a[href*='/it-jobs/']")
-
+        job_links = self.driver.find_elements(By.CSS_SELECTOR, "h3[data-url*='/it-jobs/']")
+        self.logger.info(f"Found {len(job_links)} job cards")
+        
         for job_link in job_links:
             try:
-                job_url = job_link.get_attribute('href')
-                if job_url and '/it-jobs/' in job_url and job_url not in self._processed_urls:
+                job_url = job_link.get_attribute('data-url')
+                if job_url and job_url not in self._processed_urls:
                     self.logger.info(f"Processing job: {job_url}")
 
                     # Scroll to job link and click
@@ -97,7 +165,7 @@ class ItviecSpider(scrapy.Spider):
                     job_link.click()
 
                     # Wait for job detail to load
-                    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "h2")))
+                    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div[class*='preview-job-wrapper']")))
 
                     # Extract job data
                     item = self._extract_job_from_detail()
@@ -115,84 +183,132 @@ class ItviecSpider(scrapy.Spider):
             except Exception as e:
                 self.logger.warning(f"Error processing job card: {e}")
                 continue
+        
+        try:
+            
+            # Check if we should continue to next page
+            if self._pages_crawled >= self._max_pages:
+                return
+
+            # Try multiple selectors for next page button
+            next_selectors = [
+                "a[rel='next']",
+                f"a[href*='page={self._pages_crawled + 1}']"
+            ]
+
+            next_button = None
+            for selector in next_selectors:
+                try:
+                    # Use WebDriverWait for proper element loading
+                    next_button = WebDriverWait(self.driver, 5).until(
+                        EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
+                    )
+                    self.logger.info(f"Found next page button with selector: {selector}")
+                    break
+                except:
+                    continue
+
+            if next_button:
+                # Scroll to button to ensure it's visible
+                self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", next_button)
+                time.sleep(1)
+
+                # Click the button
+                try:
+                    next_button.click()
+                except:
+                    # Fallback to JavaScript click
+                    self.driver.execute_script("arguments[0].click();", next_button)
+
+                # Wait for page to load
+                time.sleep(random.uniform(2, 4))
+
+                self.logger.info(f"Moving to page {self._pages_crawled + 1}")
+                self._pages_crawled += 1
+                # Recursively process next page
+                yield from self._process_job_cards()
+            else:
+                self.logger.info("No next page button found - reached end of results")
+
+        except Exception as e:
+            self.logger.warning(f"Error processing next page: {e}")
+            return
+
 
     def _extract_job_from_detail(self):
         """Extract job data from detail panel"""
-        def _safe_get_text(selector, default=''):
-            try:
-                element = self.driver.find_element(By.CSS_SELECTOR, selector)
-                return element.text.strip()
-            except Exception:
-                return default
 
         try:
+            # Lấy ra wraper của job_detail
+            preview_job_wrapper = self.driver.find_element(By.CSS_SELECTOR, "div[class*='preview-job-wrapper']")
+            
             item = JobItem()
 
             # Job title - from h2 in detail panel
-            title = _safe_get_text("h2")
-            if not title:
-                # Fallback: try h1
-                title = _safe_get_text("h1")
-            item['job_title'] = title
+            try:    
+                title = preview_job_wrapper.find_element(By.CSS_SELECTOR, "h2[class*='text-it-black text-hover-red']").text.strip()
+                item['job_title'] = title 
+            except Exception:
+                item['job_title'] = ''
 
             # Company name - from company link
-            company = _safe_get_text("a[href*='/companies/']")
-            item['company_name'] = company
+            try:
+                company = preview_job_wrapper.find_element(By.CSS_SELECTOR, "a[href*='/companies/'][class*='normal-text']").text.strip()
+                item['company_name'] = company or ''
+            except Exception:
+                item['company_name'] = ''
 
             # Salary - check if available or "Sign in to view"
-            salary = _safe_get_text(".salary-text")
-            if "Sign in" in salary or not salary:
-                item['salary'] = "Cần đăng nhập để xem lương"
-            else:
-                item['salary'] = salary
-
+            try:
+                salary = preview_job_wrapper.find_element(By.CSS_SELECTOR, "span.ips-2.fw-500").text.strip()
+                item['salary'] = salary or ''
+            except Exception:
+                item['salary'] = ''
+            
             # Location - from address text
-            location = _safe_get_text(".job-address")
-            if not location:
-                location = _safe_get_text("[class*='address']")
-            item['location'] = location
+            try:
+                location = preview_job_wrapper.find_element(By.CSS_SELECTOR, "div.d-inline-block.text-dark-grey").text.strip()
+                item['location'] = location or ''
+            except Exception:
+                item['location'] = ''
 
-            # Job type - from job type badge
-            job_type = _safe_get_text(".job-type")
-            if not job_type:
-                job_type = _safe_get_text("[class*='type']")
-            item['job_type'] = job_type
-
-            # Experience level - from seniority info
-            experience = _safe_get_text(".experience-text")
-            if not experience:
-                experience = _safe_get_text("[class*='experience']")
-            item['experience_level'] = experience
+            # ITviec không có job type
+            item['job_type'] = ''
+            
+            # ITviec không có experience level
+            item['experience_level'] = ''
 
             # Education level - from education info
-            education = _safe_get_text(".education-text")
-            if not education:
-                education = _safe_get_text("[class*='education']")
-            item['education_level'] = education
+            item['education_level'] = ''
 
             # Job description - from job description section
             try:
-                desc_element = self.driver.find_element(By.CSS_SELECTOR, "[class*='job-description']")
+                desc_element = preview_job_wrapper.find_element(By.CSS_SELECTOR, "section[class='job-description']")
                 item['job_description'] = desc_element.text.strip()
             except Exception:
                 item['job_description'] = ''
 
             # Requirements - from requirements section
             try:
-                req_element = self.driver.find_element(By.CSS_SELECTOR, "[class*='requirements']")
+                req_element = preview_job_wrapper.find_element(By.CSS_SELECTOR, "section[class='job-experiences']")
                 item['requirements'] = req_element.text.strip()
             except Exception:
                 item['requirements'] = ''
 
             # Benefits - from benefits section
             try:
-                benefits_element = self.driver.find_element(By.CSS_SELECTOR, "[class*='benefits']")
+                benefits_element = preview_job_wrapper.find_element(By.CSS_SELECTOR, "section[class='job-why-love-working']")
                 item['benefits'] = benefits_element.text.strip()
             except Exception:
                 item['benefits'] = ''
 
             # Other fields
-            item['job_industry'] = ''
+            try:
+                industry = preview_job_wrapper.find_element(By.CSS_SELECTOR, "div[class='d-inline-flex text-wrap']").text.strip()
+                item['job_industry'] = industry or ''
+            except Exception:
+                item['job_industry'] = ''
+            
             item['job_position'] = ''
             item['job_deadline'] = ''
 
@@ -206,9 +322,13 @@ class ItviecSpider(scrapy.Spider):
             return None
 
     def closed(self, reason):
-        """Clean up driver"""
-        try:
-            if self.driver:
-                self.driver.quit()
-        except Exception:
-            pass
+        """Robust driver cleanup for Windows compatibility"""
+        if hasattr(self, 'driver') and self.driver:
+            self.driver.quit()
+            self.logger.info("Driver cleanup completed successfully")
+        else:
+            self.logger.info("No driver to cleanup")
+
+        # Always set driver to None to prevent future access
+        self.driver = None
+        self.logger.info("Driver reference cleared")

@@ -14,6 +14,4 @@ try:
 except Exception as e:
     print(f"Login failed: {e}")
 finally:
-    # Clean up driver
-    if hasattr(itviec_spider, 'driver') and itviec_spider.driver:
-        itviec_spider.driver.quit()
+    itviec_spider.closed(None)

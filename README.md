@@ -49,9 +49,24 @@ Tạo database `JobDatabase` trong SQL Server. Pipeline sẽ **tạo bảng `job
 
 ## 🚀 Sử dụng
 
-### Cách 1: Sử dụng script run_spider.py
+### Sử dụng script run_spider.py
 
 ```bash
+# Chạy spider JobsGO
+python run_spider.py --spider jobsgo --keyword "Data Analyst" --output jobsgo.json
+
+# Chạy spider JobOKO
+python run_spider.py --spider joboko --keyword "Data Analyst" --output joboko.json
+
+# Chạy spider 123Job
+python run_spider.py --spider job123 --keyword "Data Analyst" --output job123.json
+
+# Chạy spider CareerViet
+python run_spider.py --spider careerviet --keyword "Data Analyst" --output careerviet.json
+
+# Chạy spider JobStreet
+python run_spider.py --spider jobstreet --keyword "Data Analyst" --output jobstreet.json
+
 # Chạy spider LinkedIn (public): click list → đọc panel phải
 python run_spider.py --spider linkedin --keyword "Data Analyst" --output linkedin.json
 
@@ -82,37 +97,6 @@ uvicorn api.main:app --reload
 # Kiểm tra
 curl http://127.0.0.1:8000/health
 curl "http://127.0.0.1:8000/jobs?keyword=python&site=jobsgo&page=1&page_size=20"
-```
-
-### Cách 2: Sử dụng Scrapy command
-
-```bash
-# Chạy spider JobsGO
-scrapy crawl jobsgo -a keyword="python developer"
-
-# Chạy spider JobOKO
-scrapy crawl joboko -a keyword="java developer"
-
-# Chạy spider 123job
-scrapy crawl 123job -a keyword="data analyst"
-
-# Chạy spider CareerViet
-scrapy crawl careerviet -a keyword="data analyst"
-
-# Chạy spider JobStreet
-scrapy crawl jobstreet -a keyword="data analyst"
-
-# Chạy spider TopCV
-scrapy crawl topcv -a keyword="data analyst"
-
-# Chạy spider ITviec
-scrapy crawl itviec -a keyword="data analyst"
-
-# Chạy spider CareerLink
-scrapy crawl careerlink -a keyword="data analyst"
-
-# Chạy spider VietnamWorks
-scrapy crawl vietnamworks -a keyword="data analyst"
 ```
 
 ## 📊 Cấu trúc dữ liệu
@@ -161,7 +145,7 @@ CrawlJob/
 │   │   ├── jobstreet_spider.py  # JobStreet.vn (Simple Scrapy)
 │   │   ├── careerlink_spider.py # CareerLink.vn (Simple Scrapy)
 │   │   ├── topcv_spider.py      # TopCV.vn (Enhanced Scrapy + JS extraction)
-│   │   ├── vietnamworks_spider.py # VietnamWorks.com (Advanced Scrapy)
+│   │   ├── vietnamworks_spider.py # VietnamWorks.com (Hybrid Selenium + Scrapy)
 │   │   ├── linkedin_spider.py   # LinkedIn.com (Selenium + authentication ready)
 │   │   └── itviec_spider.py     # ITviec.com (Selenium + click navigation)
 │   ├── items.py                 # JobItem data model (18+ fields)
@@ -190,8 +174,9 @@ CrawlJob/
 
 ### 🆕 **Spider Categories**
 - **Simple Scrapy** (6 sites): JobsGO, JobOKO, 123job, CareerViet, JobStreet, CareerLink
-- **Enhanced Scrapy** (2 sites): TopCV (JavaScript extraction), VietnamWorks (Advanced selectors)
-- **Selenium-Based** (2 sites): LinkedIn (Browser automation), ITviec (Click navigation)
+- **Enhanced Scrapy** (2 sites): TopCV (JavaScript extraction), ITviec (Advanced selectors)
+- **Hybrid Selenium + Scrapy** (1 site): VietnamWorks (Selenium URL collection + Scrapy parsing)
+- **Selenium-Based** (1 site): LinkedIn (Browser automation)
 
 ## ⚙️ Cấu hình nâng cao
 

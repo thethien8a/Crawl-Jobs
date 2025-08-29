@@ -60,7 +60,7 @@ def main():
 		elif args.spider == 'jobstreet':
 			process.crawl(JobStreetSpider, keyword=args.keyword)
 		elif args.spider == 'linkedin':
-			process.crawl(LinkedinSpider, keyword=args.keyword, location=args.location)
+			process.crawl(LinkedinSpider, keyword=args.keyword)
 		elif args.spider == 'topcv':
 			process.crawl(TopcvSpider, keyword=args.keyword)
 		elif args.spider == 'itviec':
@@ -75,9 +75,9 @@ def main():
 			process.crawl(Job123Spider, keyword=args.keyword)
 			process.crawl(CareervietSpider, keyword=args.keyword)
 			process.crawl(JobStreetSpider, keyword=args.keyword)
-			process.crawl(LinkedinSpider, keyword=args.keyword, location=args.location)
+			process.crawl(LinkedinSpider, keyword=args.keyword)
 			process.crawl(TopcvSpider, keyword=args.keyword)
-			process.crawl(ItviecSpider, keyword=args.keyword)
+			# process.crawl(ItviecSpider, keyword=args.keyword)
 			process.crawl(CareerlinkSpider, keyword=args.keyword)
 			process.crawl(VietnamworksSpider, keyword=args.keyword)
 		
