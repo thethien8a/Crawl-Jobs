@@ -1,3 +1,2 @@
 CrawlJob Project:
-+ Xử lý nốt ITViec
 + Xây dung lại front end có lọc theo tiêu chí
