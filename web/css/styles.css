@@ -1,0 +1,266 @@
+/* CrawlJob Frontend Styles */
+
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.main-container {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    padding: 30px;
+    margin: 20px auto;
+    max-width: 1200px;
+}
+
+.search-box {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.job-card {
+    background: white;
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.job-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.source-badge {
+    font-size: 0.75rem;
+    padding: 6px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.salary-highlight {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+}
+
+.stats-card {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.pagination-custom {
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.job-description {
+    max-height: 100px;
+    overflow: hidden;
+    position: relative;
+}
+
+.job-description.expanded {
+    max-height: none;
+}
+
+.expand-btn {
+    background: none;
+    border: none;
+    color: #007bff;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.job-title-link:hover {
+    color: #0056b3 !important;
+    text-decoration: underline !important;
+}
+
+.job-title-link:hover i {
+    opacity: 1;
+}
+
+.job-title-link i {
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+
+/* Company row responsive */
+.company-row {
+    flex-wrap: wrap;
+    gap: 6px 8px;
+}
+
+/* Filter panel styles (for future enhancement) */
+.filter-panel {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.filter-section {
+    margin-bottom: 20px;
+}
+
+.filter-section h5 {
+    margin-bottom: 10px;
+    color: #495057;
+    font-weight: 600;
+}
+
+.checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 5px;
+    transition: background-color 0.2s;
+}
+
+.checkbox-group label:hover {
+    background-color: #f8f9fa;
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.salary-slider {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.salary-slider input[type="range"] {
+    flex: 1;
+}
+
+.salary-slider span {
+    min-width: 100px;
+    font-weight: 500;
+    color: #495057;
+}
+
+/* Loading overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.spinner {
+    width: 3rem;
+    height: 3rem;
+    border: 0.25em solid #f3f3f3;
+    border-top: 0.25em solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Filter summary */
+.filter-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.clear-filters {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.clear-filters:hover {
+    background: #c82333;
+}
+
+/* Active filters */
+.active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.filter-tag {
+    display: inline-flex;
+    align-items: center;
+    background: #007bff;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+
+.filter-tag .remove-filter {
+    margin-left: 6px;
+    cursor: pointer;
+    opacity: 0.8;
+}
+
+.filter-tag .remove-filter:hover {
+    opacity: 1;
+}
+
+/* Animations */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-up {
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}

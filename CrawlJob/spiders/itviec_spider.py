@@ -10,9 +10,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from ..items import JobItem
 from dotenv import load_dotenv
-load_dotenv()
 
+# Prevent undetected-chromedriver destructor errors
 uc.Chrome.__del__ = lambda self: None
+
+load_dotenv()
 class ItviecSpider(scrapy.Spider):
     """
     ITviec spider using Selenium - similar to LinkedIn spider approach

@@ -157,9 +157,16 @@ CrawlJob/
 │   └── main.py                  # REST API endpoints (/health, /jobs)
 ├── 📁 debug/                    # Debug utilities (NEW)
 │   └── HTML_export_debug.py     # HTML export tool cho selector testing
-├── 📁 web/                      # Web dashboard
-│   ├── index.html               # Bootstrap 5 dashboard với search
-│   └── README.md                # Dashboard documentation
+├── 📁 web/                      # Web dashboard (Modular Architecture)
+│   ├── index.html               # Trang chính của dashboard
+│   ├── css/                     # Stylesheets
+│   │   ├── styles.css          # CSS chính
+│   │   └── responsive.css      # Responsive design
+│   ├── js/                     # JavaScript modules
+│   │   ├── main.js            # Logic chính của ứng dụng
+│   │   ├── api.js             # API communication layer
+│   │   └── ui.js              # UI helper functions
+│   └── README.md               # Comprehensive documentation
 ├── 📁 logs/                     # Crawling logs (timestamped)
 ├── 📁 outputs/                  # JSON output files (timestamped)
 ├── 📄 run_spider.py             # CLI runner cho tất cả spiders
