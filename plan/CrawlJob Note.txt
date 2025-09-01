@@ -1,2 +1,0 @@
-CrawlJob Project:
-+ Xây dung lại front end có lọc theo tiêu chí
