@@ -1,22 +1,22 @@
-# CrawlJob - Complete Job Scraping System 🎉
+# CrawlJob - Professional Data Engineering Project 🎉
 
-**HOÀN THÀNH 100%** - Hệ thống web scraping tự động thu thập dữ liệu việc làm từ **10 trang tuyển dụng Việt Nam** với kiến trúc **enterprise-grade** và **production-ready**.
+**ĐANG TRONG QUÁ TRÌNH PHÁT TRIỂN** - Hệ thống kỹ thuật dữ liệu chuyên nghiệp để thu thập, biến đổi, kiểm tra chất lượng và trực quan hóa dữ liệu việc làm từ **10 trang tuyển dụng Việt Nam**.
 
-## 🎯 **PROJECT STATUS: FULLY COMPLETED & PRODUCTION READY** ✅
+## 🎯 **PROJECT STATUS: EVOLVING TOWARDS PROFESSIONAL DATA ENGINEERING** ✅
 
-### **🏆 Key Achievements**
+### **🏆 Key Achievements (Current Production Ready)**
 - ✅ **10 Fully Functional Spiders** covering all major Vietnamese job platforms
-- ✅ **Enterprise-Grade Architecture** with professional ETL pipeline
+- ✅ **Enterprise-Grade Architecture** with professional ETL pipeline (initial Scrapy/PostgreSQL)
 - ✅ **Cloudflare Bypass Mastery** with 95% success rate using Undetected ChromeDriver
 - ✅ **Modular Frontend Architecture** with optimized performance (~70KB gzipped)
-- ✅ **Production-Ready Deployment** with Windows Task Scheduler automation
+- ✅ **Production-Ready Deployment** with Windows Task Scheduler automation (will transition to Airflow)
 - ✅ **Complete Documentation** and comprehensive testing framework
 
-## 🎯 **Core Features - 100% Implemented**
+## 🎯 **Core Features - Current Implementation**
 
 ### **📊 Data Collection**
 - **Input**: Từ khóa việc làm (VD: "Python Developer", "Data Analyst")
-- **Output**: Dữ liệu việc làm chuẩn hóa được lưu vào PostgreSQL với smart deduplication
+- **Output**: Dữ liệu việc làm chuẩn hóa được lưu vào PostgreSQL (OLTP) với smart deduplication
 - **Coverage**: **10 Trang Tuyển Dụng Việt Nam** - JobsGO, JobOKO, 123job, CareerViet, JobStreet, LinkedIn, TopCV, ITviec, CareerLink, VietnamWorks
 - **Data Model**: 18+ standardized fields với timestamps và metadata
 
@@ -26,63 +26,112 @@
 - **Enterprise Pipeline**: PostgreSQL với upsert logic và transaction management
 - **REST API**: FastAPI async endpoints với CORS, pagination, và keyword search
 - **Modular Web Dashboard**: Bootstrap 5 responsive interface với real-time search
-- **Automated Scheduling**: Apache Airflow với automated monitoring
+- **Automated Scheduling**: Windows Task Scheduler automation (will be replaced by Airflow)
 - **Browser Management**: Windows-compatible cleanup với WinError prevention
 
-### **🏗️ Data Engineering Architecture**
-```
-🕷️ CrawlJob Spiders → ⚡ Apache Airflow → 🐘 PostgreSQL (OLTP) → 🔨 dbt → 🦆 DuckDB (OLAP)
-                                          ↓
-                                   ✅ Great Expectations → Data Quality Validation
-                                          ↓
-                        📊 Power BI Analytics ← 🌐 Job Search Website
+### **🏗️ Target Data Engineering Architecture**
+
+```mermaid
+flowchart TD
+    %% Layers
+    subgraph ingestion["🔄 Data Ingestion"]
+        spiders["🕷️ CrawlJob Spiders<br/>10 Job Sites"]
+        airflow["⚡ Apache Airflow<br/>Orchestrator (Schedules/Triggers)"]
+    end
+
+    subgraph storage["💾 Data Storage"]
+        postgres["🐘 PostgreSQL<br/>Raw & Serving (OLTP)"]
+        duckdb["🦆 DuckDB<br/>Analytics Marts (OLAP)"]
+    end
+
+    subgraph processing["⚙️ Data Processing"]
+        dbt["🔨 dbt<br/>Transform & Model (ELT)"]
+        ge["✅ Great Expectations<br/>Validation & Data Docs"]
+    end
+
+    subgraph presentation["📊 Presentation & Access"]
+    superset["Apache Superset<br/>BI Dashboards"]
+        fastapi["🚀 FastAPI<br/>REST API"]
+        webapp["🌐 Job Search Website<br/>End-User Portal"]
+        ge_docs["📋 GE Data Docs<br/>Quality Reports"]
+    end
+
+    %% Orchestration (control-plane)
+    airflow -. trigger .-> spiders
+    airflow -. run .-> ge
+    airflow -. run .-> dbt
+
+    %% Data plane
+    spiders -->|"Insert Raw Jobs"| postgres
+    ge -->|"Validate Raw &/or Marts"| postgres
+    ge -->|"Publish"| ge_docs
+    dbt -->|"Read from Postgres"| postgres
+    dbt -->|"Materialize Marts"| duckdb
+
+    %% Serving
+    fastapi -->|"Query"| postgres
+    webapp -->|"Use"| fastapi
+    superset -->|"Connect"| duckdb
+
+    %% Styles
+    classDef ingestionStyle fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef storageStyle fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef processStyle fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef presentStyle fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+
+    class spiders,airflow ingestionStyle
+    class postgres,duckdb storageStyle
+    class dbt,ge processStyle
+    class superset,fastapi,webapp,ge_docs presentStyle
 ```
 
-**Features:**
+**Features (New Data Engineering Stack):**
 - **Automated Orchestration**: Daily pipeline với Airflow DAGs
 - **Data Transformation**: dbt models cho analytics-ready data
 - **Quality Assurance**: Automated data validation với Great Expectations
-- **Dual Presentation**: Business analytics (Power BI) + End-user portal (Job Search Website)
+- **Dual Presentation**: BI dashboards (Apache Superset) + End-user portal (Job Search Website)
 
-## 🛠️ **Technical Stack - Enterprise Data Engineering**
+## 🛠️ **Technical Stack - Professional Data Engineering**
 
-### **Current Production Stack**
-- **Scrapy 2.11.0**: Latest stable version for robust web crawling
+### **Current Production Stack (Existing Components)**
+- **Scrapy 2.12.0**: Latest stable version for robust web crawling
 - **Python 3.12.2**: Modern Python với async capabilities
 - **Selenium 4.15.0**: Advanced browser automation
 - **Undetected ChromeDriver 3.5.4**: Industry-leading Cloudflare bypass solution
-- **PostgreSQL**: OLTP database cho raw data storage
+- **PostgreSQL**: OLTP database cho raw data storage và serving
 - **FastAPI 0.112.2**: High-performance async web framework
 - **Bootstrap 5.1.3**: Modern responsive CSS framework
 
-### **Data Engineering Stack (In Progress)**
+### **New Data Engineering Stack (In Progress Integration)**
 - **🌬️ Apache Airflow**: Workflow orchestration và scheduling
 - **🔨 dbt (Data Build Tool)**: Data transformation và modeling
 - **🦆 DuckDB**: OLAP database cho analytics workloads
 - **✅ Great Expectations**: Data quality validation và monitoring
-- **📊 Power BI**: Business intelligence và analytics dashboards
-- **🌐 Job Search Portal**: End-user web application
+- **📊 Apache Superset**: Business intelligence và analytics dashboards
+- **🐳 Docker**: Containerization for all services
+- **🌐 Job Search Website**: End-user web application (via FastAPI)
+- **VS Code Development Environment**: Integrated for seamless development and debugging
 
 ### **Key Dependencies**
 ```
 # Core Scraping
-scrapy==2.11.0
+scrapy==2.12.0
 selenium==4.15.0
 undetected-chromedriver==3.5.4
 
 # Data Engineering
-apache-airflow==2.8.1
+apache-airflow==2.8.1 # For orchestration
 dbt-core==1.7.0
-dbt-postgres==1.7.0
-great-expectations==0.18.0
-duckdb==0.9.0
+dbt-postgres==1.7.0 # For PostgreSQL integration
+great-expectations==0.18.0 # For data quality
+duckdb==0.9.0 # For OLAP analytics
 
 # API & Web
 fastapi==0.112.2
 uvicorn==0.30.6
 
-# Database
-psycopg2-binary==2.9.8
+# Database Connectors
+psycopg2-binary==2.9.8 # PostgreSQL adapter
 python-dotenv==1.0.1
 ```
 
@@ -94,34 +143,31 @@ python-dotenv==1.0.1
 pip install -r requirements.txt
 ```
 
-> **Note**: Includes `undetected-chromedriver` for advanced Cloudflare bypass capabilities
+> **Note**: Includes `undetected-chromedriver` for advanced Cloudflare bypass capabilities. You will also need to install the Microsoft ODBC Driver for SQL Server if you intend to use it with dbt, but for PostgreSQL, you will need the appropriate database drivers.
 
-### 2. Configure SQL Server Database
+### 2. Configure PostgreSQL Database
 
-Edit `CrawlJob/settings.py`:
-
-```python
-# SQL Server Database Configuration
-SQL_SERVER = "localhost"  # Change to your SQL Server instance
-SQL_DATABASE = "JobDatabase"  # Change to your database name
-SQL_USERNAME = "sa"  # Change to your username
-SQL_PASSWORD = "your_password"  # Change to your password
-```
-
-Or create `.env` file in project root (recommended for security):
+Configure your PostgreSQL connection. Update `CrawlJob/settings.py` or, preferably, create a `.env` file in the project root (e.g., based on `env.example`):
 
 ```env
-SQL_SERVER=localhost
-SQL_DATABASE=JobDatabase
-SQL_USERNAME=sa
-SQL_PASSWORD=your_password
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=jobdatabase
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_password
 ```
 
-> **Note**: `settings.py` automatically reads environment variables via `python-dotenv` when `.env` exists.
+> **Note**: `settings.py` (for Scrapy pipelines) and dbt `profiles.yml` will use these environment variables. Ensure the PostgreSQL container is running and accessible.
 
-### 3. Create Database
+### 3. Setup PostgreSQL and Initialize dbt Project
 
-Create `JobDatabase` in SQL Server. The pipeline will **auto-create the `jobs` table** on first run with proper schema and indexing.
+1.  **Start PostgreSQL**: Ensure your PostgreSQL database is running (e.g., via Docker).
+2.  **Create Database**: Create a database (e.g., `jobdatabase`). The Scrapy pipeline will **auto-create the `jobs` table** within this database on its first run.
+3.  **Initialize dbt Project**: Navigate to your preferred location for dbt models (e.g., `dbt/` or `data_engineering/`) and initialize a new dbt project.
+    ```bash
+    dbt init CrawlJob_dbt
+    ```
+4.  **Configure dbt `profiles.yml`**: Set up your dbt `profiles.yml` to connect to the PostgreSQL database, referencing the environment variables configured in your `.env` file.
 
 ## 🚀 **Usage Guide**
 
@@ -208,7 +254,7 @@ curl "http://127.0.0.1:8000/jobs?page=1&page_size=20"
 
 ## 📊 **Data Model - 18+ Standardized Fields**
 
-### **SQL Server Schema (Auto-Created)**
+### **PostgreSQL Schema (Auto-Created)**
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
@@ -249,7 +295,7 @@ D:\\Practice\\Scrapy\\CrawlJob\\
 ├── 📄 requirements.txt             # Python dependencies (11 packages)
 ├── 📄 scrapy.cfg                   # Scrapy project configuration
 ├── 📄 run_spider.py                # CLI runner for all spiders
-├── 📄 crawl_daily.bat              # Windows Task Scheduler automation
+├── 📄 crawl_daily.bat              # Windows Task Scheduler automation (will be deprecated)
 ├── 📄 env.example                  # Environment configuration template
 ├── 📄 test.ipynb                   # Jupyter notebook for testing
 ├── 📄 vietnamworks.json           # VietnamWorks data output sample
@@ -257,7 +303,7 @@ D:\\Practice\\Scrapy\\CrawlJob\\
 ├── 📁 CrawlJob/                    # Main Scrapy project
 │   ├── 📄 __init__.py
 │   ├── 📄 items.py                 # JobItem data model (18+ fields)
-│   ├── 📄 pipelines.py             # SQL Server pipeline with deduplication
+│   ├── 📄 pipelines.py             # PostgreSQL pipeline with deduplication
 │   ├── 📄 settings.py              # Scrapy configuration & database settings
 │   ├── 📄 selenium_middleware.py   # Selenium integration middleware
 │   ├── 📄 utils.py                 # Helper functions (encode_input, clean_location)
@@ -277,6 +323,15 @@ D:\\Practice\\Scrapy\\CrawlJob\\
 │
 ├── 📁 api/                         # FastAPI backend
 │   └── 📄 main.py                  # REST API endpoints (/health, /jobs)
+│
+├── 📁 dbt/                         # (New) dbt project for data transformations
+│   └── 📄 ...                      # dbt models, tests, documentation
+│
+├── 📁 airflow/                     # (New) Apache Airflow DAGs and configurations
+│   └── 📄 ...                      # DAGs for orchestration
+│
+├── 📁 great_expectations/          # (New) Great Expectations checkpoints and expectation suites
+│   └── 📄 ...                      # Data quality definitions
 │
 ├── 📁 debug/                       # Debug utilities
 │   └── 📄 HTML_export_debug.py     # HTML export for selector testing
@@ -405,34 +460,36 @@ jupyter notebook test.ipynb
 - `outputs/jobs_*.json` - Timestamped output files
 - `logs/crawl_*.log` - Timestamped log files
 
-## 🗓️ Scheduling (Windows Task Scheduler)
+## 🗓️ **Scheduling & Orchestration**
 
-1. Test thủ công file batch:
-```bat
-cd /d D:\Practice\Scrapy\CrawlJob
-crawl_daily.bat
+### **Current: Windows Task Scheduler (Will be Deprecated)**
+
+Hiện tại, việc chạy thu thập dữ liệu hàng ngày được thực hiện thông qua `crawl_daily.bat` và Windows Task Scheduler. Tuy nhiên, trong kiến trúc kỹ thuật dữ liệu mới, điều này sẽ được thay thế bằng Apache Airflow để có khả năng điều phối mạnh mẽ và linh hoạt hơn.
+
+### **Target: Apache Airflow Orchestration**
+
+Với kiến trúc mới, Apache Airflow sẽ là công cụ chính để lên lịch, điều phối và giám sát toàn bộ quy trình dữ liệu (data pipeline), bao gồm:
+
+1.  **Chạy Spiders**: Kích hoạt các spiders của CrawlJob để thu thập dữ liệu.
+2.  **Kiểm tra Chất lượng Dữ liệu**: Chạy các `checkpoint` của Great Expectations để đảm bảo chất lượng dữ liệu thô.
+3.  **Biến đổi Dữ liệu**: Thực thi các `dbt run` để tạo và cập nhật các mô hình dữ liệu (data models) trong DuckDB.
+4.  **Làm mới Dashboards**: Đảm bảo Apache Superset dashboards luôn hiển thị dữ liệu mới nhất.
+5.  **Giám sát & Cảnh báo**: Cung cấp khả năng giám sát tập trung và gửi cảnh báo khi có lỗi.
+
+```mermaid
+flowchart TD
+    start([Scheduled 02:00]) --> run_spiders[Task: run_spiders]
+    run_spiders --> ge_raw[Task: ge_validate_raw]
+    ge_raw -->|PASS| dbt_run[Task: dbt_run]
+    ge_raw -->|FAIL| alert1([Alert + Stop])
+    dbt_run --> ge_marts{Run ge_validate_marts?}
+    ge_marts -->|YES| ge_marts_task[Task: ge_validate_marts] --> publish[Task: publish_duckdb]
+    ge_marts -->|NO| publish
+    publish --> notify[Task: notify_success]
+
+    classDef t fill:#fff3e0,stroke:#e65100,stroke-width:1px
+    class run_spiders,ge_raw,dbt_run,ge_marts_task,publish,notify t
 ```
-- Kết quả: tạo `outputs\jobs_YYYY-MM-DD_HH-mm-ss.json` và `logs\crawl_YYYY-MM-DD_HH-mm-ss.log`.
-
-2. Tạo task tự động (GUI):
-- Task Scheduler → Create Task…
-- General: Run whether user is logged on or not; Run with highest privileges
-- Triggers: Daily 02:00
-- Actions:
-  - Program/script: `cmd.exe`
-  - Add arguments: `/c D:\Practice\Scrapy\CrawlJob\crawl_daily.bat`
-  - Start in: `D:\Practice\Scrapy\CrawlJob`
-- Nhấn Run để test
-
-3. Tạo task bằng lệnh (tùy chọn):
-```bat
-SCHTASKS /Create /TN "CrawlJob Daily" /TR "cmd.exe /c Path_to\crawl_daily.bat" /SC DAILY /ST 02:00 /RL HIGHEST /F
-```
-
-4. Lưu ý:
-- Nếu `python` không nhận diện, dùng full path tới `python.exe` trong `crawl_daily.bat`.
-- Nếu dùng venv, bỏ comment dòng `call ...activate.bat` trong batch.
-- Đảm bảo SQL Server bật TCP/IP và cổng đúng (thường 1433), `.env` trỏ đúng `SQL_SERVER`.
 
 ### Chi tiết cấu hình Task Scheduler (GUI)
 
@@ -495,10 +552,10 @@ SCHTASKS /Create /TN "CrawlJob SYSTEM" /TR "cmd.exe /c \"D:\\Practice\\Scrapy\\C
 
 ## 🔧 Troubleshooting
 
-### Lỗi kết nối SQL Server
-1. Kiểm tra SQL Server đang chạy
-2. Kiểm tra `.env`: `SQL_SERVER=localhost,1433` hoặc `localhost\SQLEXPRESS`
-3. Bật TCP/IP và mở firewall port 1433
+### Lỗi kết nối PostgreSQL
+1. Kiểm tra PostgreSQL container đang chạy
+2. Kiểm tra `.env`: `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
+3. Kiểm tra firewall và network access tới PostgreSQL container/host
 4. Kiểm tra database permissions cho user
 
 ### Lỗi scraping
@@ -560,8 +617,8 @@ curl http://127.0.0.1:8000/health
 
 #### **Database Issues**
 ```bash
-# Check SQL Server connection
-python -c "import pymssql; conn = pymssql.connect(server='localhost', database='JobDatabase', user='sa', password='your_password'); print('Connected')"
+# Check PostgreSQL connection
+python -c "import psycopg2; conn = psycopg2.connect(host='localhost', port='5432', database='jobdatabase', user='postgres', password='your_password'); print('Connected')"
 ```
 
 ### **Performance Troubleshooting**
@@ -570,7 +627,7 @@ python -c "import pymssql; conn = pymssql.connect(server='localhost', database='
 1. **Check DOWNLOAD_DELAY**: Increase if getting blocked
 2. **Reduce CONCURRENT_REQUESTS**: Lower concurrent connections
 3. **Monitor Memory Usage**: Check for memory leaks
-4. **Database Performance**: Ensure SQL Server has adequate resources
+4. **Database Performance**: Ensure PostgreSQL has adequate resources
 
 #### **Browser Issues (Selenium)**
 1. **WinError 6**: Update browser cleanup code
@@ -582,91 +639,61 @@ python -c "import pymssql; conn = pymssql.connect(server='localhost', database='
 1. **Rate Limiting**: Adjust `DOWNLOAD_DELAY` based on site restrictions
 2. **Concurrent Requests**: Reduce `CONCURRENT_REQUESTS` if getting blocked
 3. **Memory Usage**: Monitor RAM usage with large datasets
-4. **Database Performance**: Ensure SQL Server has adequate resources
+4. **Database Performance**: Ensure PostgreSQL has adequate resources
 
-## 🚀 **Future Enhancements Roadmap**
 
-### **Phase 1: Advanced Features (Q2 2025)**
-- [ ] **Advanced Search Filters**: Filter by salary range, location, experience level
-- [ ] **Job Bookmarking**: Save and manage favorite jobs
-- [ ] **Export Functionality**: Export results to PDF/Excel/CSV
-- [ ] **Search History**: Track and reuse previous searches
-
-### **Phase 2: Intelligence & Analytics (Q3 2025)**
-- [ ] **ML Integration**: Job matching algorithms with user preferences
-- [ ] **Salary Analytics**: Market trend analysis and salary insights
-- [ ] **Company Insights**: Company profiles and reputation analysis
-- [ ] **Career Recommendations**: Personalized job suggestions
-
-### **Phase 3: Real-time & Notifications (Q4 2025)**
-- [ ] **Real-time Updates**: WebSocket integration for live job updates
-- [ ] **Push Notifications**: Browser notifications for new matching jobs
-- [ ] **Email Alerts**: Daily/weekly job digest emails
-- [ ] **SMS Integration**: Critical job alerts via SMS
-
-### **Phase 4: Enterprise Features (2026)**
-- [ ] **Multi-tenancy**: Support for multiple organizations
-- [ ] **Advanced Analytics**: Comprehensive reporting dashboard
-- [ ] **API Rate Limiting**: Production-ready API management
-- [ ] **Load Balancing**: Distributed crawling infrastructure
-- [ ] **Cloud Deployment**: AWS/Azure/GCP deployment support
-
-### **Technical Improvements**
-- [ ] **TypeScript Migration**: Type safety for frontend modules
-- [ ] **Testing Suite**: Comprehensive unit and integration tests
-- [ ] **CI/CD Pipeline**: Automated testing and deployment
-- [ ] **Performance Monitoring**: Advanced metrics and alerting
-- [ ] **Security Audit**: Penetration testing and security hardening
 
 ## 📊 **Project Achievements Summary**
 
-### ✅ **COMPLETED FEATURES**
+### ✅ **COMPLETED FEATURES (Current Production Ready)**
 - **10 Job Sites**: Complete coverage of major Vietnamese job platforms
 - **Smart Deduplication**: Advanced duplicate prevention system
 - **Rate Limiting**: Respectful crawling with configurable delays
 - **Error Resilience**: Comprehensive error handling and recovery
-- **Production Ready**: Windows Task Scheduler integration
+- **Production Ready**: Windows Task Scheduler integration (will transition to Airflow)
 - **Modular Architecture**: Easily extensible spider system
 - **Debug Tools**: Built-in testing and troubleshooting utilities
 - **Data Quality**: 18+ field standardized data model
 
-### 🏆 **TECHNICAL EXCELLENCE**
+### 🏆 **TECHNICAL EXCELLENCE (Current Production Ready)**
 - **Cloudflare Bypass**: 95% success rate with Undetected ChromeDriver
 - **Hybrid Architecture**: Perfect Scrapy-Selenium integration
-- **Enterprise Pipeline**: Professional ETL with SQL Server
+- **Enterprise Pipeline**: Professional ETL with PostgreSQL (initial ingestion)
 - **Modular Frontend**: Optimized 70KB bundle with caching
 - **Mobile-First Design**: Perfect responsive experience
 - **API Performance**: FastAPI async with optimal response times
 
-### 📈 **BUSINESS IMPACT**
+### 📈 **BUSINESS IMPACT (Current Production Ready)**
 - **Complete Market Coverage**: All major Vietnamese job sites
 - **High Data Quality**: Standardized, clean job data
 - **Real-time Access**: Instant search with pagination
 - **User Experience**: Modern responsive dashboard
 - **Operational Excellence**: Automated, reliable execution
 
-## 🎯 **CONCLUSION: MISSION ACCOMPLISHED**
+## 🎯 **CONCLUSION: EVOLVING TOWARDS PROFESSIONAL DATA ENGINEERING**
 
-**CrawlJob has been successfully completed with enterprise-grade architecture and production-ready deployment capabilities.**
+**CrawlJob is successfully transitioning from a production-ready scraping system to a comprehensive data engineering project.**
 
-### **Ready for Production Use** ✅
+### **Current State: Ready for Production Use** ✅
 - Comprehensive 10-site job scraping coverage
 - Robust error handling and recovery mechanisms
 - Advanced anti-detection capabilities
 - Modular and maintainable codebase
 - Complete documentation and testing framework
 
-### **Scalable Architecture** ✅
-- Easy addition of new job sites
-- Configurable performance parameters
-- Database optimization for high-volume data
-- API-ready for third-party integrations
+### **Target State: Scalable and Feature-Rich Data Engineering Platform** ✅
+- Easy integration of new data sources and models
+- Configurable performance parameters across the data pipeline
+- Robust data quality validation and monitoring
+- Advanced analytics and visualization capabilities with Superset
+- Orchestrated workflows for automated, reliable data processing
+- Containerized deployment for portability and scalability
 
 ### **Future-Proof Design** ✅
 - Modular frontend architecture
 - Extensible spider framework
 - Performance optimizations in place
-- Clear roadmap for advanced features
+- Clear roadmap for advanced data engineering features and ML integration
 
 ## 📄 License
 
