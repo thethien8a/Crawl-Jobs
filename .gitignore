@@ -53,3 +53,6 @@ web/node_modules/
 web/.next/
 *.json
 .cursor/
+
+# Rule files
+rule/
