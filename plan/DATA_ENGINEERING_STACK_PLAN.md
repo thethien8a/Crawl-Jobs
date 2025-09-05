@@ -7,10 +7,6 @@
 
 1. [🎯 Project Overview](#-project-overview)
 2. [🏗️ Architecture Design](#️-architecture-design)
-3. [📊 Implementation Phases](#-implementation-phases)
-4. [🔧 Technical Implementation](#-technical-implementation)
-5. [📈 Success Metrics](#-success-metrics)
-6. [🚀 Deployment Guide](#-deployment-guide)
 
 ---
 
@@ -47,12 +43,256 @@ CrawlJob Spiders → PostgreSQL → FastAPI → Web Dashboard
 ```
 
 ### **Target Data Engineering Architecture**
+
+#### **Detailed Data Flow**
+
+```mermaid
+flowchart TD
+    %% Layers
+    subgraph ingestion["🔄 Data Ingestion"]
+        spiders["🕷️ CrawlJob Spiders<br/>10 Job Sites"]
+        airflow["⚡ Apache Airflow<br/>Orchestrator (Schedules/Triggers)"]
+    end
+
+    subgraph storage["💾 Data Storage"]
+        postgres["🐘 PostgreSQL<br/>Raw & Serving (OLTP)"]
+        duckdb["🦆 DuckDB<br/>Analytics Marts (OLAP)"]
+    end
+
+    subgraph processing["⚙️ Data Processing"]
+        dbt["🔨 dbt<br/>Transform & Model (ELT)"]
+        ge["✅ Great Expectations<br/>Validation & Data Docs"]
+    end
+
+    subgraph presentation["📊 Presentation & Access"]
+        powerbi["📈 Power BI<br/>BI Dashboards"]
+        fastapi["🚀 FastAPI<br/>REST API"]
+        webapp["🌐 Job Search Website<br/>End-User Portal"]
+        ge_docs["📋 GE Data Docs<br/>Quality Reports"]
+    end
+
+    %% Orchestration (control-plane)
+    airflow -. trigger .-> spiders
+    airflow -. run .-> ge
+    airflow -. run .-> dbt
+
+    %% Data plane
+    spiders -->|"Insert Raw Jobs"| postgres
+    ge -->|"Validate Raw &/or Marts"| postgres
+    ge -->|"Publish"| ge_docs
+    dbt -->|"Read from Postgres"| postgres
+    dbt -->|"Materialize Marts"| duckdb
+
+    %% Serving
+    fastapi -->|"Query"| postgres
+    webapp -->|"Use"| fastapi
+    powerbi -->|"Connect"| duckdb
+
+    %% Styles
+    classDef ingestionStyle fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef storageStyle fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef processStyle fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef presentStyle fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+
+    class spiders,airflow ingestionStyle
+    class postgres,duckdb storageStyle
+    class dbt,ge processStyle
+    class powerbi,fastapi,webapp,ge_docs presentStyle
 ```
-CrawlJob Spiders → Apache Airflow → PostgreSQL (OLTP) → dbt → DuckDB (OLAP)
-                                    ↓
-                              Great Expectations → Data Quality Reports
-                                    ↓
-                              Power BI → Analytics Dashboards
+
+#### Data Flow chi tiết cho Power BI
+
+1) Điều phối theo lịch (Airflow)
+- Airflow chạy theo lịch (ví dụ 02:00 hằng ngày) và lần lượt trigger các bước: chạy spiders → kiểm tra chất lượng (GE) → biến đổi dữ liệu (dbt) → cập nhật kho OLAP (DuckDB).
+
+2) Thu thập dữ liệu (Spiders → PostgreSQL)
+- Các spiders thu thập dữ liệu từ 10 trang, chuẩn hóa tối thiểu và ghi trực tiếp vào PostgreSQL (schema/raw), kèm timestamps/metadata phục vụ kiểm soát phiên crawl.
+
+3) Kiểm tra chất lượng (Great Expectations – Gate)
+- GE chạy trên bảng raw ở PostgreSQL: kiểm tra không null các trường quan trọng, tính duy nhất (job_url), độ mới (posted_date), và khối lượng dữ liệu.
+- Nếu FAIL: Airflow dừng pipeline, gửi cảnh báo; dữ liệu OLAP cũ vẫn được giữ nguyên để dashboard Power BI không bị ảnh hưởng.
+- Nếu PASS: tiếp tục bước biến đổi. (Tùy chọn) Có thể chạy thêm GE sau-transform để kiểm tra các bảng marts.
+
+4) Biến đổi dữ liệu (dbt – ELT)
+- dbt đọc dữ liệu từ PostgreSQL (raw) → tạo các mô hình staging/dim/fact/agg.
+- Kết quả được materialize vào DuckDB (OLAP) thành các bảng/khung nhìn analytics-ready.
+
+5) Kho phân tích (DuckDB – OLAP)
+- DuckDB lưu trữ các mô hình phục vụ phân tích (ví dụ: dim_companies, fct_jobs, agg_jobs_by_industry…).
+- File DuckDB được đặt tại một đường dẫn ổn định để phục vụ kết nối từ Power BI.
+
+6) Kết nối Power BI
+- Power BI kết nối tới DuckDB để đọc các bảng phân tích. Tùy chọn kết nối:
+    - ODBC Driver của DuckDB (khuyến nghị trên Windows), hoặc
+    - Xuất Parquet từ DuckDB và dùng Power BI đọc thư mục Parquet, hoặc
+    - (Phương án thay thế) Nếu để marts trong PostgreSQL, Power BI có thể kết nối trực tiếp PostgreSQL.
+
+7) Làm mới dữ liệu (Refresh)
+- Desktop: Refresh thủ công để phát triển/kiểm thử.
+- Service: Dùng On-premises Data Gateway để đặt lịch refresh sau khi Airflow hoàn tất pipeline (ví dụ 04:00). Dataset trỏ tới cùng nguồn (ODBC/file path/Parquet folder).
+
+8) Trình bày và tiêu thụ
+- Power BI sử dụng các bảng trong DuckDB để dựng dashboard (Jobs by Industry, Salary Distribution, Trends…). Người dùng xem dashboard trên Power BI Service/app.
+
+9) Ứng dụng web người dùng (không liên quan Power BI)
+- Job Search Website truy cập dữ liệu qua FastAPI → PostgreSQL (OLTP) để phục vụ tra cứu/tìm kiếm theo thời gian thực; không truy vấn DuckDB.
+
+```mermaid
+flowchart LR
+    Airflow[Apache Airflow] -. trigger .-> Spiders[CrawlJob Spiders]
+    Spiders -->|Raw jobs| Postgres[(PostgreSQL OLTP)]
+    Airflow -. run .-> GE[Great Expectations]
+    GE -->|Validate raw| Postgres
+    Airflow -. run .-> dbt[dbt]
+    dbt -->|Read| Postgres
+    dbt -->|Materialize marts| DuckDB[(DuckDB OLAP)]
+    PowerBI[Power BI] -->|Connect| DuckDB
+
+    classDef c1 fill:#e1f5fe,stroke:#01579b,stroke-width:1px
+    classDef c2 fill:#f3e5f5,stroke:#4a148c,stroke-width:1px
+    class Airflow,Spiders c1
+    class Postgres,DuckDB c2
+```
+
+#### Data Flow chi tiết cho Job Search Website
+
+1) Người dùng → Giao diện Web (Frontend)
+- Người dùng nhập từ khóa/bộ lọc (keyword, site, location, page, page_size, sort…). Giao diện gửi HTTP request tới FastAPI.
+
+2) Frontend → FastAPI (API Layer)
+- Endpoint chính: `GET /jobs` với các query params đã hỗ trợ: `keyword`, `site`, `page`, `page_size` (có thể mở rộng `location`, `sort_by`).
+- FastAPI validate tham số, chuẩn hóa, log truy vấn, áp hạn mức page_size an toàn (ví dụ 10–50).
+
+3) FastAPI → PostgreSQL (Query OLTP)
+- API dựng câu truy vấn có paginate (LIMIT/OFFSET) và các điều kiện lọc; dùng truy vấn tham số (parameterized) để an toàn.
+- Khuyến nghị chỉ mục (indexes): `(job_title)`, `(company_name)`, `(location)`, `(posted_date)`, và `(source_site, posted_date)` để tối ưu lọc/sắp xếp.
+
+4) PostgreSQL → FastAPI (Kết quả)
+- PostgreSQL trả về danh sách job chuẩn hóa (18+ fields) cùng tổng số bản ghi (total) nếu có truy vấn đếm.
+- FastAPI trả JSON về frontend theo schema: `items`, `total`, `page`, `page_size`.
+
+5) FastAPI → Frontend (Hiển thị)
+- Frontend render danh sách việc làm, phân trang/scroll, và hiển thị metadata (source_site, scraped_at, posted_date…).
+- Cho trải nghiệm tốt hơn: debounce tìm kiếm, hiển thị loader, giữ state bộ lọc.
+
+6) Tính tươi dữ liệu
+- Dữ liệu đọc từ PostgreSQL đã được đi qua pipeline Airflow và cổng GE (chất lượng đạt chuẩn) trước đó.
+- Web luôn đọc nguồn OLTP nên không bị phụ thuộc vào DuckDB/BI.
+
+7) Độ tin cậy & Hiệu năng
+- Timeout hợp lý tại API (ví dụ 3–5s), retry nhẹ phía frontend; phân trang bắt buộc để bảo vệ DB.
+- (Tùy chọn) Cache ngắn hạn tại API (in-memory/ETag) cho truy vấn lặp lại; bật nén (gzip) khi trả JSON.
+
+8) Nhật ký & Giám sát
+- Log request/response và thời gian truy vấn (latency) để tối ưu tiếp; theo dõi lỗi 4xx/5xx.
+
+```mermaid
+flowchart LR
+    User[End User] --> UI[Web UI]
+    UI -->|HTTP GET /jobs?query...| FastAPI[FastAPI API]
+    FastAPI -->|Parameterized SQL| Postgres[(PostgreSQL OLTP)]
+    Postgres -->|Rows + total| FastAPI
+    FastAPI -->|JSON items,total,page,page_size| UI
+
+    classDef api fill:#e8f5e8,stroke:#1b5e20,stroke-width:1px
+    classDef db fill:#f3e5f5,stroke:#4a148c,stroke-width:1px
+    class FastAPI,UI api
+    class Postgres db
+```
+
+#### Data Flow chi tiết cho Orchestration & Monitoring (Airflow)
+
+1) Lên lịch & điều phối
+- Airflow DAG chạy theo cron (ví dụ 02:00). Các task: `run_spiders` → `ge_validate_raw` → `dbt_run` → (tuỳ chọn) `ge_validate_marts` → `publish_duckdb` → `notify_success`.
+
+2) Retry & SLA
+- Mỗi task có `retries` và `retry_delay` hợp lý; đặt `sla` để cảnh báo khi quá thời gian.
+
+3) Logging & Artifacts
+- Log chi tiết của từng task được lưu vào thư mục logs; artifacts gồm GE Data Docs, file DuckDB mới, và dbt target (manifest/run_results).
+
+4) Alerting
+- Kênh cảnh báo: Email/Slack khi task fail/SLA miss. Nội dung đính kèm link log và Data Docs (nếu có).
+
+5) Observability
+- Theo dõi trạng thái DAG trên Airflow UI (Gantt/Graph). Ghi nhận metrics (thời gian chạy, tỉ lệ fail) để tối ưu.
+
+```mermaid
+flowchart TD
+    start([Scheduled 02:00]) --> run_spiders[Task: run_spiders]
+    run_spiders --> ge_raw[Task: ge_validate_raw]
+    ge_raw -->|PASS| dbt_run[Task: dbt_run]
+    ge_raw -->|FAIL| alert1([Alert + Stop])
+    dbt_run --> ge_marts{Run ge_validate_marts?}
+    ge_marts -->|YES| ge_marts_task[Task: ge_validate_marts] --> publish[Task: publish_duckdb]
+    ge_marts -->|NO| publish
+    publish --> notify[Task: notify_success]
+
+    classDef t fill:#fff3e0,stroke:#e65100,stroke-width:1px
+    class run_spiders,ge_raw,dbt_run,ge_marts_task,publish,notify t
+```
+
+#### Data Flow chi tiết cho Data Quality (Great Expectations – chi tiết)
+
+1) Cấu hình
+- Khai báo datasource trỏ về PostgreSQL (raw) và (tuỳ chọn) DuckDB (marts). Tạo expectation suites cho các bảng quan trọng.
+
+2) Chạy checkpoint
+- Airflow trigger checkpoints: `raw_jobs_checkpoint` trước dbt; `marts_checkpoint` sau dbt (tuỳ chọn). Kết quả gồm pass/fail + thống kê chi tiết.
+
+3) Data Docs
+- Tự động build Data Docs (HTML) và lưu ở một vị trí cố định (ví dụ `reports/ge_data_docs/`). Có thể publish lên web nội bộ nếu cần.
+
+4) Gating
+- Nếu checkpoint FAIL (ví dụ null/unique/freshness vi phạm), dừng pipeline và gửi alert; không cập nhật DuckDB để giữ dashboard ổn định.
+
+```mermaid
+flowchart TD
+    GE[GE Checkpoint] --> RAW[(PostgreSQL raw)]
+    RAW --> VALIDATE{Validate rules}
+    VALIDATE -- PASS --> DOCS[Build Data Docs]
+    VALIDATE -- FAIL --> ALERT[Alert and stop pipeline]
+    DOCS --> PUBLISH[Publish HTML Data Docs]
+```
+
+#### Data Flow chi tiết cho dbt Docs & Lineage
+
+1) Sinh tài liệu
+- Chạy `dbt docs generate` sau `dbt run` để tạo catalog + lineage diagrams; lưu trong `target/` và (tuỳ chọn) publish nội bộ.
+
+2) Exposures
+- Khai báo `exposures` trong dbt để mô tả dashboard Power BI và web app như consumer chính; giúp theo dõi tác động thay đổi.
+
+3) Source Freshness
+- Chạy `dbt source freshness` theo lịch để đo độ tươi của nguồn (PostgreSQL/raw), phản hồi vào monitoring/alerting.
+
+```mermaid
+flowchart TD
+    dbt_run[dbt run] --> models[Staging/Dim/Fact/Agg Models]
+    dbt_run --> target_duckdb[(DuckDB marts)]
+    dbt_docs[dbt docs generate] --> catalog[Catalog + Lineage]
+    exposures[dbt exposures] --> consumers[Power BI, Web App]
+    freshness[dbt source freshness] --> status[Freshness Status]
+```
+
+#### Data Flow chi tiết cho Data Export/Sharing (Parquet/External)
+
+1) Export từ DuckDB
+- Sau `dbt run`, có thể export bảng phân tích từ DuckDB sang Parquet/CSV trong `data/exports/` để chia sẻ cho data science/đối tác.
+
+2) Tích hợp công cụ khác
+- Các công cụ như Pandas, Spark, hoặc Power BI (qua Parquet folder) có thể tiêu thụ dữ liệu này mà không cần truy cập trực tiếp DB.
+
+3) Quản trị phiên bản
+- Đặt quy tắc đặt tên (kèm timestamp) và dọn dẹp phiên bản cũ bằng job định kỳ để tối ưu dung lượng.
+
+```mermaid
+flowchart TD
+    MARTS["DuckDB marts"] --> EXPORT["Export to Parquet or CSV"]
+    EXPORT --> PANDAS["Pandas"]
+    EXPORT --> SPARK["Spark"]
+    EXPORT --> PBI["Power BI - Parquet folder"]
+    AF["Airflow optional"] --> EXPORT
 ```
 
 ### **Technology Stack**
@@ -64,613 +304,5 @@ CrawlJob Spiders → Apache Airflow → PostgreSQL (OLTP) → dbt → DuckDB (OL
 - **Visualization**: Power BI
 - **Backend**: FastAPI
 - **Frontend**: Bootstrap 5
-
----
-
-## 📊 **IMPLEMENTATION PHASES**
-
-### **Phase 1: Core Data Engineering (Tuần 1-4)**
-
-#### **Week 1-2: Apache Airflow Setup**
-- ✅ Install Apache Airflow
-- ✅ Create DAGs cho spider scheduling
-- ✅ Setup database connections
-- ✅ Configure error handling và retries
-- ✅ Test với existing spiders
-- ✅ Setup monitoring và alerts
-
-#### **Week 3-4: dbt Integration**
-- ✅ Install dbt-core + dbt-postgres
-- ✅ Create dbt project structure
-- ✅ Build transformation models
-- ✅ Setup dbt docs
-- ✅ Test data transformations
-- ✅ Create data lineage
-
-### **Phase 2: Data Quality & Visualization (Tuần 5-8)**
-
-#### **Week 5-6: Great Expectations**
-- ✅ Install Great Expectations
-- ✅ Create data quality checks
-- ✅ Setup validation pipelines
-- ✅ Integrate với Airflow
-- ✅ Generate quality reports
-- ✅ Setup quality monitoring
-
-#### **Week 7-8: Power BI Integration**
-- ✅ Setup Power BI Desktop
-- ✅ Connect to PostgreSQL/DuckDB
-- ✅ Create job market dashboards
-- ✅ Setup data refresh schedules
-- ✅ Deploy Power BI Service
-- ✅ Setup user access controls
-
----
-
-## 🔧 **TECHNICAL IMPLEMENTATION**
-
-### **1. Apache Airflow Configuration**
-
-#### **DAG Structure**
-```python
-# crawljob_dag.py
-from airflow import DAG
-from airflow.operators.python import PythonOperator
-from airflow.operators.bash import BashOperator
-from datetime import datetime, timedelta
-
-default_args = {
-    'owner': 'crawljob',
-    'depends_on_past': False,
-    'start_date': datetime(2024, 1, 1),
-    'email_on_failure': True,
-    'email_on_retry': False,
-    'retries': 3,
-    'retry_delay': timedelta(minutes=5)
-}
-
-dag = DAG(
-    'crawljob_daily_pipeline',
-    default_args=default_args,
-    description='Daily job crawling pipeline',
-    schedule_interval='0 2 * * *',  # Daily at 2 AM
-    catchup=False,
-    tags=['crawljob', 'daily', 'jobs']
-)
-
-# Spider execution tasks
-spider_tasks = []
-for spider in ['careerlink', 'careerviet', 'itviec', 'job123', 'joboko', 'jobsgo', 'jobstreet', 'linkedin', 'topcv', 'vietnamworks']:
-    task = BashOperator(
-        task_id=f'run_{spider}_spider',
-        bash_command=f'cd /path/to/crawljob && scrapy crawl {spider}',
-        dag=dag
-    )
-    spider_tasks.append(task)
-
-# Data quality check
-quality_check = PythonOperator(
-    task_id='data_quality_check',
-    python_callable=run_data_quality_checks,
-    dag=dag
-)
-
-# dbt transformation
-dbt_run = BashOperator(
-    task_id='dbt_transformation',
-    bash_command='cd /path/to/dbt/project && dbt run',
-    dag=dag
-)
-
-# Set dependencies
-spider_tasks >> quality_check >> dbt_run
-```
-
-#### **Connection Configuration**
-```python
-# airflow/connections.py
-from airflow.models import Connection
-
-# PostgreSQL connection
-postgres_conn = Connection(
-    conn_id='postgresql_default',
-    conn_type='postgres',
-    host='localhost',
-    port=5432,
-    login='crawljob_user',
-    password='your_password',
-    schema='crawljob_db'
-)
-
-# DuckDB connection
-duckdb_conn = Connection(
-    conn_id='duckdb_default',
-    conn_type='duckdb',
-    host='localhost',
-    port=5432,
-    login='analytics_user',
-    password='your_password',
-    schema='analytics_db'
-)
-```
-
-### **2. dbt Configuration**
-
-#### **dbt_project.yml**
-```yaml
-name: 'crawljob_analytics'
-version: '1.0.0'
-config-version: 2
-
-profile: 'crawljob'
-
-model-paths: ["models"]
-analysis-paths: ["analysis"]
-test-paths: ["tests"]
-seed-paths: ["seeds"]
-macro-paths: ["macros"]
-snapshot-paths: ["snapshots"]
-
-target-path: "target"
-clean-targets:
-  - "target"
-  - "dbt_packages"
-
-models:
-  crawljob_analytics:
-    staging:
-      +materialized: view
-    marts:
-      +materialized: table
-```
-
-#### **profiles.yml**
-```yaml
-crawljob:
-  target: dev
-  outputs:
-    dev:
-      type: postgres
-      host: localhost
-      user: crawljob_user
-      password: your_password
-      port: 5432
-      dbname: crawljob_db
-      schema: analytics
-      threads: 4
-      keepalives_idle: 0
-```
-
-#### **Sample Model: stg_jobs.sql**
-```sql
--- models/staging/stg_jobs.sql
-with source as (
-    select * from {{ source('raw', 'jobs') }}
-),
-
-renamed as (
-    select
-        id,
-        job_title,
-        company_name,
-        salary,
-        location,
-        job_type,
-        job_industry,
-        experience_level,
-        education_level,
-        job_position,
-        job_description,
-        job_requirements,
-        job_benefits,
-        job_url,
-        company_url,
-        company_size,
-        company_industry,
-        posted_date,
-        created_at,
-        updated_at
-    from source
-)
-
-select * from renamed
-```
-
-#### **Sample Model: dim_companies.sql**
-```sql
--- models/marts/dim_companies.sql
-with companies as (
-    select distinct
-        company_name,
-        company_url,
-        company_size,
-        company_industry
-    from {{ ref('stg_jobs') }}
-),
-
-company_stats as (
-    select
-        company_name,
-        count(*) as total_jobs,
-        count(distinct job_industry) as industries_count,
-        count(distinct location) as locations_count
-    from {{ ref('stg_jobs') }}
-    group by company_name
-)
-
-select
-    row_number() over (order by company_name) as company_id,
-    c.company_name,
-    c.company_url,
-    c.company_size,
-    c.company_industry,
-    cs.total_jobs,
-    cs.industries_count,
-    cs.locations_count
-from companies c
-left join company_stats cs on c.company_name = cs.company_name
-```
-
-### **3. Great Expectations Configuration**
-
-#### **Data Quality Checks**
-```python
-# great_expectations/expectations/job_data_quality.py
-import great_expectations as gx
-from great_expectations.core import ExpectationConfiguration
-
-def create_job_data_quality_suite():
-    context = gx.get_context()
-    
-    # Create expectation suite
-    suite = context.create_expectation_suite(
-        expectation_suite_name="job_data_quality",
-        overwrite_existing=True
-    )
-    
-    # Add expectations
-    expectations = [
-        # Data completeness
-        ExpectationConfiguration(
-            expectation_type="expect_column_values_to_not_be_null",
-            kwargs={"column": "job_title"}
-        ),
-        ExpectationConfiguration(
-            expectation_type="expect_column_values_to_not_be_null",
-            kwargs={"column": "company_name"}
-        ),
-        ExpectationConfiguration(
-            expectation_type="expect_column_values_to_not_be_null",
-            kwargs={"column": "job_url"}
-        ),
-        
-        # Data uniqueness
-        ExpectationConfiguration(
-            expectation_type="expect_column_values_to_be_unique",
-            kwargs={"column": "job_url"}
-        ),
-        
-        # Data freshness
-        ExpectationConfiguration(
-            expectation_type="expect_column_max_to_be_between",
-            kwargs={
-                "column": "posted_date",
-                "min_value": "2024-01-01",
-                "max_value": "now"
-            }
-        ),
-        
-        # Data volume
-        ExpectationConfiguration(
-            expectation_type="expect_table_row_count_to_be_between",
-            kwargs={
-                "min_value": 1000,
-                "max_value": 50000
-            }
-        )
-    ]
-    
-    for expectation in expectations:
-        suite.add_expectation(expectation)
-    
-    context.save_expectation_suite(suite)
-    return suite
-```
-
-### **4. Power BI Integration**
-
-#### **Data Source Configuration**
-```python
-# powerbi/data_connection.py
-import pyodbc
-import pandas as pd
-
-class PowerBIDataConnector:
-    def __init__(self, connection_string):
-        self.connection_string = connection_string
-    
-    def get_job_data(self):
-        """Get job data for Power BI"""
-        query = """
-        SELECT 
-            j.job_title,
-            j.company_name,
-            j.salary,
-            j.location,
-            j.job_type,
-            j.job_industry,
-            j.experience_level,
-            j.education_level,
-            j.posted_date,
-            j.created_at,
-            c.company_size,
-            c.company_industry,
-            c.total_jobs
-        FROM jobs j
-        LEFT JOIN dim_companies c ON j.company_name = c.company_name
-        WHERE j.posted_date >= DATEADD(day, -30, GETDATE())
-        """
-        
-        with pyodbc.connect(self.connection_string) as conn:
-            return pd.read_sql(query, conn)
-    
-    def get_analytics_data(self):
-        """Get analytics data for Power BI"""
-        query = """
-        SELECT 
-            job_industry,
-            location,
-            experience_level,
-            education_level,
-            COUNT(*) as job_count,
-            AVG(CASE WHEN salary IS NOT NULL THEN salary END) as avg_salary
-        FROM jobs
-        WHERE posted_date >= DATEADD(day, -30, GETDATE())
-        GROUP BY job_industry, location, experience_level, education_level
-        """
-        
-        with pyodbc.connect(self.connection_string) as conn:
-            return pd.read_sql(query, conn)
-```
-
-#### **Power BI Dashboard Structure**
-```
-📊 CrawlJob Analytics Dashboard
-├── 📈 Job Market Overview
-│   ├── Total Jobs by Industry
-│   ├── Jobs by Location
-│   ├── Salary Distribution
-│   └── Job Trends Over Time
-├── 🏢 Company Analysis
-│   ├── Top Companies by Job Count
-│   ├── Company Size Distribution
-│   ├── Company Industry Breakdown
-│   └── Company Growth Trends
-├── 💼 Job Requirements
-│   ├── Experience Level Distribution
-│   ├── Education Requirements
-│   ├── Job Type Breakdown
-│   └── Skills Demand Analysis
-└── 📊 Data Quality
-    ├── Data Completeness Score
-    ├── Data Freshness Status
-    ├── Quality Trends
-    └── Data Volume Metrics
-```
-
----
-
-## 📈 **SUCCESS METRICS**
-
-### **Technical Metrics**
-- ✅ **Pipeline Uptime**: > 99%
-- ✅ **Data Freshness**: < 24 hours
-- ✅ **Data Quality Score**: > 95%
-- ✅ **Processing Time**: < 2 hours for daily pipeline
-- ✅ **Error Rate**: < 1%
-
-### **Business Metrics**
-- ✅ **Dashboard Usage**: > 80% daily active users
-- ✅ **Data Accuracy**: > 98%
-- ✅ **User Satisfaction**: > 4.5/5
-- ✅ **Insight Generation**: > 10 new insights per week
-- ✅ **Decision Support**: > 90% of decisions data-driven
-
-### **Operational Metrics**
-- ✅ **Automation Level**: 100% automated pipelines
-- ✅ **Monitoring Coverage**: 100% of critical processes
-- ✅ **Alert Response Time**: < 15 minutes
-- ✅ **Documentation Coverage**: > 95%
-- ✅ **Team Productivity**: > 50% improvement
-
----
-
-## 🚀 **DEPLOYMENT GUIDE**
-
-### **Environment Setup**
-
-#### **1. Apache Airflow**
-```bash
-# Install Airflow
-pip install apache-airflow
-
-# Initialize database
-airflow db init
-
-# Create admin user
-airflow users create \
-    --username admin \
-    --firstname Admin \
-    --lastname User \
-    --role Admin \
-    --email admin@crawljob.com
-
-# Start Airflow
-airflow webserver --port 8080
-airflow scheduler
-```
-
-#### **2. dbt**
-```bash
-# Install dbt
-pip install dbt-core dbt-postgres
-
-# Initialize project
-dbt init crawljob_analytics
-
-# Test connection
-dbt debug
-
-# Run models
-dbt run
-```
-
-#### **3. Great Expectations**
-```bash
-# Install Great Expectations
-pip install great_expectations
-
-# Initialize project
-great_expectations init
-
-# Create datasource
-great_expectations datasource new
-
-# Create expectation suite
-great_expectations suite new
-```
-
-#### **4. Power BI**
-```bash
-# Install Power BI Desktop
-# Download from Microsoft Store or website
-
-# Install Python connector
-pip install pyodbc pandas
-
-# Setup data gateway
-# Configure on-premises data gateway
-```
-
-### **Production Deployment**
-
-#### **Docker Compose**
-```yaml
-# docker-compose.yml
-version: '3.8'
-
-services:
-  postgresql:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: crawljob_db
-      POSTGRES_USER: crawljob_user
-      POSTGRES_PASSWORD: your_password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  airflow:
-    image: apache/airflow:2.8.1
-    environment:
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://crawljob_user:your_password@postgresql:5432/crawljob_db
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
-    depends_on:
-      - postgresql
-
-  dbt:
-    image: dbt/dbt:latest
-    volumes:
-      - ./dbt:/dbt
-    working_dir: /dbt
-    command: dbt run
-
-volumes:
-  postgres_data:
-```
-
-### **Monitoring & Alerting**
-
-#### **Airflow Monitoring**
-```python
-# airflow/monitoring.py
-from airflow.models import DagRun
-from airflow.utils.state import State
-from airflow.utils.dates import days_ago
-
-def check_dag_status():
-    """Check DAG run status and send alerts"""
-    dag_runs = DagRun.find(
-        dag_id='crawljob_daily_pipeline',
-        state=State.FAILED,
-        execution_date_gte=days_ago(1)
-    )
-    
-    if dag_runs:
-        send_alert(f"Failed DAG runs: {len(dag_runs)}")
-```
-
-#### **Data Quality Monitoring**
-```python
-# monitoring/data_quality.py
-import great_expectations as gx
-
-def monitor_data_quality():
-    """Monitor data quality and send alerts"""
-    context = gx.get_context()
-    
-    # Run checkpoint
-    checkpoint_result = context.run_checkpoint(
-        checkpoint_name="job_data_quality_checkpoint"
-    )
-    
-    if not checkpoint_result.success:
-        send_alert("Data quality check failed")
-```
-
----
-
-## 📚 **RESOURCES & DOCUMENTATION**
-
-### **Documentation**
-- [Apache Airflow Documentation](https://airflow.apache.org/docs/)
-- [dbt Documentation](https://docs.getdbt.com/)
-- [Great Expectations Documentation](https://docs.greatexpectations.io/)
-- [Power BI Documentation](https://docs.microsoft.com/en-us/power-bi/)
-
-### **Learning Resources**
-- [Data Engineering with Apache Airflow](https://www.oreilly.com/library/view/data-pipelines-with/9781492087823/)
-- [dbt Fundamentals](https://courses.getdbt.com/)
-- [Great Expectations Tutorial](https://docs.greatexpectations.io/docs/tutorials/)
-- [Power BI Training](https://docs.microsoft.com/en-us/learn/powerplatform/power-bi/)
-
-### **Community**
-- [Apache Airflow Slack](https://apache-airflow.slack.com/)
-- [dbt Community](https://getdbt.com/community/)
-- [Great Expectations Discord](https://discord.gg/great-expectations)
-- [Power BI Community](https://community.powerbi.com/)
-
----
-
-## 🎯 **CONCLUSION**
-
-Việc tích hợp **Apache Airflow + dbt + Great Expectations + Power BI** sẽ biến CrawlJob thành một **professional data engineering project** với:
-
-- ✅ **Industry-standard tools**
-- ✅ **Automated pipelines**
-- ✅ **Data quality assurance**
-- ✅ **Rich analytics dashboards**
-- ✅ **Scalable architecture**
-- ✅ **Professional documentation**
-
-Đây sẽ là một **impressive portfolio project** cho data engineering career và sẵn sàng cho production environment.
-
----
-
-**Next Steps**: Bắt đầu với **Apache Airflow** setup và tạo DAGs cho spider scheduling!
+- **Containerization**: Docker
+- **Version Control**: Git & GitHub

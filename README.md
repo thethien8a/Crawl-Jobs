@@ -16,40 +16,74 @@
 
 ### **📊 Data Collection**
 - **Input**: Từ khóa việc làm (VD: "Python Developer", "Data Analyst")
-- **Output**: Dữ liệu việc làm chuẩn hóa được lưu vào SQL Server với smart deduplication
+- **Output**: Dữ liệu việc làm chuẩn hóa được lưu vào PostgreSQL với smart deduplication
 - **Coverage**: **10 Trang Tuyển Dụng Việt Nam** - JobsGO, JobOKO, 123job, CareerViet, JobStreet, LinkedIn, TopCV, ITviec, CareerLink, VietnamWorks
 - **Data Model**: 18+ standardized fields với timestamps và metadata
 
 ### **🚀 Technical Capabilities**
 - **Hybrid Architecture**: Perfect Scrapy + Selenium integration
 - **Cloudflare Bypass**: Advanced anti-detection với Undetected ChromeDriver 3.5.4
-- **Enterprise Pipeline**: SQL Server với upsert logic và transaction management
+- **Enterprise Pipeline**: PostgreSQL với upsert logic và transaction management
 - **REST API**: FastAPI async endpoints với CORS, pagination, và keyword search
 - **Modular Web Dashboard**: Bootstrap 5 responsive interface với real-time search
-- **Automated Scheduling**: Windows Task Scheduler với automated log rotation
+- **Automated Scheduling**: Apache Airflow với automated monitoring
 - **Browser Management**: Windows-compatible cleanup với WinError prevention
 
-## 🛠️ **Technical Stack - Latest Versions**
+### **🏗️ Data Engineering Architecture**
+```
+🕷️ CrawlJob Spiders → ⚡ Apache Airflow → 🐘 PostgreSQL (OLTP) → 🔨 dbt → 🦆 DuckDB (OLAP)
+                                          ↓
+                                   ✅ Great Expectations → Data Quality Validation
+                                          ↓
+                        📊 Power BI Analytics ← 🌐 Job Search Website
+```
 
-### **Core Technologies**
+**Features:**
+- **Automated Orchestration**: Daily pipeline với Airflow DAGs
+- **Data Transformation**: dbt models cho analytics-ready data
+- **Quality Assurance**: Automated data validation với Great Expectations
+- **Dual Presentation**: Business analytics (Power BI) + End-user portal (Job Search Website)
+
+## 🛠️ **Technical Stack - Enterprise Data Engineering**
+
+### **Current Production Stack**
 - **Scrapy 2.11.0**: Latest stable version for robust web crawling
 - **Python 3.12.2**: Modern Python với async capabilities
 - **Selenium 4.15.0**: Advanced browser automation
-- **Undetected ChromeDriver 3.5.4**: **NEW** - Industry-leading Cloudflare bypass solution
-- **SQL Server**: Enterprise-grade database với robust indexing
+- **Undetected ChromeDriver 3.5.4**: Industry-leading Cloudflare bypass solution
+- **PostgreSQL**: OLTP database cho raw data storage
 - **FastAPI 0.112.2**: High-performance async web framework
 - **Bootstrap 5.1.3**: Modern responsive CSS framework
 
+### **Data Engineering Stack (In Progress)**
+- **🌬️ Apache Airflow**: Workflow orchestration và scheduling
+- **🔨 dbt (Data Build Tool)**: Data transformation và modeling
+- **🦆 DuckDB**: OLAP database cho analytics workloads
+- **✅ Great Expectations**: Data quality validation và monitoring
+- **📊 Power BI**: Business intelligence và analytics dashboards
+- **🌐 Job Search Portal**: End-user web application
+
 ### **Key Dependencies**
 ```
+# Core Scraping
 scrapy==2.11.0
 selenium==4.15.0
 undetected-chromedriver==3.5.4
-pymssql==2.2.7
+
+# Data Engineering
+apache-airflow==2.8.1
+dbt-core==1.7.0
+dbt-postgres==1.7.0
+great-expectations==0.18.0
+duckdb==0.9.0
+
+# API & Web
 fastapi==0.112.2
 uvicorn==0.30.6
+
+# Database
+psycopg2-binary==2.9.8
 python-dotenv==1.0.1
-webdriver-manager==4.0.1
 ```
 
 ## 📋 **Installation & Setup**
