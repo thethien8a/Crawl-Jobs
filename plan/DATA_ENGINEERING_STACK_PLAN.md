@@ -24,7 +24,7 @@ Chuyển đổi CrawlJob thành **Professional Data Engineering Project** với:
 - **Apache Airflow**: Workflow orchestration
 - **dbt**: Data transformation layer
 - **Great Expectations**: Data quality validation
-- **Power BI**: Data visualization và analytics
+– **Apache Superset**: Data visualization và analytics
 
 ### **Benefits**
 - 🏢 **Professional**: Industry-standard data engineering stack
@@ -65,7 +65,7 @@ flowchart TD
     end
 
     subgraph presentation["📊 Presentation & Access"]
-        powerbi["📈 Power BI<br/>BI Dashboards"]
+    superset["Apache Superset<br/>BI Dashboards"]
         fastapi["🚀 FastAPI<br/>REST API"]
         webapp["🌐 Job Search Website<br/>End-User Portal"]
         ge_docs["📋 GE Data Docs<br/>Quality Reports"]
@@ -86,7 +86,7 @@ flowchart TD
     %% Serving
     fastapi -->|"Query"| postgres
     webapp -->|"Use"| fastapi
-    powerbi -->|"Connect"| duckdb
+    superset -->|"Connect"| duckdb
 
     %% Styles
     classDef ingestionStyle fill:#e1f5fe,stroke:#01579b,stroke-width:2px
@@ -97,10 +97,10 @@ flowchart TD
     class spiders,airflow ingestionStyle
     class postgres,duckdb storageStyle
     class dbt,ge processStyle
-    class powerbi,fastapi,webapp,ge_docs presentStyle
+    class superset,fastapi,webapp,ge_docs presentStyle
 ```
 
-#### Data Flow chi tiết cho Power BI
+#### Data Flow chi tiết cho Apache Superset
 
 1) Điều phối theo lịch (Airflow)
 - Airflow chạy theo lịch (ví dụ 02:00 hằng ngày) và lần lượt trigger các bước: chạy spiders → kiểm tra chất lượng (GE) → biến đổi dữ liệu (dbt) → cập nhật kho OLAP (DuckDB).
@@ -110,7 +110,7 @@ flowchart TD
 
 3) Kiểm tra chất lượng (Great Expectations – Gate)
 - GE chạy trên bảng raw ở PostgreSQL: kiểm tra không null các trường quan trọng, tính duy nhất (job_url), độ mới (posted_date), và khối lượng dữ liệu.
-- Nếu FAIL: Airflow dừng pipeline, gửi cảnh báo; dữ liệu OLAP cũ vẫn được giữ nguyên để dashboard Power BI không bị ảnh hưởng.
+- Nếu FAIL: Airflow dừng pipeline, gửi cảnh báo; dữ liệu OLAP cũ vẫn được giữ nguyên để dashboard Superset không bị ảnh hưởng.
 - Nếu PASS: tiếp tục bước biến đổi. (Tùy chọn) Có thể chạy thêm GE sau-transform để kiểm tra các bảng marts.
 
 4) Biến đổi dữ liệu (dbt – ELT)
@@ -121,18 +121,17 @@ flowchart TD
 - DuckDB lưu trữ các mô hình phục vụ phân tích (ví dụ: dim_companies, fct_jobs, agg_jobs_by_industry…).
 - File DuckDB được đặt tại một đường dẫn ổn định để phục vụ kết nối từ Power BI.
 
-6) Kết nối Power BI
-- Power BI kết nối tới DuckDB để đọc các bảng phân tích. Tùy chọn kết nối:
-    - ODBC Driver của DuckDB (khuyến nghị trên Windows), hoặc
-    - Xuất Parquet từ DuckDB và dùng Power BI đọc thư mục Parquet, hoặc
-    - (Phương án thay thế) Nếu để marts trong PostgreSQL, Power BI có thể kết nối trực tiếp PostgreSQL.
+6) Kết nối Apache Superset
+- Superset kết nối tới DuckDB qua SQLAlchemy (duckdb-engine) để đọc các bảng phân tích. Tùy chọn kết nối:
+    - SQLAlchemy URI: `duckdb:///D:/path/to/warehouse.duckdb`, hoặc
+    - (Phương án thay thế) Nếu để marts trong PostgreSQL, Superset có thể kết nối trực tiếp PostgreSQL.
 
 7) Làm mới dữ liệu (Refresh)
 - Desktop: Refresh thủ công để phát triển/kiểm thử.
-- Service: Dùng On-premises Data Gateway để đặt lịch refresh sau khi Airflow hoàn tất pipeline (ví dụ 04:00). Dataset trỏ tới cùng nguồn (ODBC/file path/Parquet folder).
+- Service: Dùng feature Database refresh của Superset (hoặc cron Airflow để trigger materialization) sau khi pipeline hoàn tất; dashboard dùng nguồn DuckDB cập nhật.
 
 8) Trình bày và tiêu thụ
-- Power BI sử dụng các bảng trong DuckDB để dựng dashboard (Jobs by Industry, Salary Distribution, Trends…). Người dùng xem dashboard trên Power BI Service/app.
+- Superset sử dụng các bảng trong DuckDB để dựng dashboard (Jobs by Industry, Salary Distribution, Trends…). Người dùng xem dashboard trên giao diện Superset.
 
 9) Ứng dụng web người dùng (không liên quan Power BI)
 - Job Search Website truy cập dữ liệu qua FastAPI → PostgreSQL (OLTP) để phục vụ tra cứu/tìm kiếm theo thời gian thực; không truy vấn DuckDB.
@@ -146,7 +145,7 @@ flowchart LR
     Airflow -. run .-> dbt[dbt]
     dbt -->|Read| Postgres
     dbt -->|Materialize marts| DuckDB[(DuckDB OLAP)]
-    PowerBI[Power BI] -->|Connect| DuckDB
+    Superset[Apache Superset] -->|Connect| DuckDB
 
     classDef c1 fill:#e1f5fe,stroke:#01579b,stroke-width:1px
     classDef c2 fill:#f3e5f5,stroke:#4a148c,stroke-width:1px
@@ -271,7 +270,7 @@ flowchart TD
     dbt_run[dbt run] --> models[Staging/Dim/Fact/Agg Models]
     dbt_run --> target_duckdb[(DuckDB marts)]
     dbt_docs[dbt docs generate] --> catalog[Catalog + Lineage]
-    exposures[dbt exposures] --> consumers[Power BI, Web App]
+    exposures[dbt exposures] --> consumers[Superset, Web App]
     freshness[dbt source freshness] --> status[Freshness Status]
 ```
 
@@ -291,7 +290,7 @@ flowchart TD
     MARTS["DuckDB marts"] --> EXPORT["Export to Parquet or CSV"]
     EXPORT --> PANDAS["Pandas"]
     EXPORT --> SPARK["Spark"]
-    EXPORT --> PBI["Power BI - Parquet folder"]
+    EXPORT --> PBI["Superset (via Parquet folder)"]
     AF["Airflow optional"] --> EXPORT
 ```
 
@@ -301,7 +300,7 @@ flowchart TD
 - **OLAP Database**: DuckDB
 - **Transformation**: dbt
 - **Data Quality**: Great Expectations
-- **Visualization**: Power BI
+- **Visualization**: Apache Superset
 - **Backend**: FastAPI
 - **Frontend**: Bootstrap 5
 - **Containerization**: Docker
