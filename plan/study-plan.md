@@ -20,7 +20,7 @@
 #### **1. Docker Compose Fundamentals (2-3 days)**
 ```bash
 # Essential Commands
-docker-compose up -d
+ 
 docker-compose down
 docker-compose logs -f
 docker-compose exec <service> bash

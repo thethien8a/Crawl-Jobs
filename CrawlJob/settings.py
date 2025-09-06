@@ -70,15 +70,17 @@ COOKIES_ENABLED = False
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    "CrawlJob.pipelines.CrawljobPipeline": 300,
-    "CrawlJob.pipelines.SQLServerPipeline": 400,
+    "CrawlJob.pipelines.CrawljobPipeline": 200, # Giữ pipeline xử lý cơ bản
+    "CrawlJob.pipelines.PostgreSQLPipeline": 300, # Kích hoạt pipeline PostgreSQL mới
 }
 
-# SQL Server Database Configuration (loaded from environment)
-SQL_SERVER = os.getenv("SQL_SERVER", "localhost")
-SQL_DATABASE = os.getenv("SQL_DATABASE", "JobDatabase")
-SQL_USERNAME = os.getenv("SQL_USERNAME", "sa")
-SQL_PASSWORD = os.getenv("SQL_PASSWORD", "")
+
+# PostgreSQL Database Configuration (NEW)
+POSTGRES_HOST = os.getenv('POSTGRES_HOST', 'db')
+POSTGRES_PORT = os.getenv('POSTGRES_PORT', '5432')
+POSTGRES_DB = os.getenv('POSTGRES_DB', 'job_database')
+POSTGRES_USER = os.getenv('POSTGRES_USER', 'scrapy_user')
+POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD', 'scrapy_password')
 
 # Scraping Configuration
 DOWNLOAD_DELAY = 2  
