@@ -5,7 +5,7 @@ Hệ thống kỹ thuật dữ liệu chuyên nghiệp để thu thập, kiểm 
 ## 🏗️ Kiến trúc Hệ thống
 
 Dự án được xây dựng theo kiến trúc hiện đại, tách biệt rõ ràng các thành phần, bao gồm:
-- **Thu thập dữ liệu (Ingestion)**: `Scrapy` & `Selenium`
+- **Thu thập dữ liệu (Ingestion)**: `Scrapy` & `Selenium` & `BeautifulSoup`
 - **Điều phối (Orchestration)**: `Apache Airflow`
 - **Lưu trữ (Storage)**: `PostgreSQL` (OLTP) & `DuckDB` (OLAP)
 - **Kiểm tra chất lượng (Data Quality)**: `Great Expectations`
@@ -88,14 +88,10 @@ docker-compose up -d
 ```
 Lệnh này sẽ khởi động một service PostgreSQL có thể truy cập tại `localhost:5432`.
 
-**6. (QUAN TRỌNG) Khởi tạo Great Expectations**
-Bước này tạo ra cấu trúc thư mục cần thiết (`great_expectations/` hoặc `gx/`) để lưu trữ các cấu hình kiểm tra chất lượng dữ liệu. **Đây là bước bắt buộc.**
-```bash
-great_expectations init
 ```
 Lệnh này sẽ hỏi bạn một vài câu, hãy nhấn `Enter` để chấp nhận các giá trị mặc định.
 
-**7. Chạy thử nghiệm**
+**6. Chạy thử nghiệm**
 Bây giờ bạn đã sẵn sàng! Hãy thử chạy một spider để kiểm tra:
 ```bash
 python run_spider.py --spider itviec --keyword "Data Engineer"
@@ -123,7 +119,7 @@ uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 - **Health check**: `http://localhost:8000/health`
 - **Tìm kiếm jobs**: `http://localhost:8000/jobs?keyword=python`
 
-### Kiểm tra chất lượng dữ liệu (Data Quality)
+### Kiểm tra chất lượng dữ liệu (Data Quality) (Great Expectations)
 Sau khi thu thập dữ liệu, bạn có thể chạy quy trình kiểm tra chất lượng đã được định nghĩa.
 ```bash
 # Lệnh này sẽ được tích hợp vào Airflow trong pipeline hoàn chỉnh
