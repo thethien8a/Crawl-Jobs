@@ -61,25 +61,20 @@ class PostgreSQLPipeline:
             experience_level VARCHAR(200),
             education_level VARCHAR(200),
             job_position VARCHAR(200),
-            job_description TEXT, -- Changed from NVARCHAR(MAX) to TEXT for PostgreSQL
+            job_description TEXT,
             requirements TEXT,
             benefits TEXT,
             job_deadline VARCHAR(200),
             source_site VARCHAR(100),
-            job_url VARCHAR(1000) UNIQUE, -- Changed to UNIQUE to simplify upsert logic
+            job_url VARCHAR(1000),
             search_keyword VARCHAR(200),
             scraped_at VARCHAR(50),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP
+            updated_at TIMESTAMP,
+            UNIQUE(job_title, company_name, source_site)
         );
         """
-        try:
-            self.cursor.execute(create_table_sql)
-            # No need to commit here if autocommit is True
-            logger.info("Table 'jobs' checked/created successfully.")
-        except psycopg2.Error as e:
-            logger.error(f"Error creating 'jobs' table: {e}")
-            # self.conn.rollback() # No rollback needed with autocommit
+        
 
     def process_item(self, item, spider):
         if not self.conn or not self.cursor:
@@ -110,13 +105,13 @@ class PostgreSQLPipeline:
         # Logic UPSERT (INSERT ON CONFLICT DO UPDATE) cho PostgreSQL
         upsert_sql = """
         INSERT INTO jobs (
-            job_title, company_name, salary, location, job_type, job_industry, 
-            experience_level, education_level, job_position, job_description, 
-            requirements, benefits, job_deadline, source_site, job_url, 
+            job_title, company_name, salary, location, job_type, job_industry,
+            experience_level, education_level, job_position, job_description,
+            requirements, benefits, job_deadline, source_site, job_url,
             search_keyword, scraped_at, updated_at
         ) VALUES (
             %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP
-        ) ON CONFLICT (job_url) DO UPDATE SET
+        ) ON CONFLICT (job_title, company_name, source_site) DO UPDATE SET
             job_title = EXCLUDED.job_title,
             company_name = EXCLUDED.company_name,
             salary = EXCLUDED.salary,
@@ -130,6 +125,8 @@ class PostgreSQLPipeline:
             requirements = EXCLUDED.requirements,
             benefits = EXCLUDED.benefits,
             job_deadline = EXCLUDED.job_deadline,
+            job_url = EXCLUDED.job_url,
+            search_keyword = EXCLUDED.search_keyword,
             scraped_at = EXCLUDED.scraped_at,
             updated_at = CURRENT_TIMESTAMP;
         """

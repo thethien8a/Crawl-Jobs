@@ -56,3 +56,5 @@ web/.next/
 
 # Rule files
 rule/
+.cursorignore
+QWEN.md

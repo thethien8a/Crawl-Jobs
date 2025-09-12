@@ -13,12 +13,33 @@ services:
     networks:
       - crawljob-network
 
+  # Trong trường hợp nếu thích sử dụng docker pgadmin để có giao diện postgresql dễ quản lý
+  # và không thích sử dụng command line để quản lý postgresql
+  
+  # pgadmin:
+  #   image: dpage/pgadmin4
+  #   restart: always
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL} 
+  #     PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD} 
+  #     PGADMIN_LISTEN_PORT: 8080 # Cổng mà pgAdmin sẽ lắng nghe bên trong container
+  #   ports:
+  #     - "80:8080" 
+  #   volumes:
+  #     - pgadmin_data:/var/lib/pgadmin
+  #   depends_on:
+  #     - db # pgAdmin cần db chạy trước
+  #   networks:
+  #     - crawljob-network # Cùng network với db 
+
+  # Trong trường hợp thích sử dụng cmd
+  # docker exec -it  [tên container] psql -U [tên user] -d [tên database]
+  # Tiếp sử dụng: \dt để xem các bảng hiện có
+  # Sau câu lệnh này chỉ cần nhập lệnh sql vào để thực hiện
+
 volumes:
   db_data:
 
 networks:
   crawljob-network:
     driver: bridge
-
-# Cách chạy lệnh sql postgres trong container:
-# docker exec -it  crawljob-db-1 psql -U thethien8a -d job_database
