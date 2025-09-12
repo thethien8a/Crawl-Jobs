@@ -58,3 +58,9 @@ web/.next/
 rule/
 .cursorignore
 QWEN.md
+
+# Great Expectations - The "uncommitted" directory contains database passwords
+# and other sensitive information. NEVER commit it.
+great_expectations/uncommitted/
+gx/uncommitted/
+gx/

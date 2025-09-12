@@ -1,4 +1,3 @@
-
 # Welcome to Great Expectations! Always know what to expect from your data.
 #
 # Here you can define datasources, batch kwargs generators, integrations and
@@ -9,7 +8,7 @@
 
 # config_version refers to the syntactic version of this config file, and is used in maintaining backwards compatibility
 # It is auto-generated and usually does not need to be changed.
-config_version: 4
+config_version: 4.0
 
 # This config file supports variable substitution which enables: 1) keeping
 # secrets out of source control & 2) environment-based configuration changes
@@ -75,10 +74,17 @@ data_docs_sites:
   # profiles from the uncommitted directory. Read more at https://docs.greatexpectations.io/docs/terms/data_docs
   local_site:
     class_name: SiteBuilder
-    # set to false to hide how-to buttons in Data Docs
     show_how_to_buttons: true
     store_backend:
-        class_name: TupleFilesystemStoreBackend
-        base_directory: uncommitted/data_docs/local_site/
+      class_name: TupleFilesystemStoreBackend
+      base_directory: uncommitted/data_docs/local_site/
     site_index_builder:
-        class_name: DefaultSiteIndexBuilder
+      class_name: DefaultSiteIndexBuilder
+fluent_datasources:
+  job_database:
+    type: postgres
+    id: 0fbb74b2-fa77-40d3-9eba-c3d17034b675
+    connection_string: 
+      postgresql+psycopg2://thethien8a:Thethien8%40%21@localhost:5432/job_database
+analytics_enabled:
+data_context_id: 0b75d35e-b46b-41e7-b80e-b2bc1d049121
