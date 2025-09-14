@@ -59,18 +59,30 @@ class JobStreetSpider(scrapy.Spider):
         
         # Title
         title = response.css('h1[class*="job-title"]::text').get()
-        item['job_title'] = (title or '').strip()
+        if title:
+            title = title.strip()
+        else:
+            title = ''
+        item['job_title'] = title
         
         # Company
         company = response.css('[class*="company"]::text').get()
-        item['company_name'] = (company or '').strip()
+        if company:
+            company = company.strip()
+        else:
+            company = ''
+        item['company_name'] = company
         
         # Salary
         item['salary'] = ''
         
         # Location
         location = response.css('[class*="location"]::text').get()
-        item['location'] = (location or '').strip()
+        if location:
+            location = location.strip()
+        else:
+            location = ''
+        item['location'] = location
         
         item['job_type'] = response.css('div.badge.-default-badge div[class*="content"]::text').get()
         

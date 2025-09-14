@@ -43,7 +43,7 @@ class ItviecSpider(scrapy.Spider):
         options = uc.ChromeOptions()
 
         # Basic configuration for stability
-        options.add_argument('--headless')
+        options.add_argument(f'--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-gpu')
@@ -67,7 +67,7 @@ class ItviecSpider(scrapy.Spider):
 
         # Set window size for consistency
         options.add_argument('--window-size=1920,1080')
-        driver = uc.Chrome(options=options, version_main=None)
+        driver = uc.Chrome(headless=True, options=options, version_main=None)
 
         # Additional stealth scripts (optional, as undetected-chromedriver already provides most stealth)
         stealth_scripts = [
@@ -101,9 +101,17 @@ class ItviecSpider(scrapy.Spider):
         time.sleep(1)
         
         # Wait for email input to be visible
-        wait = WebDriverWait(self.driver, 10)
-        email_input = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "input[id='user_email']")))
-        
+        wait = WebDriverWait(self.driver, 20) # Increased wait time
+        try:
+            email_input = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "input[id='user_email']")))
+        except TimeoutException:
+            self.logger.error("Failed to find the email input field. The page might be blocked or changed.")
+            self.driver.save_screenshot('itviec_login_error.png')
+            with open('itviec_login_error.html', 'w', encoding='utf-8') as f:
+                f.write(self.driver.page_source)
+            self.logger.info("Saved screenshot and page source to 'itviec_login_error.png/html' for debugging.")
+            return
+
         # Quick email input
         email_input.click()
         email_input.clear()
@@ -132,6 +140,12 @@ class ItviecSpider(scrapy.Spider):
     def start_requests(self):
         """Start crawling with direct Selenium navigation"""
         self._login()
+
+        # Prevent further execution if login failed
+        if not self.driver or 'sign_in' in self.driver.current_url:
+            self.logger.error("Login failed or was not completed. Halting spider.")
+            return
+            
         url = f"https://itviec.com/it-jobs/{self.keyword}"
 
     
@@ -311,7 +325,10 @@ class ItviecSpider(scrapy.Spider):
             except Exception:
                 item['job_industry'] = ''
             
+            # ITviec không có job position
             item['job_position'] = ''
+            
+            # ITviec không có job deadline
             item['job_deadline'] = ''
 
             if item['job_title'] == '':

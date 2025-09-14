@@ -71,7 +71,7 @@ COOKIES_ENABLED = False
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
     "CrawlJob.pipelines.CrawljobPipeline": 200, # Giữ pipeline xử lý cơ bản
-    "CrawlJob.pipelines.PostgreSQLPipeline": 300, # Kích hoạt pipeline PostgreSQL mới
+    # "CrawlJob.pipelines.PostgreSQLPipeline": 300, # Kích hoạt pipeline PostgreSQL mới 
 }
 
 

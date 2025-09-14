@@ -70,7 +70,7 @@ class Job123Spider(scrapy.Spider):
         # Chi tiết
         item['job_type'] = self._parse_text_in_follow_sibling(response, 'Hình thức làm việc')
         
-        item['experience_level'] = self._parse_text_in_follow_sibling(response, 'Kinh nghiệm yêu cầu')
+        item['experience_level'] = self._parse_exp_level(response)
         
         item['education_level'] = self._parse_text_in_follow_sibling(response, 'Trình độ yêu cầu')
         
@@ -123,3 +123,7 @@ class Job123Spider(scrapy.Spider):
             salary_value = salary_container.css('div[class*="value"] ::text').get()
             return salary_value.strip() if salary_value else ''
         return ''
+    
+    def _parse_exp_level(self, response):
+        text = response.xpath(f'//div[contains(., "Kinh nghiệm yêu cầu")]/following-sibling::div[1]//text()').get()
+        return text.strip() if text else ''
