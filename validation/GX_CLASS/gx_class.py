@@ -1,7 +1,14 @@
 import os
 import great_expectations as gx
+import pandas as pd
 from dotenv import load_dotenv
 import urllib.parse
+from great_expectations.checkpoint import (
+    Checkpoint,
+    SlackNotificationAction,
+    UpdateDataDocsAction
+)
+
 from datetime import datetime, timedelta
 load_dotenv()
 
@@ -58,70 +65,78 @@ class GXClass:
             print(f"Added expectation to suite {expectation_suite_name}")
         except Exception as e:
             print(f"{e}")
-    
-    def create_recent_batch_request(self, asset_name, table_name, update_col_name, days_back=7):
-        """Create a BatchRequest for the latest data using QueryAsset with SQL filter on update_date."""
-        try:
-            datasource = self._context.data_sources.get(self.datasource_name)
             
-            # Build SQL query to filter latest data
-            query = f"""
-            SELECT * FROM {table_name}
-            WHERE {update_col_name} >= CURRENT_DATE - INTERVAL '{days_back}' DAY
-            ORDER BY {update_col_name} DESC
-            """
-            
-            # Add QueryAsset if it doesn't exist
-            try:
-                query_asset = datasource.get_asset(asset_name)
-                print(f"QueryAsset {asset_name} already exists.")
-            except:
-                query_asset = datasource.add_query_asset(
-                    name=asset_name,
-                    query=query
-                )
-                print(f"Created QueryAsset {asset_name} with query for latest {days_back} days.")
-            
-            # Build BatchRequest
-            batch_request = datasource.build_batch_request(data_asset_name=asset_name)
-            print(f"Created BatchRequest for recent data.")
-            return batch_request
-            
-        except Exception as e:
-            print(f"Error creating recent batch request: {e}")
-            return None
-    
-    def validate_batch(self, batch_request, expectation_suite_name):
-        """Validate the batch using the expectation suite."""
-        try:
-            # Get or create suite
-            try:
-                suite = self._context.get_expectation_suite(expectation_suite_name)
-            except:
-                self.create_expectation_suite(expectation_suite_name)
-                suite = self._context.get_expectation_suite(expectation_suite_name)
-            
-            # Create validator and run validation
-            validator = self._context.get_validator(
-                batch_request=batch_request,
-                expectation_suite=suite
-            )
-            results = validator.validate()
-            print(f"Validation results for suite {expectation_suite_name}:")
-            print(results)
-            return results
-        except Exception as e:
-            print(f"Error validating batch: {e}")
-            return None
+    def add_custom_expectation_to_suite(self,expectation_suite_name,expect_func_obj,col_effect):
+        pass
+
+    def create_batch_request(self,data_source_name,data_asset_name,batch_definition_name):
+        file_data_asset = self._context.data_sources.get(data_source_name).get_asset(data_asset_name)
         
+        try:
+            file_data_asset.add_batch_definition(name=batch_definition_name)
+            print(f"Created batch definition {batch_definition_name}")
+        except Exception as e:
+            print(f"{e}")
     
+    def get_batch(self,data_source_name,data_asset_name,batch_definition_name):
+        batch_definition = (
+            self._context.data_sources.get(data_source_name)
+            .get_asset(data_asset_name)
+            .get_batch_definition(batch_definition_name)
+        )
+        return batch_definition
+    
+    def create_validator(self,data_source_name, data_asset_name, batch_name, suite_name, validator_name):
+        expect_suite = self._context.suites.get(suite_name)
+        batch_definition = (
+            self._context.data_sources.get(data_source_name)
+            .get_asset(data_asset_name)
+            .get_batch_definition(batch_name)
+        )
+        try: 
+            validation_definition = gx.ValidationDefinition(
+                data=batch_definition,
+                    suite=expect_suite,
+                    name=validator_name
+                )
+            self._context.validation_definitions.add(validation_definition)
+            print(f"Created validator {validator_name}")
+        except Exception as e:
+            print(f"{e}")
+
+    def run_validator(self,validator_name):
+        try:
+            validation_definition = self._context.validation_definitions.get(validator_name)
+            validation_results = validation_definition.run()
+            print(validation_results)
+        except Exception as e:
+            print(f"{e}")
+
+    def create_checkpoint_docs(self,checkpoint_name,list_validator_name):
+        try:
+            validation_definitions = [self._context.validation_definitions.get(validator_name) for validator_name in list_validator_name]
+            action = UpdateDataDocsAction(name="update_data_docs")
+            checkpoint = Checkpoint(
+                name=checkpoint_name,
+                validation_definitions=validation_definitions,  
+                actions=action,
+                result_format={"result_format": "SUMMARY"}
+            )
+            
+            self._context.checkpoints.add(checkpoint)
+        except Exception as e:
+            print(f"{e}")
+            
+    def run_checkpoint(self,checkpoint_name):
+        try:
+            checkpoint = self._context.checkpoints.get(checkpoint_name)
+            checkpoint.run()
+        except Exception as e:
+            print(f"{e}")
+            
 if __name__ == "__main__":
     gx_obj = GXClass(datasource_name="job_database")
     gx_obj.create_datasource()
     gx_obj.create_asset(asset_name="job_database",table_name="jobs")
     gx_obj.create_expectation_suite(expectation_suite_name="recent_suite")
-    # Ví dụ sử dụng
-    batch_request = gx_obj.create_recent_batch_request("recent_jobs_batch", "jobs", update_col_name="update_date")
-    if batch_request:
-        gx_obj.validate_batch(batch_request, "recent_suite")  # Giả sử suite đã tạo
-
+    gx_obj.create_batch_request(data_source_name="job_database",data_asset_name="job_database",batch_definition_name="recent_batch")

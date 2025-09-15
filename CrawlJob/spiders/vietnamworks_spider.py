@@ -15,6 +15,10 @@ from webdriver_manager.chrome import ChromeDriverManager
 from ..items import JobItem
 from ..utils import create_stealth_chrome_options
 
+# Suppress verbose Selenium and urllib3 logs
+logging.getLogger('selenium').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
+logging.getLogger('selenium.webdriver.remote.remote_connection').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 class VietnamworksSpider(scrapy.Spider):
