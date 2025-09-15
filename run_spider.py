@@ -77,14 +77,9 @@ def main():
 			process.crawl(JobStreetSpider, keyword=args.keyword)
 			process.crawl(LinkedinSpider, keyword=args.keyword)
 			process.crawl(TopcvSpider, keyword=args.keyword)
-			# process.crawl(ItviecSpider, keyword=args.keyword)
+			process.crawl(ItviecSpider, keyword=args.keyword)
 			process.crawl(CareerlinkSpider, keyword=args.keyword)
 			process.crawl(VietnamworksSpider, keyword=args.keyword)
-		
-		print(f"Starting spider: {args.spider}")
-		print(f"Searching for: {args.keyword}")
-		print(f"Output: {args.output}")
-		print("-" * 50)
 		
 		process.start()
 		
