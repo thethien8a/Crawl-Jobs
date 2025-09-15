@@ -10,7 +10,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from ..items import JobItem
 from dotenv import load_dotenv
-
+# Suppress verbose Selenium and urllib3 logs
+import logging
+logging.getLogger('selenium').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
+logging.getLogger('selenium.webdriver.remote.remote_connection').setLevel(logging.WARNING)
 # Prevent undetected-chromedriver destructor errors
 uc.Chrome.__del__ = lambda self: None
 

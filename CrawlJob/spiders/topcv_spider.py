@@ -4,16 +4,8 @@ from datetime import datetime
 from ..items import JobItem
 from ..utils import encode_input
 
-# Debug helper function
-def test_selector(response, selector, name):
-    """Test a CSS selector and log results"""
-    elements = response.css(selector).getall()
-    print(f"\n=== {name} ===")
-    print(f"Selector: {selector}")
-    print(f"Found {len(elements)} elements:")
-    for i, elem in enumerate(elements):
-        print(f"  {i+1}: '{elem.strip()}'")
-    return elements
+
+
 class TopcvSpider(scrapy.Spider):
     name = 'topcv'
     allowed_domains = ['topcv.vn']
