@@ -12,6 +12,12 @@ from selenium.common.exceptions import TimeoutException
 from dotenv import load_dotenv
 from ..items import JobItem
 
+# Suppress verbose Selenium and urllib3 logs
+import logging
+logging.getLogger('selenium').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
+logging.getLogger('selenium.webdriver.remote.remote_connection').setLevel(logging.WARNING)
+
 # Prevent undetected-chromedriver destructor errors
 uc.Chrome.__del__ = lambda self: None
 
@@ -29,13 +35,14 @@ class LinkedinSpider(scrapy.Spider):
         super(LinkedinSpider, self).__init__(*args, **kwargs)
         self.keyword = keyword or 'Data Analyst'
         self.location = 'Vietnam'
-        self._max_pages = 3
+        self._max_pages = 1
         self._pages_crawled = 0
         self._click_delay_range = (2, 5)
         self.driver = None
         self._processed_hrefs = set()
         self.__username = os.getenv('LINKEDIN_EMAIL')
         self.__password = os.getenv('LINKEDIN_PASS')
+
 
     def _init_driver(self):
         """Initializes the undetected-chromedriver"""
@@ -123,68 +130,73 @@ class LinkedinSpider(scrapy.Spider):
             self.logger.error("Halting spider due to login failure.")
             return
 
+   
+
     def parse(self, response):
         """Main parsing logic after successful login."""
-        # The driver is already on the correct page from start_requests
         self.driver.get(response.url)
+        
         wait = WebDriverWait(self.driver, 15)
         
-        try:
-            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div[class*='jobs-search-results-list']")))
-            self.logger.info("Job search results page loaded.")
-        except TimeoutException:
-            self.logger.error("Timed out waiting for job results to load.")
-            self.driver.save_screenshot('linkedin_jobsearch_error.png')
-            return
+        # Loop through pages
+        while self._pages_crawled < self._max_pages:
+            self._pages_crawled += 1
+            self.logger.info(f"--- Processing page {self._pages_crawled} ---")
+    
+            # Ensure list is present
+            try:
+                wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div[class*='jobs-search-results-list']")))
+            except TimeoutException:
+                self.logger.error(f"Timed out waiting for job results to load on page {self._pages_crawled}.")
+                break
 
-        yield from self._process_current_visible_items()
-        self._pages_crawled += 1
-        
-        if self._pages_crawled < self._max_pages:
-            self.driver.find_element(By.CSS_SELECTOR, "button[aria-label='Xem trang tiếp theo']").click()
-            yield scrapy.Request(
-                url=response.url,
-                callback=self.parse,
-                meta=response.meta
-            )
-        else:
-            return
+            # Process all visible items on the current page
+            yield from self._process_current_visible_items()
+
+            # Find and click the 'Next' button to go to the next page
+            try:
+                next_button = wait.until(EC.element_to_be_clickable(
+                    (By.CSS_SELECTOR, "button[class*='jobs-search-pagination__button--next']")
+                ))
+                next_button.click()
+                time.sleep(random.uniform(1.5, 2.5))
+            except TimeoutException:
+                self.logger.info("No 'Next' button found. Reached the last page.")
+                break
+            except Exception as e:
+                self.logger.error(f"Error clicking 'Next' button: {e}")
+                break
     
     def _process_current_visible_items(self):
         wait = WebDriverWait(self.driver, 15)
-        # Lấy đúng các thẻ anchor của danh sách kết quả thay vì container <ul>
-        anchors = self.driver.find_elements(
-            By.CSS_SELECTOR, "a[href*='/jobs/view/'][class*='job-card-list__title--link']"
-        )
-        ordered = []
 
-        # Set để kiểm tra href có tồn tại trong view hiện tại không
-        seen_local = set()
-        for a in anchors:
+        time.sleep(1.5)
+        
+        job_container = self.driver.find_element(By.CSS_SELECTOR, "ul[class*='ZoMBgxcPjwbXwxVDiHJRnBmTIhQPBYxqqgkZo']")
+        job_elements = job_container.find_elements(By.CSS_SELECTOR, "li[id*='ember']")
+        for job in job_elements:
             try:
-                href = a.get_attribute('href')
-                # Điều kiện: có href hợp lệ, chưa thấy trong vòng lặp này và chưa xử lý từ trước
-                if href and '/jobs/view/' in href and href not in seen_local and href not in self._processed_hrefs:
-                    seen_local.add(href)
-                    ordered.append((a, href))
-            except Exception:
-                continue
-
-        for a, href in ordered:
-            try:
-                self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", a)
+               
+                self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", job)
                 time.sleep(0.3)
-                a.click()
+                job.click()
+                
+                try:
+                    job_link = job.find_element(By.CSS_SELECTOR, "a[href*='/jobs/view/']")
+                    job_url = job_link.get_attribute('href')
+                except Exception:
+                    continue
+                
                 wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div[class='job-view-layout jobs-details']")))
                 time.sleep(0.3)
 
                 item = self._extract_job_from_panel()
                 if item:
                     item['source_site'] = 'linkedin.com'
-                    item['job_url'] = href
+                    item['job_url'] = job_url
                     item['search_keyword'] = self.keyword
                     item['scraped_at'] = datetime.now().isoformat()
-                    self._processed_hrefs.add(href)
+                    self._processed_hrefs.add(job_url)
                     yield item
 
                 time.sleep(random.uniform(*self._click_delay_range))
@@ -244,10 +256,20 @@ class LinkedinSpider(scrapy.Spider):
         return item
 
     def closed(self, reason):
-        """Robust driver cleanup."""
+        """
+        Ensures the driver is always quit when the spider is closed,
+        preventing orphan processes.
+        """
         if hasattr(self, 'driver') and self.driver:
-            self.driver.quit()
-            self.logger.info("Driver cleanup completed successfully")
+            self.logger.info("Closing the Selenium driver...")
+            try:
+                self.driver.quit()
+                self.logger.info("Driver quit successfully.")
+            except Exception as e:
+                self.logger.error(f"Error while quitting driver: {e}")
+            finally:
+                self.driver = None
         else:
-            self.logger.info("No driver to cleanup")
-        self.driver = None
+            self.logger.info("No active driver to close.")
+
+    
