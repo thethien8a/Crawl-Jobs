@@ -1,15 +1,12 @@
 import os
 import great_expectations as gx
-import pandas as pd
 from dotenv import load_dotenv
 import urllib.parse
 from great_expectations.checkpoint import (
     Checkpoint,
-    SlackNotificationAction,
     UpdateDataDocsAction
 )
 
-from datetime import datetime, timedelta
 load_dotenv()
 
 class GXClass:
@@ -133,7 +130,8 @@ class GXClass:
             checkpoint.run()
         except Exception as e:
             print(f"{e}")
-            
+         
+# TEST CLASS   
 if __name__ == "__main__":
     gx_obj = GXClass(datasource_name="job_database")
     gx_obj.create_datasource()
