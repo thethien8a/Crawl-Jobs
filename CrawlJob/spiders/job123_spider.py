@@ -98,19 +98,19 @@ class Job123Spider(scrapy.Spider):
         text = reponse.css(f"[class*='{class_name}'] ::text").get()
         if text:
             return text.strip()
-        return ''
+        return None
     
     def _parse_text_in_follow_sibling(self, response, text_extract):
         text = response.xpath(f"//*[contains(text(), '{text_extract}')]/following-sibling::*[1]//text()").get()
         if text:
             return text.strip()
-        return ''
+        return None
     
     def _parse_paragraph_in_follow_sibling(self, response, text_extract):
         para = response.xpath(f'//h2[contains(normalize-space(.), "{text_extract}")]/following-sibling::*[1]//text()').getall()
         if para:
             return ' '.join(para)
-        return ''
+        return None
     
     def _parse_salary(self, response):
         # Tìm div.attr-item có chứa span với text cần tìm
@@ -121,9 +121,9 @@ class Job123Spider(scrapy.Spider):
         if salary_container:
             # Lấy text từ span bên trong div.value
             salary_value = salary_container.css('div[class*="value"] ::text').get()
-            return salary_value.strip() if salary_value else ''
-        return ''
+            return salary_value.strip() if salary_value else None
+        return None
     
     def _parse_exp_level(self, response):
         text = response.xpath(f'//div[contains(., "Kinh nghiệm yêu cầu")]/following-sibling::div[1]//text()').get()
-        return text.strip() if text else ''
+        return text.strip() if text else None

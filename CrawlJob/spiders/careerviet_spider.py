@@ -70,7 +70,7 @@ class CareervietSpider(scrapy.Spider):
         item['experience_level'] = ' '.join(self._extract_detail_text(response, 'Kinh nghiệm').split())
         
         # Education level
-        item['education_level'] = ''
+        item['education_level'] = None
         for text in response.css('div.content_fck li::text').getall():
             if "Bằng cấp" in text:
                 item['education_level'] = clean_text_with_tab(' '.join(text.split()))
@@ -99,12 +99,12 @@ class CareervietSpider(scrapy.Spider):
         value = response.xpath(f'//strong[contains(normalize-space(.), "{text_extract}")]/following-sibling::p//text()').getall()
         if value:
             return clean_text_with_tab(' '.join(value).strip())
-        return ''
+        return None
     
     def _extract_detail_paragraph(self, response, text_extract):
         texts = response.xpath(f'//h2[contains(normalize-space(.), "{text_extract}")]/following-sibling::*//text()').getall()
         if texts:
             return (' '.join(clean_text_with_tab(text) for text in texts))
-        return ''
+        return None
 
     

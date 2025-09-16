@@ -209,9 +209,9 @@ class LinkedinSpider(scrapy.Spider):
         def _text_or_empty(by, selector):
             try:
                 el = self.driver.find_element(by, selector)
-                return (el.text or '').strip()
+                return el.text.strip() if el.text else None
             except Exception:
-                return ''
+                return None
         
 
         item = JobItem()
@@ -229,12 +229,12 @@ class LinkedinSpider(scrapy.Spider):
         description = _text_or_empty(By.CSS_SELECTOR, "div[class='mt4'] p[dir='ltr']")
         item['job_description'] = description
         
-        item['requirements'] = ''
-        item['benefits'] = ''
+        item['requirements'] = None
+        item['benefits'] = None
 
-        item['job_type'] = '' 
-        item['experience_level'] = ''
-        item['education_level'] = ''
+        item['job_type'] = None
+        item['experience_level'] = None
+        item['education_level'] = None
         
         try:
             # This div contains industry, employee count, etc
@@ -245,12 +245,12 @@ class LinkedinSpider(scrapy.Spider):
             industry = self.driver.execute_script(script, info_div)
             item['job_industry'] = industry
         except Exception:
-            item['job_industry'] = ''
-            
-        item['job_position'] = ''
-        item['job_deadline'] = ''
+            item['job_industry'] = None
 
-        if item['job_title'] == '' :
+        item['job_position'] = None
+        item['job_deadline'] = None
+
+        if item['job_title'] is None :
             return None
         
         return item

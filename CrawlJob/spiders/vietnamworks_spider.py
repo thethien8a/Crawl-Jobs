@@ -276,7 +276,7 @@ class VietnamworksSpider(scrapy.Spider):
             item['requirements'] = self._get_text_by_xpath_text("Yêu cầu")
 
             # Không có benefits trên trang web
-            item['benefits'] = ''
+            item['benefits'] = None
 
             # Metadata
             item['source_site'] = 'vietnamworks.com'
@@ -315,7 +315,7 @@ class VietnamworksSpider(scrapy.Spider):
             element = self._driver.find_element(By.XPATH, xpath)
             return element.text.strip()
         except (NoSuchElementException, Exception):
-            return ""
+            return None
 
     def _cleanup_driver(self):
         """Clean up Selenium driver"""
@@ -334,4 +334,4 @@ class VietnamworksSpider(scrapy.Spider):
             element = self._driver.find_element(by, selector)
             return element.text.strip()
         except (NoSuchElementException, Exception):
-            return ''
+            return None

@@ -78,7 +78,7 @@ class JobsgoSpider(scrapy.Spider):
         
         # Company name - lấy tên công ty từ link tới trang tuyển dụng công ty 
         company = response.css('[class="fw-semibold pe-3 mb-0 pt-4 mt-2"]::text').get()
-        item['company_name'] = (company or '')
+        item['company_name'] = (company or None)
         
         # Meta list ngay dưới tiêu đề: Mức lương / Hạn nộp / Địa điểm
         item['salary'] = self._extract_value_by_label(response, 'Mức lương')
@@ -112,7 +112,7 @@ class JobsgoSpider(scrapy.Spider):
         text = response.css(f'{selector}::text').get()
         if not text:
             self.logger.warning(f"No text found for selector: {selector}")
-        return text.strip() if text else ''
+        return text.strip() if text else None
     
     def _extract_value_by_label(self, response, label_text):
         """Lấy giá trị trong thẻ <li> có chứa nhãn (ví dụ: Mức lương/Hạn nộp/Địa điểm)"""
@@ -130,7 +130,7 @@ class JobsgoSpider(scrapy.Spider):
             return texts
         except Exception as e:
             self.logger.error(f"Error extracting common section value: {e}")
-            return ''
+            return None
     
     def _extract_common_section_links(self, response, label_text):
         """Lấy lĩnh vực (job industry)"""
@@ -139,7 +139,7 @@ class JobsgoSpider(scrapy.Spider):
             return link_texts
         except Exception as e:
             self.logger.error(f"Error extracting common section links: {e}")
-            return ''
+            return None
     
     def _extract_section_list_text(self, response, heading_text):
         try:
@@ -147,4 +147,4 @@ class JobsgoSpider(scrapy.Spider):
             return ' '.join([' '.join(p.split()) for p in para if p and p.strip()])
         except Exception as e:
             self.logger.error(f"Error extracting section list text: {e}")
-            return ''
+            return None

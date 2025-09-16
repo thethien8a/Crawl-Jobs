@@ -8,7 +8,7 @@ Dự án được xây dựng theo kiến trúc hiện đại, tách biệt rõ 
 - **Thu thập dữ liệu (Ingestion)**: `Scrapy` & `Selenium` & `BeautifulSoup`
 - **Điều phối (Orchestration)**: `Apache Airflow`
 - **Lưu trữ (Storage)**: `PostgreSQL` (OLTP) & `DuckDB` (OLAP)
-- **Kiểm tra chất lượng (Data Quality)**: `Great Expectations`
+- **Kiểm tra chất lượng (Data Quality)**: `Soda Core` (Raw gating) + `dbt tests` (Business rules)
 - **Biến đổi dữ liệu (Transformation)**: `dbt`
 - **API & Giao diện (Presentation)**: `FastAPI` & `Vanilla JS`
 - **Trực quan hóa (BI)**: `Apache Superset`
@@ -24,8 +24,8 @@ flowchart TD
         duckdb["🦆 DuckDB (OLAP)"]
     end
     subgraph processing["⚙️ Data Processing"]
-        dbt["🔨 dbt (Transform)"]
-        ge["✅ Great Expectations (Validate)"]
+        soda["🧪 Soda Core (Gate Raw)"]
+        dbt["🔨 dbt (Transform + Tests)"]
     end
     subgraph presentation["📊 Presentation & Access"]
         superset["Apache Superset (BI)"]
@@ -33,7 +33,7 @@ flowchart TD
         webapp["🌐 Web App"]
     end
     airflow --> spiders --> postgres
-    airflow --> ge --> postgres
+    airflow --> soda --> postgres
     airflow --> dbt
     dbt --> postgres
     dbt --> duckdb
@@ -98,6 +98,40 @@ python run_spider.py --spider itviec --keyword "Data Engineer"
 ```
 Dữ liệu sẽ được thu thập và lưu vào database PostgreSQL của bạn.
 
+### Cấu trúc thư mục chi tiết
+
+```
+CrawlJob/
+├── .env.example              # Template cho biến môi trường
+├── .gitignore                # Các file và thư mục được Git bỏ qua
+├── api/
+│   └── main.py               # API Server (FastAPI)
+├── CrawlJob/                 # Source code chính của Scrapy
+│   ├── spiders/              # Chứa 10 spiders cho các trang web
+│   ├── items.py              # Định nghĩa cấu trúc dữ liệu JobItem
+│   ├── pipelines.py          # Xử lý và lưu trữ dữ liệu vào PostgreSQL
+│   └── settings.py           # Cấu hình của Scrapy
+├── debug/                    # Các script hỗ trợ debug
+├── docker-compose.yml        # Định nghĩa các service Docker (PostgreSQL)
+├── great_expectations/       # (Được tạo bởi GE) Cấu hình của Great Expectations
+├── plan/                     # Các tài liệu kế hoạch
+│   └── DATA_ENGINEERING_STACK_PLAN.md
+├── README.md                 # Tài liệu hướng dẫn dự án
+├── requirements.txt          # Các gói Python cần thiết
+├── run_spider.py             # Script để chạy các spiders từ command line
+├── scrapy.cfg                # Cấu hình dự án Scrapy
+├── test/                     # Các file và script để test
+└── validation/               # Framework quản lý Great Expectations bằng code
+│   ├── GX_CLASS/
+│   │   └── gx_class.py       # Class lõi để tương tác với GE API
+│   ├── checkpoints_definition.py # Script để định nghĩa các thành phần GE
+│   └── run_checkpoint.py     # Script để thực thi một checkpoint
+└── web/                      # Giao diện Frontend (HTML, CSS, JS)
+    ├── css/
+    ├── js/
+    └── index.html
+```
+
 ## 📖 Hướng dẫn sử dụng
 
 ### Chạy Spiders
@@ -119,18 +153,26 @@ uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 - **Health check**: `http://localhost:8000/health`
 - **Tìm kiếm jobs**: `http://localhost:8000/jobs?keyword=python`
 
-### Kiểm tra chất lượng dữ liệu (Data Quality) (Great Expectations)
-Sau khi thu thập dữ liệu, bạn có thể chạy quy trình kiểm tra chất lượng đã được định nghĩa.
+### Kiểm tra chất lượng dữ liệu (Data Quality)
+Áp dụng mô hình kiểm tra hai lớp:
+
+- Lớp 1 (Raw Gating - Soda Core): kiểm tra bảng `raw` ngay sau khi crawl để đảm bảo dữ liệu đã sẵn sàng cho dbt.
 ```bash
-# Lệnh này sẽ được tích hợp vào Airflow trong pipeline hoàn chỉnh
-python validation/run_checkpoint.py <tên_checkpoint>
+# Ví dụ (chạy thủ công)
+soda scan -d postgres_db -c soda/configuration.yml soda/checks/raw_jobs.yml
+```
+
+- Lớp 2 (Business Validation - dbt tests): chạy các kiểm tra cho các model sau khi `dbt run`.
+```bash
+# Ví dụ (trong thư mục dbt project)
+dbt test
 ```
 
 ## 🛠️ Công nghệ sử dụng
 
 - **Scrapy & Selenium**: Lõi thu thập dữ liệu, với khả năng vượt qua Cloudflare.
 - **PostgreSQL & Docker**: Lưu trữ dữ liệu thô, dễ dàng cài đặt và quản lý.
-- **Great Expectations**: Đảm bảo tính toàn vẹn và chất lượng của dữ liệu.
+- **Soda Core + dbt tests**: Đảm bảo tính toàn vẹn và chất lượng dữ liệu (raw + transformed).
 - **FastAPI**: Xây dựng API hiệu năng cao.
 - **Và các công cụ khác trong DE Stack**: Airflow, dbt, DuckDB, Superset.
 

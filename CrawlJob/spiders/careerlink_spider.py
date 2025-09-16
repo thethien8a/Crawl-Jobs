@@ -59,11 +59,11 @@ class CareerlinkSpider(scrapy.Spider):
 
         # Title
         title = response.css('h1#job-title::text').get()
-        item['job_title'] = title.strip() if title else ''
+        item['job_title'] = title.strip() if title else None
 
         # Company name
         company = response.css('a[href*="viec-lam-cua"] ::text').get()
-        item['company_name'] = company.strip() if company else ''
+        item['company_name'] = company.strip() if company else None
 
         # Salary
         salary = self._extract_by_icon(response, 'cli-currency-circle-dollar')
@@ -101,7 +101,7 @@ class CareerlinkSpider(scrapy.Spider):
             deadline_date = datetime.now().date() + timedelta(days=days_remaining)
             item['job_deadline'] = deadline_date.strftime('%Y-%m-%d')
         else:
-            item['job_deadline'] = ''
+            item['job_deadline'] = None
         
         # Job description
         description = response.css("div.rich-text-content ::text").getall()
@@ -135,17 +135,17 @@ class CareerlinkSpider(scrapy.Spider):
         text = response.xpath(f"//i[contains(@class, '{icon_class}')]/following-sibling::span[1]//text()").getall()
         if text:
             return ' '.join([t.strip() for t in text])
-        return ''
+        return None
     
     def _extract_by_text(self, response, label_text):
         text = response.xpath(f'//div[contains(text(), "{label_text}")]/following-sibling::div[1]//text()').get()
         if text:
             return text.strip()
-        return ''
+        return None
     
     def _extract_by_text_all(self, response, label_text):
         text = response.xpath(f'//div[contains(text(), "{label_text}")]/following-sibling::div[1]//text()').getall()
         if text:
             return ' '.join([t.strip() for t in text])
-        return ''
+        return None
     

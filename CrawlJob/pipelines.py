@@ -52,25 +52,25 @@ class PostgreSQLPipeline:
         create_table_sql = """
         CREATE TABLE IF NOT EXISTS jobs (
             id SERIAL PRIMARY KEY,
-            job_title VARCHAR(500),
-            company_name VARCHAR(500),
+            job_title VARCHAR(500), -- NOT NULL
+            company_name VARCHAR(500), -- NOT NULL
             salary VARCHAR(200),
-            location VARCHAR(200),
+            location VARCHAR(200), -- NOT NULL
             job_type VARCHAR(100),
             job_industry VARCHAR(200),
             experience_level VARCHAR(200),
             education_level VARCHAR(200),
             job_position VARCHAR(200),
-            job_description TEXT,
+            job_description TEXT, -- NOT NULL
             requirements TEXT,
             benefits TEXT,
             job_deadline VARCHAR(200),
-            source_site VARCHAR(100),
-            job_url VARCHAR(1000),
-            search_keyword VARCHAR(200),
-            scraped_at VARCHAR(50),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP,
+            source_site VARCHAR(100), -- NOT NULL
+            job_url VARCHAR(1000), -- NOT NULL
+            search_keyword VARCHAR(200), -- NOT NULL
+            scraped_at VARCHAR(50), -- NOT NULL
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- NOT NULL
+            updated_at TIMESTAMP, -- NOT NULL
             UNIQUE(job_title, company_name, source_site)
         );
         """

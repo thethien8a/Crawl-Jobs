@@ -62,7 +62,7 @@ class JobStreetSpider(scrapy.Spider):
         if title:
             title = title.strip()
         else:
-            title = ''
+            title = None
         item['job_title'] = title
         
         # Company
@@ -70,36 +70,36 @@ class JobStreetSpider(scrapy.Spider):
         if company:
             company = company.strip()
         else:
-            company = ''
+            company = None
         item['company_name'] = company
         
         # Salary
-        item['salary'] = ''
+        item['salary'] = None
         
         # Location
         location = response.css('[class*="location"]::text').get()
         if location:
             location = location.strip()
         else:
-            location = ''
+            location = None
         item['location'] = location
         
         item['job_type'] = response.css('div.badge.-default-badge div[class*="content"]::text').get()
         
         # No have
-        item['experience_level'] = ''
-        item['education_level'] = ''
-        item['job_industry'] = ''
-        item['job_position'] = ''
+        item['experience_level'] = None
+        item['education_level'] = None
+        item['job_industry'] = None
+        item['job_position'] = None
         
         
         # Long texts: gộp description là của cả requirements và benefits
         item['job_description'] = ' '.join(response.css('div#job-description-container ::text').getall())
-        item['requirements'] = ''
-        item['benefits'] = ''
+        item['requirements'] = None
+        item['benefits'] = None
         
         # Deadline
-        item['job_deadline'] = ''
+        item['job_deadline'] = None
         
         # Metadata
         item['source_site'] = 'jobstreet.vn'

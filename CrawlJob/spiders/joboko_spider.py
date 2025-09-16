@@ -69,8 +69,8 @@ class JobokoSpider(scrapy.Spider):
 		item["experience_level"] = self._xpath_text(response, 'Kinh nghiệm')
 		
 		# Education level & industry không luôn có sẵn
-		item["education_level"] = item.get("education_level", '')
-		item['job_industry'] = item.get('job_industry', '')
+		item["education_level"] = item.get("education_level", None)
+		item['job_industry'] = item.get('job_industry', None)
 
 		# Job position
 		item['job_position'] = self._xpath_text(response, 'Chức vụ')
@@ -92,23 +92,23 @@ class JobokoSpider(scrapy.Spider):
 			parts = response.css(f'[class*="{css_selector}"] ::text').getall()
 			return ' '.join(p.strip() for p in parts if p.strip())
 		except Exception:
-			return ''
+			return None
 		
 	def _xpath_text(self, response, text_extract):
 		try:
 			full = response.xpath(f'//text()[contains(., "{text_extract}")]/following-sibling::*/text()').get()
 			return full.strip()
 		except Exception:
-			return ''
+			return None
 		
 	def _xpath_paragraph(self, response, text_extract):
 		try:
 			paragraphs = response.xpath(f'//*[contains(normalize-space(), "{text_extract}")]/following-sibling::*[1]//text()').getall()
 			if not paragraphs:
-				return "Có thể là không có hoặc Tiếng Anh"    
+				return "Có thể là không có hoặc Tiếng Anh"
 			return ' '.join(p.strip() for p in paragraphs if p.strip())
 		except Exception:
-			return ''
+			return None
    
 
     

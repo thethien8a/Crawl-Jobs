@@ -265,78 +265,76 @@ class ItviecSpider(scrapy.Spider):
             item = JobItem()
 
             # Job title - from h2 in detail panel
-            try:    
+            try:
                 title = preview_job_wrapper.find_element(By.CSS_SELECTOR, "h2[class*='text-it-black text-hover-red']").text.strip()
-                item['job_title'] = title 
+                item['job_title'] = title
             except Exception:
-                item['job_title'] = ''
+                item['job_title'] = None
 
             # Company name - from company link
             try:
                 company = preview_job_wrapper.find_element(By.CSS_SELECTOR, "a[href*='/companies/'][class*='normal-text']").text.strip()
-                item['company_name'] = company or ''
+                item['company_name'] = company or None
             except Exception:
-                item['company_name'] = ''
+                item['company_name'] = None
 
             # Salary - check if available or "Sign in to view"
             try:
                 salary = preview_job_wrapper.find_element(By.CSS_SELECTOR, "span.ips-2.fw-500").text.strip()
-                item['salary'] = salary or ''
+                item['salary'] = salary or None
             except Exception:
-                item['salary'] = ''
+                item['salary'] = None
             
             # Location - from address text
             try:
                 location = preview_job_wrapper.find_element(By.CSS_SELECTOR, "div.d-inline-block.text-dark-grey").text.strip()
-                item['location'] = location or ''
+                item['location'] = location or None
             except Exception:
-                item['location'] = ''
+                item['location'] = None
 
             # ITviec không có job type
-            item['job_type'] = ''
-            
+            item['job_type'] = None
+
             # ITviec không có experience level
-            item['experience_level'] = ''
+            item['experience_level'] = None
 
             # Education level - from education info
-            item['education_level'] = ''
+            item['education_level'] = None
 
             # Job description - from job description section
             try:
                 desc_element = preview_job_wrapper.find_element(By.CSS_SELECTOR, "section[class='job-description']")
                 item['job_description'] = desc_element.text.strip()
             except Exception:
-                item['job_description'] = ''
+                item['job_description'] = None
 
             # Requirements - from requirements section
             try:
                 req_element = preview_job_wrapper.find_element(By.CSS_SELECTOR, "section[class='job-experiences']")
                 item['requirements'] = req_element.text.strip()
             except Exception:
-                item['requirements'] = ''
+                item['requirements'] = None
 
             # Benefits - from benefits section
             try:
                 benefits_element = preview_job_wrapper.find_element(By.CSS_SELECTOR, "section[class='job-why-love-working']")
                 item['benefits'] = benefits_element.text.strip()
             except Exception:
-                item['benefits'] = ''
+                item['benefits'] = None
 
             # Other fields
             try:
                 industry = preview_job_wrapper.find_element(By.CSS_SELECTOR, "div[class='d-inline-flex text-wrap']").text.strip()
-                item['job_industry'] = industry or ''
+                item['job_industry'] = industry or None
             except Exception:
-                item['job_industry'] = ''
-            
-            # ITviec không có job position
-            item['job_position'] = ''
-            
-            # ITviec không có job deadline
-            item['job_deadline'] = ''
+                item['job_industry'] = None
 
-            if item['job_title'] == '':
-                return None
+            # ITviec không có job position
+            item['job_position'] = None
+
+            # ITviec không có job deadline
+            item['job_deadline'] = None
+
 
             return item
 

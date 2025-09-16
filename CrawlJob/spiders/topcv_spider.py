@@ -72,7 +72,7 @@ class TopcvSpider(scrapy.Spider):
                     title_texts = title_element.css('::text').getall()
                     title = [t.strip() for t in title_texts if t.strip()]
                     title = ' '.join(title)
-            item['job_title'] = title.strip() if title else ''
+            item['job_title'] = title.strip() if title else None
             
         # Company name
         if 'brand' in response.url:
@@ -90,7 +90,7 @@ class TopcvSpider(scrapy.Spider):
                     # Final fallback: thử selector cũ
                     company = response.css('a[class="name"][href*="cong-ty"] ::text').getall()
                 company = ' '.join([t.strip() for t in company if t.strip()])
-            item['company_name'] = company.strip() if company else ''
+            item['company_name'] = company.strip() if company else None
 
         # Salary
         if 'brand' in response.url:
@@ -101,7 +101,7 @@ class TopcvSpider(scrapy.Spider):
             if not salary:
                 # Fallback: HTML extraction
                 salary = response.css('h4.box-header-job__salary::text').get()
-            item['salary'] = salary.strip() if salary else ''
+            item['salary'] = salary.strip() if salary else None
         
         if 'brand' in response.url:
             # Location (brand pages can use label/value blocks)
@@ -122,14 +122,14 @@ class TopcvSpider(scrapy.Spider):
                 location = response.css("span.hight-light.city-name ::text").getall()
                 location = ' '.join(t.strip() for t in location if t.strip())
                 location = location.replace("Địa điểm:", "").replace("&nbsp", "")
-            item['location'] = location.strip() if location else ''
+            item['location'] = location.strip() if location else None
 
         # Job type
         if 'brand' in response.url:
             job_type = self._extract_important_info(response, 'Hình thức làm việc')
         else:
             job_type = self._extract_important_info_no_brand(response, 'Hình thức làm việc')
-        item['job_type'] = job_type.strip() if job_type else ''
+        item['job_type'] = job_type.strip() if job_type else None
 
         # Experience level - Extract from JavaScript object
         experience = self._extract_experience_from_js(response)
@@ -139,46 +139,46 @@ class TopcvSpider(scrapy.Spider):
         if not experience:
             # Final fallback
             experience = 'Không tìm thấy thông tin kinh nghiệm'
-        item['experience_level'] = experience.strip() if experience else ''
+        item['experience_level'] = experience.strip() if experience else None
 
         # Education level
         if 'brand' in response.url:
             education = self._extract_important_info(response, 'Học vấn')
         else:
             education = self._extract_important_info_no_brand(response, 'Học vấn')
-        item['education_level'] = education.strip() if education else ''
+        item['education_level'] = education.strip() if education else None
 
         # Job industry - Extract from JavaScript object first
         industry = self._extract_from_js_object(response, 'job_category')
         if not industry:
             # Fallback: HTML extraction
             industry = response.xpath('//a[contains(@href, "cong-ty") and contains(@class, "text-dark-blue")]/following-sibling::*[1]//text()').get()
-        item['job_industry'] = industry.strip() if industry else ''
+        item['job_industry'] = industry.strip() if industry else None
 
         # Job position
         if 'brand' in response.url:
             position = self._extract_important_info(response, 'Cấp bậc')
         else:
             position = self._extract_important_info_no_brand(response, 'Cấp bậc')
-        item['job_position'] = position.strip() if position else ''
+        item['job_position'] = position.strip() if position else None
 
         # Job deadline
         if 'brand' in response.url:
             deadline = self._extract_important_info(response, 'Hạn nộp hồ sơ')
         else:
             deadline = response.xpath("//i[contains(@class, 'fa-clock')]/following-sibling::span//text()").get()
-        item['job_deadline'] = deadline.strip() if deadline else ''
+        item['job_deadline'] = deadline.strip() if deadline else None
         # Job description
         description = self._extract_paragraph(response, 'Mô tả công việc')
-        item['job_description'] = description.strip() if description else ''
+        item['job_description'] = description.strip() if description else None
 
         # Requirements
         requirements = self._extract_paragraph(response, 'Yêu cầu ứng viên')
-        item['requirements'] = requirements.strip() if requirements else ''
+        item['requirements'] = requirements.strip() if requirements else None
 
         # Benefits
         benefits = self._extract_paragraph(response, 'Quyền lợi')
-        item['benefits'] = benefits.strip() if benefits else ''
+        item['benefits'] = benefits.strip() if benefits else None
 
         # Metadata
         item['source_site'] = 'topcv.vn'
@@ -194,7 +194,7 @@ class TopcvSpider(scrapy.Spider):
     
     def _extract_important_info(self, response, label_text):
         text = response.xpath(f'//*[contains(text(), "{label_text}")]/following-sibling::*[1]//text()').get()
-        return text.strip() if text else ''
+        return text.strip() if text else None
 
     def _extract_paragraph(self, response, label_text):
         text = response.xpath(f'//*[contains(text(), "{label_text}")]/following-sibling::div[position()<=2]//text()').getall()

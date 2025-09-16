@@ -143,7 +143,7 @@ def generate_html_table(rows, column_names, output_file='job_data.html'):
             html_template += '                <tr>\n'
             for cell in row:
                 # Handle None values
-                cell_value = str(cell) if cell is not None else ''
+                cell_value = str(cell) if cell is not None else None
                 # Escape HTML special characters
                 cell_value = cell_value.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
                 html_template += f'                    <td title="{cell_value}">{cell_value}</td>\n'
@@ -166,11 +166,14 @@ def generate_html_table(rows, column_names, output_file='job_data.html'):
     return output_file
 
 def main():
+    script_dir = os.path.dirname(__file__)
     conn = test_connection_postgre()
     if conn:
         rows, column_names = get_data_from_postgre(conn)
         if rows is not None and column_names is not None:
-            output_file = generate_html_table(rows, column_names, 'display_data_dynamic.html')
+            output_filename = 'display_data_dynamic.html'
+            output_file = os.path.join(script_dir, output_filename)
+            generate_html_table(rows, column_names, output_file)
             print(f"Data has been exported to {output_file}")
         else:
             print("Failed to get data from PostgreSQL.")
