@@ -23,7 +23,7 @@
 Chuyển đổi CrawlJob thành **Professional Data Engineering Project** với:
 - **Apache Airflow**: Workflow orchestration
 - **dbt**: Data transformation layer
-- **Great Expectations**: Data quality validation
+- **Soda Core + dbt tests**: Data quality validation (Raw Gate + Business Rules)
 – **Apache Superset**: Data visualization và analytics
 
 ### **Benefits**
@@ -60,8 +60,8 @@ flowchart TD
     end
 
     subgraph processing["⚙️ Data Processing"]
-        dbt["🔨 dbt<br/>Transform & Model (ELT)"]
-        ge["✅ Great Expectations<br/>Validation & Data Docs"]
+        soda["🧪 Soda Core<br/>Raw Gate (Postgres)"]
+        dbt["🔨 dbt<br/>Transform & Model (ELT) + Tests"]
     end
 
     subgraph presentation["📊 Presentation & Access"]
@@ -73,13 +73,12 @@ flowchart TD
 
     %% Orchestration (control-plane)
     airflow -. trigger .-> spiders
-    airflow -. run .-> ge
+    airflow -. run .-> soda
     airflow -. run .-> dbt
 
     %% Data plane
     spiders -->|"Insert Raw Jobs"| postgres
-    ge -->|"Validate Raw &/or Marts"| postgres
-    ge -->|"Publish"| ge_docs
+    soda -->|"Validate Raw"| postgres
     dbt -->|"Read from Postgres"| postgres
     dbt -->|"Materialize Marts"| duckdb
 
@@ -96,22 +95,22 @@ flowchart TD
 
     class spiders,airflow ingestionStyle
     class postgres,duckdb storageStyle
-    class dbt,ge processStyle
-    class superset,fastapi,webapp,ge_docs presentStyle
+    class dbt,soda processStyle
+    class superset,fastapi,webapp presentStyle
 ```
 
 #### Data Flow chi tiết cho Apache Superset
 
 1) Điều phối theo lịch (Airflow)
-- Airflow chạy theo lịch (ví dụ 02:00 hằng ngày) và lần lượt trigger các bước: chạy spiders → kiểm tra chất lượng (GE) → biến đổi dữ liệu (dbt) → cập nhật kho OLAP (DuckDB).
+- Airflow chạy theo lịch (ví dụ 02:00 hằng ngày) và lần lượt trigger các bước: chạy spiders → kiểm tra chất lượng (Soda Core) → biến đổi dữ liệu (dbt) → cập nhật kho OLAP (DuckDB).
 
 2) Thu thập dữ liệu (Spiders → PostgreSQL)
 - Các spiders thu thập dữ liệu từ 10 trang, chuẩn hóa tối thiểu và ghi trực tiếp vào PostgreSQL (schema/raw), kèm timestamps/metadata phục vụ kiểm soát phiên crawl.
 
-3) Kiểm tra chất lượng (Great Expectations – Gate)
-- GE chạy trên bảng raw ở PostgreSQL: kiểm tra không null các trường quan trọng, tính duy nhất (job_url), độ mới (posted_date), và khối lượng dữ liệu.
+3) Kiểm tra chất lượng (Raw Gate – Soda Core)
+- Soda Core chạy trên bảng raw ở PostgreSQL: kiểm tra schema, tính hợp lệ (URL), không null, row_count, và freshness (scraped_at).
 - Nếu FAIL: Airflow dừng pipeline, gửi cảnh báo; dữ liệu OLAP cũ vẫn được giữ nguyên để dashboard Superset không bị ảnh hưởng.
-- Nếu PASS: tiếp tục bước biến đổi. (Tùy chọn) Có thể chạy thêm GE sau-transform để kiểm tra các bảng marts.
+- Nếu PASS: tiếp tục bước biến đổi. (Sau-transform) Sử dụng `dbt test` để kiểm tra các model.
 
 4) Biến đổi dữ liệu (dbt – ELT)
 - dbt đọc dữ liệu từ PostgreSQL (raw) → tạo các mô hình staging/dim/fact/agg.
@@ -140,8 +139,8 @@ flowchart TD
 flowchart LR
     Airflow[Apache Airflow] -. trigger .-> Spiders[CrawlJob Spiders]
     Spiders -->|Raw jobs| Postgres[(PostgreSQL OLTP)]
-    Airflow -. run .-> GE[Great Expectations]
-    GE -->|Validate raw| Postgres
+    Airflow -. run .-> Soda[Soda Core]
+    Soda -->|Validate raw| Postgres
     Airflow -. run .-> dbt[dbt]
     dbt -->|Read| Postgres
     dbt -->|Materialize marts| DuckDB[(DuckDB OLAP)]
@@ -202,16 +201,16 @@ flowchart LR
 #### Data Flow chi tiết cho Orchestration & Monitoring (Airflow)
 
 1) Lên lịch & điều phối
-- Airflow DAG chạy theo cron (ví dụ 02:00). Các task: `run_spiders` → `ge_validate_raw` → `dbt_run` → (tuỳ chọn) `ge_validate_marts` → `publish_duckdb` → `notify_success`.
+- Airflow DAG chạy theo cron (ví dụ 02:00). Các task: `run_spiders` → `soda_validate_raw` → `dbt_run` → `dbt_test` → `publish_duckdb` → `notify_success`.
 
 2) Retry & SLA
 - Mỗi task có `retries` và `retry_delay` hợp lý; đặt `sla` để cảnh báo khi quá thời gian.
 
 3) Logging & Artifacts
-- Log chi tiết của từng task được lưu vào thư mục logs; artifacts gồm GE Data Docs, file DuckDB mới, và dbt target (manifest/run_results).
+- Log chi tiết của từng task được lưu vào thư mục logs; artifacts gồm log `soda scan`, file DuckDB mới, và dbt target (manifest/run_results).
 
 4) Alerting
-- Kênh cảnh báo: Email/Slack khi task fail/SLA miss. Nội dung đính kèm link log và Data Docs (nếu có).
+- Kênh cảnh báo: Email/Slack khi task fail/SLA miss. Nội dung đính kèm link log và tham chiếu tới log `soda scan`/`dbt test`.
 
 5) Observability
 - Theo dõi trạng thái DAG trên Airflow UI (Gantt/Graph). Ghi nhận metrics (thời gian chạy, tỉ lệ fail) để tối ưu.
@@ -231,28 +230,16 @@ flowchart TD
     class run_spiders,ge_raw,dbt_run,ge_marts_task,publish,notify t
 ```
 
-#### Data Flow chi tiết cho Data Quality (Great Expectations – chi tiết)
+#### Data Quality Implementation (Soda Core + dbt tests)
 
-1) Cấu hình
-- Khai báo datasource trỏ về PostgreSQL (raw) và (tuỳ chọn) DuckDB (marts). Tạo expectation suites cho các bảng quan trọng.
+1) Soda Core (Raw Gate)
+- Khai báo data source Postgres trong `soda/configuration.yml`.
+- Định nghĩa checks trong `soda/checks/*.yml` (ví dụ `raw_jobs.yml`).
+- Chạy `soda scan` trong Airflow (BashOperator). Fail thì dừng pipeline.
 
-2) Chạy checkpoint
-- Airflow trigger checkpoints: `raw_jobs_checkpoint` trước dbt; `marts_checkpoint` sau dbt (tuỳ chọn). Kết quả gồm pass/fail + thống kê chi tiết.
-
-3) Data Docs
-- Tự động build Data Docs (HTML) và lưu ở một vị trí cố định (ví dụ `reports/ge_data_docs/`). Có thể publish lên web nội bộ nếu cần.
-
-4) Gating
-- Nếu checkpoint FAIL (ví dụ null/unique/freshness vi phạm), dừng pipeline và gửi alert; không cập nhật DuckDB để giữ dashboard ổn định.
-
-```mermaid
-flowchart TD
-    GE[GE Checkpoint] --> RAW[(PostgreSQL raw)]
-    RAW --> VALIDATE{Validate rules}
-    VALIDATE -- PASS --> DOCS[Build Data Docs]
-    VALIDATE -- FAIL --> ALERT[Alert and stop pipeline]
-    DOCS --> PUBLISH[Publish HTML Data Docs]
-```
+2) dbt tests (Post-Transform)
+- Viết tests trong `schema.yml` của các model (built-in + dbt-expectations nếu cần).
+- Chạy `dbt test` sau `dbt run`. Fail thì alert và dừng publish.
 
 #### Data Flow chi tiết cho dbt Docs & Lineage
 
@@ -299,7 +286,7 @@ flowchart TD
 - **OLTP Database**: PostgreSQL
 - **OLAP Database**: DuckDB
 - **Transformation**: dbt
-- **Data Quality**: Great Expectations
+- **Data Quality**: Soda Core (raw) + dbt tests (post-transform)
 - **Visualization**: Apache Superset
 - **Backend**: FastAPI
 - **Frontend**: Bootstrap 5
