@@ -1,4 +1,4 @@
-data_source postgres_db:
+data_source job_database:
   type: postgres
   host: ${POSTGRES_HOST}
   port: ${POSTGRES_PORT}
@@ -6,5 +6,3 @@ data_source postgres_db:
   password: ${POSTGRES_PASSWORD}
   database: ${POSTGRES_DB}
   schema: public
-
-
