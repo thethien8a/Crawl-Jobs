@@ -25,7 +25,7 @@ def main():
 	parser = argparse.ArgumentParser(description='Run job scraping spiders')
 	parser.add_argument('--spider', choices=['jobsgo', 'joboko', '123job', 'careerviet', 'jobstreet', 'linkedin', 'topcv', 'itviec', 'careerlink', 'vietnamworks', 'all'],
 					   default='jobsgo', help='Spider to run')
-	parser.add_argument('--keyword', default='python developer', 
+	parser.add_argument('--keyword', default='data analyst', 
 					   help='Job keyword to search for')
 	parser.add_argument('--output', default='jobs.json', 
 					   help='Output file for JSON results')
