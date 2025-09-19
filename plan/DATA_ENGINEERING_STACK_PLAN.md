@@ -61,26 +61,27 @@ flowchart TD
 
     subgraph processing["⚙️ Data Processing"]
         soda["🧪 Soda Core<br/>Raw Gate (Postgres)"]
-        dbt["🔨 dbt<br/>Transform & Model (ELT) + Tests"]
+        airbyte["🧲 Airbyte<br/>EL Postgres → DuckDB"]
+        dbt["🔨 dbt-duckdb<br/>Transform & Tests (in DuckDB)"]
     end
 
     subgraph presentation["📊 Presentation & Access"]
-    superset["Apache Superset<br/>BI Dashboards"]
+        superset["Apache Superset<br/>BI Dashboards"]
         fastapi["🚀 FastAPI<br/>REST API"]
         webapp["🌐 Job Search Website<br/>End-User Portal"]
-        ge_docs["📋 GE Data Docs<br/>Quality Reports"]
     end
 
     %% Orchestration (control-plane)
     airflow -. trigger .-> spiders
     airflow -. run .-> soda
+    airflow -. run .-> airbyte
     airflow -. run .-> dbt
 
     %% Data plane
     spiders -->|"Insert Raw Jobs"| postgres
     soda -->|"Validate Raw"| postgres
-    dbt -->|"Read from Postgres"| postgres
-    dbt -->|"Materialize Marts"| duckdb
+    airbyte -->|"Sync raw/staging"| duckdb
+    dbt -->|"Read & Materialize"| duckdb
 
     %% Serving
     fastapi -->|"Query"| postgres
@@ -95,7 +96,7 @@ flowchart TD
 
     class spiders,airflow ingestionStyle
     class postgres,duckdb storageStyle
-    class dbt,soda processStyle
+    class dbt,airbyte,soda processStyle
     class superset,fastapi,webapp presentStyle
 ```
 
