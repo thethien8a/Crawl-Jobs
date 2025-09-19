@@ -103,7 +103,7 @@ flowchart TD
 #### Data Flow chi tiết cho Apache Superset
 
 1) Điều phối theo lịch (Airflow)
-- Airflow chạy theo lịch (ví dụ 02:00 hằng ngày) và lần lượt trigger các bước: chạy spiders → kiểm tra chất lượng (Soda Core) → biến đổi dữ liệu (dbt) → cập nhật kho OLAP (DuckDB).
+- Airflow chạy theo lịch (ví dụ 02:00 hằng ngày) và lần lượt trigger các bước: chạy spiders → kiểm tra chất lượng (Soda Core) → đồng bộ EL (Airbyte: PostgreSQL → DuckDB) → biến đổi dữ liệu (dbt-duckdb) → cập nhật kho OLAP (DuckDB).
 
 2) Thu thập dữ liệu (Spiders → PostgreSQL)
 - Các spiders thu thập dữ liệu từ 10 trang, chuẩn hóa tối thiểu và ghi trực tiếp vào PostgreSQL (schema/raw), kèm timestamps/metadata phục vụ kiểm soát phiên crawl.
@@ -113,9 +113,13 @@ flowchart TD
 - Nếu FAIL: Airflow dừng pipeline, gửi cảnh báo; dữ liệu OLAP cũ vẫn được giữ nguyên để dashboard Superset không bị ảnh hưởng.
 - Nếu PASS: tiếp tục bước biến đổi. (Sau-transform) Sử dụng `dbt test` để kiểm tra các model.
 
-4) Biến đổi dữ liệu (dbt – ELT)
-- dbt đọc dữ liệu từ PostgreSQL (raw) → tạo các mô hình staging/dim/fact/agg.
-- Kết quả được materialize vào DuckDB (OLAP) thành các bảng/khung nhìn analytics-ready.
+4) Đồng bộ dữ liệu (Airbyte – EL)
+- Airbyte sync từ PostgreSQL (raw/staging) → DuckDB (OLAP), ưu tiên incremental.
+- Quản lý lịch chạy và retry/monitoring qua Airflow.
+
+5) Biến đổi dữ liệu (dbt-duckdb – ELT)
+- dbt-duckdb đọc dữ liệu trong DuckDB → tạo các mô hình staging/dim/fact/agg.
+- Kết quả được materialize trực tiếp trong DuckDB thành các bảng/khung nhìn analytics-ready.
 
 5) Kho phân tích (DuckDB – OLAP)
 - DuckDB lưu trữ các mô hình phục vụ phân tích (ví dụ: dim_companies, fct_jobs, agg_jobs_by_industry…).
@@ -235,8 +239,8 @@ flowchart TD
 
 1) Soda Core (Raw Gate)
 - Khai báo data source Postgres trong `soda/configuration.yml`.
-- Định nghĩa checks trong `soda/checks/*.yml` (ví dụ `raw_jobs.yml`).
-- Chạy `soda scan` trong Airflow (BashOperator). Fail thì dừng pipeline.
+- Định nghĩa checks trong `soda/checks/raw_jobs_check1.yml`, `raw_jobs_check2.yml`, `raw_jobs_check3.yml`.
+- Chạy tuần tự 3 checks trong Airflow (BashOperator). Fail dừng pipeline.
 
 2) dbt tests (Post-Transform)
 - Viết tests trong `schema.yml` của các model (built-in + dbt-expectations nếu cần).
@@ -286,7 +290,7 @@ flowchart TD
 - **Orchestration**: Apache Airflow
 - **OLTP Database**: PostgreSQL
 - **OLAP Database**: DuckDB
-- **Transformation**: dbt
+- **Transformation**: dbt-duckdb
 - **Data Quality**: Soda Core (raw) + dbt tests (post-transform)
 - **Visualization**: Apache Superset
 - **Backend**: FastAPI
