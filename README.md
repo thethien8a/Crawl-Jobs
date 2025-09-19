@@ -9,7 +9,7 @@ Dự án được xây dựng theo kiến trúc hiện đại, tách biệt rõ 
 - **Điều phối (Orchestration)**: `Apache Airflow`
 - **Lưu trữ (Storage)**: `PostgreSQL` (OLTP) & `DuckDB` (OLAP)
 - **Kiểm tra chất lượng (Data Quality)**: `Soda Core` (Raw gating) + `dbt tests` (Business rules)
-- **Biến đổi dữ liệu (Transformation)**: `dbt`
+- **Biến đổi dữ liệu (Transformation)**: `dbt-duckdb` (biến đổi trong DuckDB)
 - **API & Giao diện (Presentation)**: `FastAPI` & `Vanilla JS`
 - **Trực quan hóa (BI)**: `Apache Superset`
 
@@ -25,7 +25,8 @@ flowchart TD
     end
     subgraph processing["⚙️ Data Processing"]
         soda["🧪 Soda Core (Gate Raw)"]
-        dbt["🔨 dbt (Transform + Tests)"]
+        airbyte["🧲 Airbyte (Sync Postgres → DuckDB)"]
+        dbt["🔨 dbt-duckdb (Transform + Tests)"]
     end
     subgraph presentation["📊 Presentation & Access"]
         superset["Apache Superset (BI)"]
@@ -34,8 +35,8 @@ flowchart TD
     end
     airflow --> spiders --> postgres
     airflow --> soda --> postgres
+    airflow --> airbyte --> duckdb
     airflow --> dbt
-    dbt --> postgres
     dbt --> duckdb
     fastapi --> postgres
     webapp --> fastapi
@@ -111,9 +112,15 @@ CrawlJob/
 │   ├── items.py              # Định nghĩa cấu trúc dữ liệu JobItem
 │   ├── pipelines.py          # Xử lý và lưu trữ dữ liệu vào PostgreSQL
 │   └── settings.py           # Cấu hình của Scrapy
+├── airflow/                  # Airflow DAGs (pipeline orchestration)
+│   └── dags/
+│       └── crawljob_pipeline.py
+├── soda/                     # Data Quality (Raw Gating with Soda Core)
+│   ├── configuration.yml     # Kết nối Postgres (dùng .env)
+│   └── checks/
+│       └── raw_jobs.yml      # Kiểm tra bảng raw
 ├── debug/                    # Các script hỗ trợ debug
 ├── docker-compose.yml        # Định nghĩa các service Docker (PostgreSQL)
-├── great_expectations/       # (Được tạo bởi GE) Cấu hình của Great Expectations
 ├── plan/                     # Các tài liệu kế hoạch
 │   └── DATA_ENGINEERING_STACK_PLAN.md
 ├── README.md                 # Tài liệu hướng dẫn dự án
@@ -121,11 +128,6 @@ CrawlJob/
 ├── run_spider.py             # Script để chạy các spiders từ command line
 ├── scrapy.cfg                # Cấu hình dự án Scrapy
 ├── test/                     # Các file và script để test
-└── validation/               # Framework quản lý Great Expectations bằng code
-│   ├── GX_CLASS/
-│   │   └── gx_class.py       # Class lõi để tương tác với GE API
-│   ├── checkpoints_definition.py # Script để định nghĩa các thành phần GE
-│   └── run_checkpoint.py     # Script để thực thi một checkpoint
 └── web/                      # Giao diện Frontend (HTML, CSS, JS)
     ├── css/
     ├── js/
@@ -154,18 +156,22 @@ uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 - **Tìm kiếm jobs**: `http://localhost:8000/jobs?keyword=python`
 
 ### Kiểm tra chất lượng dữ liệu (Data Quality)
-Áp dụng mô hình kiểm tra hai lớp:
+Áp dụng mô hình kiểm tra hai lớp + đồng bộ:
 
-- Lớp 1 (Raw Gating - Soda Core): kiểm tra bảng `raw` ngay sau khi crawl để đảm bảo dữ liệu đã sẵn sàng cho dbt.
+- Lớp 1 (Raw Gating - Soda Core): kiểm tra bảng `raw` ngay sau khi crawl để đảm bảo dữ liệu sẵn sàng.
 ```bash
 # Ví dụ (chạy thủ công)
-soda scan -d postgres_db -c soda/configuration.yml soda/checks/raw_jobs.yml
+soda scan -d job_database -c soda/configuration.yml soda/checks/raw_jobs_check1.yml
+soda scan -d job_database -c soda/configuration.yml soda/checks/raw_jobs_check2.yml
+soda scan -d job_database -c soda/configuration.yml soda/checks/raw_jobs_check3.yml
 ```
 
-- Lớp 2 (Business Validation - dbt tests): chạy các kiểm tra cho các model sau khi `dbt run`.
+- Đồng bộ (EL) sang DuckDB: dùng Airbyte để sync từ PostgreSQL → DuckDB trước khi transform.
+- Lớp 2 (Business Validation - dbt tests): chạy các kiểm tra cho các model sau khi `dbt run` trong DuckDB.
 ```bash
-# Ví dụ (trong thư mục dbt project)
-dbt test
+# Ví dụ với dbt-duckdb
+cd path/to/dbt_duckdb_project
+ dbt run && dbt test
 ```
 
 ## 🛠️ Công nghệ sử dụng
