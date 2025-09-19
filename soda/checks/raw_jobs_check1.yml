@@ -1,0 +1,34 @@
+filter jobs [today]:
+  where: scraped_at::date = CURRENT_DATE
+
+checks for jobs [today]:
+  ### SCHEMA PHẢI TỒN TẠI CÁC TRƯỜNG Ở DƯỚI ĐÂY
+  - schema:
+      fail:
+        when required column missing: [job_url, job_title, company_name, scraped_at]
+
+  ### CẤM ĐƯỢC DUPLICATE
+  - duplicate_count(company_name, job_title, source_site) = 0
+
+  ### CÁC TRƯỜNG NÀY TẤT CẢ CÁC TRƯỜNG KHÔNG THIẾU
+  - missing_count(job_title) = 0
+  - missing_count(company_name) = 0
+  - missing_count(location) = 0
+  - missing_count(job_description) = 0
+
+  ### CONDITIONAL GATE: Chỉ chạy tiếp nếu data quality checks pass
+  - data_quality_gate:
+      data_quality_gate query: |
+        SELECT
+          CASE
+            WHEN COUNT(*) > 0 THEN 1
+            ELSE 0
+          END as gate_status
+        FROM jobs
+        WHERE scraped_at::date = CURRENT_DATE
+          AND job_title IS NOT NULL
+          AND company_name IS NOT NULL
+          AND location IS NOT NULL
+          AND job_description IS NOT NULL
+      fail: when < 1
+      name: "Data Quality Gate - Stop if no valid data"

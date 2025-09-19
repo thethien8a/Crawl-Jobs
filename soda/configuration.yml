@@ -5,4 +5,3 @@ data_source job_database:
   username: ${POSTGRES_USER}
   password: ${POSTGRES_PASSWORD}
   database: ${POSTGRES_DB}
-  schema: public
