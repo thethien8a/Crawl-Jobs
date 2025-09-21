@@ -4,10 +4,11 @@ Test script for ITVIEC spider with undetected chromedriver
 Tests Cloudflare bypass functionality
 """
 
-import sys
 import os
-import time
 import random
+import sys
+import time
+
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -25,8 +26,8 @@ def test_itviec_login():
     print("=" * 60)
 
     # Check environment variables
-    username = os.getenv('ITVIEC_EMAIL')
-    password = os.getenv('ITVIEC_PASS')
+    username = os.getenv("ITVIEC_EMAIL")
+    password = os.getenv("ITVIEC_PASS")
 
     if not username or not password:
         print("❌ Missing credentials!")
@@ -39,7 +40,7 @@ def test_itviec_login():
     print(f"✅ Credentials found for: {username}")
 
     # Create spider instance
-    spider = ItviecSpider(keyword='data analyst')
+    spider = ItviecSpider(keyword="data analyst")
 
     try:
         print("🌐 Initializing undetected Chrome driver...")
@@ -75,7 +76,7 @@ def test_itviec_login():
     finally:
         # Cleanup
         try:
-            if hasattr(spider, 'driver') and spider.driver:
+            if hasattr(spider, "driver") and spider.driver:
                 spider.driver.quit()
                 print("🧹 Driver cleanup completed")
         except:
@@ -87,7 +88,7 @@ def test_cloudflare_detection():
     print("\n🔍 Testing Cloudflare Challenge Detection")
     print("=" * 60)
 
-    spider = ItviecSpider(keyword='data analyst')
+    spider = ItviecSpider(keyword="data analyst")
 
     try:
         print("🌐 Navigating to ITVIEC login page...")
@@ -109,7 +110,7 @@ def test_cloudflare_detection():
             "[class*='turnstile']",
             ".cf-turnstile",
             ".h-captcha",
-            ".g-recaptcha"
+            ".g-recaptcha",
         ]
 
         challenge_found = False
@@ -129,14 +130,19 @@ def test_cloudflare_detection():
             # Try to find login form
             try:
                 from selenium.webdriver.common.by import By
-                email_input = driver.find_element(By.CSS_SELECTOR, "input[id='user_email']")
+
+                email_input = driver.find_element(
+                    By.CSS_SELECTOR, "input[id='user_email']"
+                )
                 print("✅ Login form is accessible!")
                 return True
             except Exception as e:
                 print(f"❌ Could not find login form: {e}")
                 return False
         else:
-            print("🚨 Cloudflare challenge detected - undetected chromedriver may need additional configuration")
+            print(
+                "🚨 Cloudflare challenge detected - undetected chromedriver may need additional configuration"
+            )
             return False
 
     except Exception as e:
@@ -145,7 +151,7 @@ def test_cloudflare_detection():
 
     finally:
         try:
-            if hasattr(spider, 'driver') and spider.driver:
+            if hasattr(spider, "driver") and spider.driver:
                 spider.driver.quit()
         except:
             pass

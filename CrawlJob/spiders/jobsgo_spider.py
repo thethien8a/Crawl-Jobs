@@ -1,42 +1,50 @@
-import scrapy
 from datetime import datetime
+
+import scrapy
+
 from ..items import JobItem
-from ..utils import encode_input, clean_location
+from ..utils import clean_location, encode_input
+
 
 class JobsgoSpider(scrapy.Spider):
-    name = 'jobsgo'
-    allowed_domains = ['jobsgo.vn']
-    
+    name = "jobsgo"
+    allowed_domains = ["jobsgo.vn"]
+
     def __init__(self, keyword=None, *args, **kwargs):
         super(JobsgoSpider, self).__init__(*args, **kwargs)
-        self.keyword = keyword or 'data analyst'  # default keyword
+        self.keyword = keyword or "data analyst"  # default keyword
         self._count_page = 0
         self._max_page = 3
-        
+
     def start_requests(self):
         """Generate search URLs based on keyword and location"""
-        base_url = 'https://jobsgo.vn/'
-        
+        base_url = "https://jobsgo.vn/"
+
         search_word = encode_input(self.keyword)
-        
+
         search_url = f"{base_url}viec-lam-{search_word}.html"
-        
+
         yield scrapy.Request(
             url=search_url,
             callback=self.parse_search_results,
-            meta={'keyword': self.keyword}
+            meta={"keyword": self.keyword},
         )
-    
+
     def parse_search_results(self, response):
         """Parse the search results page"""
         # Find job listing links
         job_links = response.css('a[href*="/viec-lam/"]::attr(href)').getall()
-        
+
         job_urls = []
         for link in job_links:
-            if link and 'viec-lam/' in link and link.endswith('.html') and len(link.split('-')) > 3:
+            if (
+                link
+                and "viec-lam/" in link
+                and link.endswith(".html")
+                and len(link.split("-")) > 3
+            ):
                 job_urls.append(link)
-        
+
         # Remove duplicates url link
         seen = set()
         unique_job_urls = []
@@ -44,107 +52,127 @@ class JobsgoSpider(scrapy.Spider):
             if url not in seen:
                 seen.add(url)
                 unique_job_urls.append(url)
-        
+
         self.logger.info(f"Found {len(unique_job_urls)} job listings")
-        
+
         for job_url in unique_job_urls:
             yield scrapy.Request(
                 url=job_url,
                 callback=self.parse_job_detail,
                 meta={
-                    'keyword': response.meta['keyword'],
-                }
+                    "keyword": response.meta["keyword"],
+                },
             )
-        
+
         self._count_page += 1
         # Handle pagination
         next_page = response.css('li[class="next"] a::attr(href)').get()
         if next_page and self._count_page < self._max_page:
             yield scrapy.Request(
-                url=next_page,
-                callback=self.parse_search_results,
-                meta=response.meta
+                url=next_page, callback=self.parse_search_results, meta=response.meta
             )
         else:
             self.logger.info("No more pages to crawl")
-    
+
     def parse_job_detail(self, response):
         """Parse individual job detail page"""
         item = JobItem()
 
         # Title
         title = self._extract_text(response, '[class="job-title mb-2 mb-sm-3 fs-4"]')
-        item['job_title'] = title 
-        
-        # Company name - lấy tên công ty từ link tới trang tuyển dụng công ty 
+        item["job_title"] = title
+
+        # Company name - lấy tên công ty từ link tới trang tuyển dụng công ty
         company = response.css('[class="fw-semibold pe-3 mb-0 pt-4 mt-2"]::text').get()
-        item['company_name'] = (company or None)
-        
+        item["company_name"] = company or None
+
         # Meta list ngay dưới tiêu đề: Mức lương / Hạn nộp / Địa điểm
-        item['salary'] = self._extract_value_by_label(response, 'Mức lương')
-        item['job_deadline'] = self._extract_value_by_label(response, 'Hạn nộp')
-        item['location'] = clean_location(response.css('a[href="#places"].position-relative.text-truncate.d-inline-block::text').get()) 
-        
+        item["salary"] = self._extract_value_by_label(response, "Mức lương")
+        item["job_deadline"] = self._extract_value_by_label(response, "Hạn nộp")
+        item["location"] = clean_location(
+            response.css(
+                'a[href="#places"].position-relative.text-truncate.d-inline-block::text'
+            ).get()
+        )
+
         # Thông tin chung (panel bên dưới)
-        item['job_type'] = self._extract_common_section_value(response, 'Loại hình') 
-        item['experience_level'] = self._extract_common_section_value(response, 'Yêu cầu kinh nghiệm')
-        item['education_level'] = self._extract_common_section_value(response, 'Yêu cầu bằng cấp')
-        item['job_industry'] = self._extract_common_section_links(response, "Lĩnh vực")
-        
+        item["job_type"] = self._extract_common_section_value(response, "Loại hình")
+        item["experience_level"] = self._extract_common_section_value(
+            response, "Yêu cầu kinh nghiệm"
+        )
+        item["education_level"] = self._extract_common_section_value(
+            response, "Yêu cầu bằng cấp"
+        )
+        item["job_industry"] = self._extract_common_section_links(response, "Lĩnh vực")
+
         # Chức danh (vị trí)
-        item["job_position"] = self._extract_common_section_value(response, 'chức vụ')
- 
+        item["job_position"] = self._extract_common_section_value(response, "chức vụ")
+
         # Job description and requirements (lấy từ các section tiêu đề h3)
-        item['job_description'] = self._extract_section_list_text(response, 'Mô tả công việc')
-        item['requirements'] = self._extract_section_list_text(response, 'Yêu cầu công việc')
-        item['benefits'] = self._extract_section_list_text(response, 'Quyền lợi được hưởng')
-        
+        item["job_description"] = self._extract_section_list_text(
+            response, "Mô tả công việc"
+        )
+        item["requirements"] = self._extract_section_list_text(
+            response, "Yêu cầu công việc"
+        )
+        item["benefits"] = self._extract_section_list_text(
+            response, "Quyền lợi được hưởng"
+        )
+
         # Metadata
-        item['source_site'] = 'jobsgo.vn'
-        item['job_url'] = response.url
-        item['search_keyword'] = response.meta['keyword']
-        item['scraped_at'] = datetime.now().isoformat()
-        
+        item["source_site"] = "jobsgo.vn"
+        item["job_url"] = response.url
+        item["search_keyword"] = response.meta["keyword"]
+        item["scraped_at"] = datetime.now().isoformat()
+
         yield item
-    
+
     def _extract_text(self, response, selector):
         """Extract text from CSS selector with fallbacks"""
-        text = response.css(f'{selector}::text').get()
+        text = response.css(f"{selector}::text").get()
         if not text:
             self.logger.warning(f"No text found for selector: {selector}")
         return text.strip() if text else None
-    
+
     def _extract_value_by_label(self, response, label_text):
         """Lấy giá trị trong thẻ <li> có chứa nhãn (ví dụ: Mức lương/Hạn nộp/Địa điểm)"""
-        texts = response.xpath(f'//li[.//text()[contains(., "{label_text}")]]//strong//text()').get()
+        texts = response.xpath(
+            f'//li[.//text()[contains(., "{label_text}")]]//strong//text()'
+        ).get()
         if texts:
             value = texts.strip()
         else:
-            value = ''
+            value = ""
         return value
-    
+
     def _extract_common_section_value(self, response, label_text):
         """Trong khối 'Thông Tin Chung', lấy strong ngay sau nhãn label_text"""
         try:
-            texts = response.xpath(f'//*[contains(normalize-space(), "{label_text}")]/following-sibling::strong[1]//text()').get()
+            texts = response.xpath(
+                f'//*[contains(normalize-space(), "{label_text}")]/following-sibling::strong[1]//text()'
+            ).get()
             return texts
         except Exception as e:
             self.logger.error(f"Error extracting common section value: {e}")
             return None
-    
+
     def _extract_common_section_links(self, response, label_text):
         """Lấy lĩnh vực (job industry)"""
         try:
-            link_texts = response.xpath(f'//*[contains(normalize-space(), "{label_text}")]/following-sibling::*[1]//text()').get()
+            link_texts = response.xpath(
+                f'//*[contains(normalize-space(), "{label_text}")]/following-sibling::*[1]//text()'
+            ).get()
             return link_texts
         except Exception as e:
             self.logger.error(f"Error extracting common section links: {e}")
             return None
-    
+
     def _extract_section_list_text(self, response, heading_text):
         try:
-            para = response.xpath(f'//h3[contains(normalize-space(.), "{heading_text}")]/following-sibling::*[1]//text()').getall()
-            return ' '.join([' '.join(p.split()) for p in para if p and p.strip()])
+            para = response.xpath(
+                f'//h3[contains(normalize-space(.), "{heading_text}")]/following-sibling::*[1]//text()'
+            ).getall()
+            return " ".join([" ".join(p.split()) for p in para if p and p.strip()])
         except Exception as e:
             self.logger.error(f"Error extracting section list text: {e}")
             return None

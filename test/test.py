@@ -1,11 +1,12 @@
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from CrawlJob.spiders.itviec_spider import ItviecSpider
 
 # Create spider instance
-itviec_spider = ItviecSpider(keyword='data analyst')
+itviec_spider = ItviecSpider(keyword="data analyst")
 
 # Call login method
 try:

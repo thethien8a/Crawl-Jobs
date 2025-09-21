@@ -12,26 +12,26 @@ class JobItem(scrapy.Item):
     company_name = scrapy.Field()
     salary = scrapy.Field()
     location = scrapy.Field()
-    
+
     # Job details
     job_type = scrapy.Field()  # Full-time, Part-time, etc.
     experience_level = scrapy.Field()
     education_level = scrapy.Field()
     job_industry = scrapy.Field()
     job_position = scrapy.Field()
-    
+
     # Job description and requirements
     job_description = scrapy.Field()
     requirements = scrapy.Field()
     benefits = scrapy.Field()
-    
+
     # Job deadline
     job_deadline = scrapy.Field()  # Hạn cuối nộp CV
-    
+
     # Metadata
     source_site = scrapy.Field()
     job_url = scrapy.Field()
     search_keyword = scrapy.Field()
-    
+
     # Timestamp
     scraped_at = scrapy.Field()

@@ -3,17 +3,18 @@
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 
+import logging
+
 import psycopg2
 from itemadapter import ItemAdapter
 from scrapy.utils.project import get_project_settings
-import logging
 
 logger = logging.getLogger(__name__)
 
 
 class CrawljobPipeline:
     def process_item(self, item, spider):
-        if not item.get('job_title'):
+        if not item.get("job_title"):
             return None
         return item
 
@@ -24,22 +25,22 @@ class PostgreSQLPipeline:
         settings = get_project_settings()
         self.conn = None
         self.cursor = None
-        
+
         self.db_params = {
-            'host': settings.get('POSTGRES_HOST'),
-            'port': settings.get('POSTGRES_PORT'),
-            'database': settings.get('POSTGRES_DB'),
-            'user': settings.get('POSTGRES_USER'),
-            'password': settings.get('POSTGRES_PASSWORD')
+            "host": settings.get("POSTGRES_HOST"),
+            "port": settings.get("POSTGRES_PORT"),
+            "database": settings.get("POSTGRES_DB"),
+            "user": settings.get("POSTGRES_USER"),
+            "password": settings.get("POSTGRES_PASSWORD"),
         }
-        
+
         # Thử kết nối ngay khi khởi tạo
         try:
             self.conn = psycopg2.connect(**self.db_params)
-            self.conn.autocommit = True # Set autocommit to True
+            self.conn.autocommit = True  # Set autocommit to True
             self.cursor = self.conn.cursor()
             logger.info("Connected to PostgreSQL successfully.")
-            self._create_table_if_not_exists()
+            self._create_table_if_not_exists(self.cursor)
         except psycopg2.Error as e:
             logger.error(f"Error connecting to PostgreSQL: {e}")
             # Xử lý lỗi kết nối, có thể raise ngoại lệ hoặc dừng spider
@@ -48,8 +49,9 @@ class PostgreSQLPipeline:
     def from_crawler(cls, crawler):
         return cls()
 
-    def _create_table_if_not_exists(self):
-        create_table_sql = """
+    def _create_table_if_not_exists(self, cursor):
+        cursor.execute(
+            """
         CREATE TABLE IF NOT EXISTS jobs (
             id SERIAL PRIMARY KEY,
             job_title VARCHAR(500), -- NOT NULL
@@ -68,13 +70,13 @@ class PostgreSQLPipeline:
             source_site VARCHAR(100), -- NOT NULL
             job_url VARCHAR(1000), -- NOT NULL
             search_keyword VARCHAR(200), -- NOT NULL
-            scraped_at VARCHAR(50), -- NOT NULL
+            scraped_at TIMESTAMP, -- NOT NULL
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- NOT NULL
             updated_at TIMESTAMP, -- NOT NULL
             UNIQUE(job_title, company_name, source_site)
         );
         """
-        
+        )
 
     def process_item(self, item, spider):
         if not self.conn or not self.cursor:
@@ -82,25 +84,25 @@ class PostgreSQLPipeline:
             return item
 
         adapter = ItemAdapter(item)
-        
+
         # Lấy giá trị cho các trường
-        job_title = adapter.get('job_title')
-        company_name = adapter.get('company_name')
-        salary = adapter.get('salary')
-        location = adapter.get('location')
-        job_type = adapter.get('job_type')
-        job_industry = adapter.get('job_industry')
-        experience_level = adapter.get('experience_level')
-        education_level = adapter.get('education_level')
-        job_position = adapter.get('job_position')
-        job_description = adapter.get('job_description')
-        requirements = adapter.get('requirements')
-        benefits = adapter.get('benefits')
-        job_deadline = adapter.get('job_deadline')
-        source_site = adapter.get('source_site')
-        job_url = adapter.get('job_url')
-        search_keyword = adapter.get('search_keyword')
-        scraped_at = adapter.get('scraped_at')
+        job_title = adapter.get("job_title")
+        company_name = adapter.get("company_name")
+        salary = adapter.get("salary")
+        location = adapter.get("location")
+        job_type = adapter.get("job_type")
+        job_industry = adapter.get("job_industry")
+        experience_level = adapter.get("experience_level")
+        education_level = adapter.get("education_level")
+        job_position = adapter.get("job_position")
+        job_description = adapter.get("job_description")
+        requirements = adapter.get("requirements")
+        benefits = adapter.get("benefits")
+        job_deadline = adapter.get("job_deadline")
+        source_site = adapter.get("source_site")
+        job_url = adapter.get("job_url")
+        search_keyword = adapter.get("search_keyword")
+        scraped_at = adapter.get("scraped_at")
 
         # Logic UPSERT (INSERT ON CONFLICT DO UPDATE) cho PostgreSQL
         upsert_sql = """
@@ -131,12 +133,28 @@ class PostgreSQLPipeline:
             updated_at = CURRENT_TIMESTAMP;
         """
         try:
-            self.cursor.execute(upsert_sql, (
-                job_title, company_name, salary, location, job_type, job_industry,
-                experience_level, education_level, job_position, job_description,
-                requirements, benefits, job_deadline, source_site, job_url,
-                search_keyword, scraped_at
-            ))
+            self.cursor.execute(
+                upsert_sql,
+                (
+                    job_title,
+                    company_name,
+                    salary,
+                    location,
+                    job_type,
+                    job_industry,
+                    experience_level,
+                    education_level,
+                    job_position,
+                    job_description,
+                    requirements,
+                    benefits,
+                    job_deadline,
+                    source_site,
+                    job_url,
+                    search_keyword,
+                    scraped_at,
+                ),
+            )
             # self.conn.commit() # No commit needed if autocommit is True
             logger.info(f"Item saved/updated: {job_title} at {company_name}")
         except psycopg2.Error as e:
