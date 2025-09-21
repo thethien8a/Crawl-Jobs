@@ -1,24 +1,17 @@
 import os
 import sys
-from typing import Optional
 
 import duckdb
 from dotenv import load_dotenv
 
-
-def get_env(name: str, default: Optional[str] = None) -> str:
-    value = os.getenv(name, default)
-    if value is None or value == "":
-        raise RuntimeError(f"Missing required environment variable: {name}")
-    return value
-
+load_dotenv()
 
 def build_pg_conn_string() -> str:
-    host = get_env("POSTGRES_HOST")
-    port = get_env("POSTGRES_PORT", "5432")
-    db = get_env("POSTGRES_DB")
-    user = get_env("POSTGRES_USER")
-    pwd = get_env("POSTGRES_PASSWORD")
+    host = os.getenv("POSTGRES_HOST")
+    port = os.getenv("POSTGRES_PORT", "5432")
+    db = os.getenv("POSTGRES_DB")
+    user = os.getenv("POSTGRES_USER")
+    pwd = os.getenv("POSTGRES_PASSWORD")
     return f"host={host} dbname={db} user={user} password={pwd} port={port}"
 
 
@@ -59,19 +52,14 @@ def incremental_by_timestamp(
 
 
 def main() -> int:
-    # Load .env from project root if present
-    load_dotenv()
-
-    duckdb_path = get_env("DUCKDB_PATH")
-    schema_name = os.getenv("DUCKDB_SCHEMA", "raw")
-    # Which table and cursor to sync (defaults match project conventions)
-    table = os.getenv("PG_TABLE", "jobs")
-    cursor_column = os.getenv("PG_CURSOR_COLUMN", "scraped_at")
-
-    mode = (os.getenv("SYNC_MODE", "incremental").lower()).strip()
-    if mode not in {"full", "incremental"}:
-        print("SYNC_MODE must be 'full' or 'incremental'", file=sys.stderr)
-        return 2
+    # Cấu hình DuckDB
+    duckdb_path = os.getenv("DUCKDB_PATH")
+    schema_name = "raw"
+    table = "jobs"
+    cursor_column = "scraped_at"
+    
+    # Chỉ có 2 mode: full và incremental
+    mode = "incremental"
 
     pg_conn = build_pg_conn_string()
 
