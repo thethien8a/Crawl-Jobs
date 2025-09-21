@@ -61,7 +61,7 @@ flowchart TD
 
     subgraph processing["⚙️ Data Processing"]
         soda["🧪 Soda Core<br/>Raw Gate (Postgres)"]
-        airbyte["🧲 Airbyte<br/>EL Postgres → DuckDB"]
+        scanner["🔌 DuckDB postgres_scanner<br/>EL Postgres → DuckDB"]
         dbt["🔨 dbt-duckdb<br/>Transform & Tests (in DuckDB)"]
     end
 
@@ -74,13 +74,13 @@ flowchart TD
     %% Orchestration (control-plane)
     airflow -. trigger .-> spiders
     airflow -. run .-> soda
-    airflow -. run .-> airbyte
+    airflow -. run .-> scanner
     airflow -. run .-> dbt
 
     %% Data plane
     spiders -->|"Insert Raw Jobs"| postgres
     soda -->|"Validate Raw"| postgres
-    airbyte -->|"Sync raw/staging"| duckdb
+    scanner -->|"Sync raw/staging"| duckdb
     dbt -->|"Read & Materialize"| duckdb
 
     %% Serving
@@ -96,14 +96,14 @@ flowchart TD
 
     class spiders,airflow ingestionStyle
     class postgres,duckdb storageStyle
-    class dbt,airbyte,soda processStyle
+    class dbt,scanner,soda processStyle
     class superset,fastapi,webapp presentStyle
 ```
 
 #### Data Flow chi tiết cho Apache Superset
 
 1) Điều phối theo lịch (Airflow)
-- Airflow chạy theo lịch (ví dụ 02:00 hằng ngày) và lần lượt trigger các bước: chạy spiders → kiểm tra chất lượng (Soda Core) → đồng bộ EL (Airbyte: PostgreSQL → DuckDB) → biến đổi dữ liệu (dbt-duckdb) → cập nhật kho OLAP (DuckDB).
+- Airflow chạy theo lịch (ví dụ 02:00 hằng ngày) và lần lượt trigger các bước: chạy spiders → kiểm tra chất lượng (Soda Core) → đồng bộ EL (DuckDB postgres_scanner: PostgreSQL → DuckDB) → biến đổi dữ liệu (dbt-duckdb) → cập nhật kho OLAP (DuckDB).
 
 2) Thu thập dữ liệu (Spiders → PostgreSQL)
 - Các spiders thu thập dữ liệu từ 10 trang, chuẩn hóa tối thiểu và ghi trực tiếp vào PostgreSQL (schema/raw), kèm timestamps/metadata phục vụ kiểm soát phiên crawl.
@@ -113,9 +113,9 @@ flowchart TD
 - Nếu FAIL: Airflow dừng pipeline, gửi cảnh báo; dữ liệu OLAP cũ vẫn được giữ nguyên để dashboard Superset không bị ảnh hưởng.
 - Nếu PASS: tiếp tục bước biến đổi. (Sau-transform) Sử dụng `dbt test` để kiểm tra các model.
 
-4) Đồng bộ dữ liệu (Airbyte – EL)
-- Airbyte sync từ PostgreSQL (raw/staging) → DuckDB (OLAP), ưu tiên incremental.
-- Quản lý lịch chạy và retry/monitoring qua Airflow.
+4) Đồng bộ dữ liệu (DuckDB postgres_scanner – EL)
+- DuckDB `postgres_scanner` sync từ PostgreSQL (raw/staging) → DuckDB (OLAP), hỗ trợ full refresh hoặc incremental theo cột thời gian (mặc định `scraped_at`).
+- Quản lý lịch chạy và tham số hoá qua Airflow (BashOperator).
 
 5) Biến đổi dữ liệu (dbt-duckdb – ELT)
 - dbt-duckdb đọc dữ liệu trong DuckDB → tạo các mô hình staging/dim/fact/agg.
@@ -123,21 +123,20 @@ flowchart TD
 
 5) Kho phân tích (DuckDB – OLAP)
 - DuckDB lưu trữ các mô hình phục vụ phân tích (ví dụ: dim_companies, fct_jobs, agg_jobs_by_industry…).
-- File DuckDB được đặt tại một đường dẫn ổn định để phục vụ kết nối từ Power BI.
+- File DuckDB được đặt tại một đường dẫn ổn định để phục vụ kết nối từ Superset.
 
 6) Kết nối Apache Superset
-- Superset kết nối tới DuckDB qua SQLAlchemy (duckdb-engine) để đọc các bảng phân tích. Tùy chọn kết nối:
-    - SQLAlchemy URI: `duckdb:///D:/path/to/warehouse.duckdb`, hoặc
-    - (Phương án thay thế) Nếu để marts trong PostgreSQL, Superset có thể kết nối trực tiếp PostgreSQL.
+- Superset kết nối tới DuckDB qua SQLAlchemy (duckdb-engine) để đọc các bảng phân tích. Ví dụ kết nối:
+    - SQLAlchemy URI: `duckdb:///D:/path/to/warehouse.duckdb`
 
 7) Làm mới dữ liệu (Refresh)
 - Desktop: Refresh thủ công để phát triển/kiểm thử.
-- Service: Dùng feature Database refresh của Superset (hoặc cron Airflow để trigger materialization) sau khi pipeline hoàn tất; dashboard dùng nguồn DuckDB cập nhật.
+- Service: Dùng cron Airflow để trigger sync + transform; dashboard dùng nguồn DuckDB cập nhật.
 
 8) Trình bày và tiêu thụ
 - Superset sử dụng các bảng trong DuckDB để dựng dashboard (Jobs by Industry, Salary Distribution, Trends…). Người dùng xem dashboard trên giao diện Superset.
 
-9) Ứng dụng web người dùng (không liên quan Power BI)
+9) Ứng dụng web người dùng
 - Job Search Website truy cập dữ liệu qua FastAPI → PostgreSQL (OLTP) để phục vụ tra cứu/tìm kiếm theo thời gian thực; không truy vấn DuckDB.
 
 ```mermaid
@@ -146,9 +145,10 @@ flowchart LR
     Spiders -->|Raw jobs| Postgres[(PostgreSQL OLTP)]
     Airflow -. run .-> Soda[Soda Core]
     Soda -->|Validate raw| Postgres
+    Airflow -. run .-> Scanner[DuckDB postgres_scanner]
+    Scanner -->|Sync| DuckDB[(DuckDB OLAP)]
     Airflow -. run .-> dbt[dbt]
-    dbt -->|Read| Postgres
-    dbt -->|Materialize marts| DuckDB[(DuckDB OLAP)]
+    dbt -->|Materialize marts| DuckDB
     Superset[Apache Superset] -->|Connect| DuckDB
 
     classDef c1 fill:#e1f5fe,stroke:#01579b,stroke-width:1px
@@ -157,83 +157,22 @@ flowchart LR
     class Postgres,DuckDB c2
 ```
 
-#### Data Flow chi tiết cho Job Search Website
-
-1) Người dùng → Giao diện Web (Frontend)
-- Người dùng nhập từ khóa/bộ lọc (keyword, site, location, page, page_size, sort…). Giao diện gửi HTTP request tới FastAPI.
-
-2) Frontend → FastAPI (API Layer)
-- Endpoint chính: `GET /jobs` với các query params đã hỗ trợ: `keyword`, `site`, `page`, `page_size` (có thể mở rộng `location`, `sort_by`).
-- FastAPI validate tham số, chuẩn hóa, log truy vấn, áp hạn mức page_size an toàn (ví dụ 10–50).
-
-3) FastAPI → PostgreSQL (Query OLTP)
-- API dựng câu truy vấn có paginate (LIMIT/OFFSET) và các điều kiện lọc; dùng truy vấn tham số (parameterized) để an toàn.
-- Khuyến nghị chỉ mục (indexes): `(job_title)`, `(company_name)`, `(location)`, `(posted_date)`, và `(source_site, posted_date)` để tối ưu lọc/sắp xếp.
-
-4) PostgreSQL → FastAPI (Kết quả)
-- PostgreSQL trả về danh sách job chuẩn hóa (18+ fields) cùng tổng số bản ghi (total) nếu có truy vấn đếm.
-- FastAPI trả JSON về frontend theo schema: `items`, `total`, `page`, `page_size`.
-
-5) FastAPI → Frontend (Hiển thị)
-- Frontend render danh sách việc làm, phân trang/scroll, và hiển thị metadata (source_site, scraped_at, posted_date…).
-- Cho trải nghiệm tốt hơn: debounce tìm kiếm, hiển thị loader, giữ state bộ lọc.
-
-6) Tính tươi dữ liệu
-- Dữ liệu đọc từ PostgreSQL đã được đi qua pipeline Airflow và cổng GE (chất lượng đạt chuẩn) trước đó.
-- Web luôn đọc nguồn OLTP nên không bị phụ thuộc vào DuckDB/BI.
-
-7) Độ tin cậy & Hiệu năng
-- Timeout hợp lý tại API (ví dụ 3–5s), retry nhẹ phía frontend; phân trang bắt buộc để bảo vệ DB.
-- (Tùy chọn) Cache ngắn hạn tại API (in-memory/ETag) cho truy vấn lặp lại; bật nén (gzip) khi trả JSON.
-
-8) Nhật ký & Giám sát
-- Log request/response và thời gian truy vấn (latency) để tối ưu tiếp; theo dõi lỗi 4xx/5xx.
-
-```mermaid
-flowchart LR
-    User[End User] --> UI[Web UI]
-    UI -->|HTTP GET /jobs?query...| FastAPI[FastAPI API]
-    FastAPI -->|Parameterized SQL| Postgres[(PostgreSQL OLTP)]
-    Postgres -->|Rows + total| FastAPI
-    FastAPI -->|JSON items,total,page,page_size| UI
-
-    classDef api fill:#e8f5e8,stroke:#1b5e20,stroke-width:1px
-    classDef db fill:#f3e5f5,stroke:#4a148c,stroke-width:1px
-    class FastAPI,UI api
-    class Postgres db
-```
-
 #### Data Flow chi tiết cho Orchestration & Monitoring (Airflow)
 
 1) Lên lịch & điều phối
-- Airflow DAG chạy theo cron (ví dụ 02:00). Các task: `run_spiders` → `soda_validate_raw` → `dbt_run` → `dbt_test` → `publish_duckdb` → `notify_success`.
+- Airflow DAG chạy theo cron (ví dụ 02:00). Các task: `run_spiders` → `soda_validate_raw` → `duckdb_sync` → `dbt_run` → `dbt_test` → `notify_success`.
 
 2) Retry & SLA
 - Mỗi task có `retries` và `retry_delay` hợp lý; đặt `sla` để cảnh báo khi quá thời gian.
 
 3) Logging & Artifacts
-- Log chi tiết của từng task được lưu vào thư mục logs; artifacts gồm log `soda scan`, file DuckDB mới, và dbt target (manifest/run_results).
+- Log chi tiết của từng task được lưu vào thư mục logs; artifacts gồm log `soda scan`, file DuckDB, và dbt target (manifest/run_results).
 
 4) Alerting
-- Kênh cảnh báo: Email/Slack khi task fail/SLA miss. Nội dung đính kèm link log và tham chiếu tới log `soda scan`/`dbt test`.
+- Kênh cảnh báo: Email/Slack khi task fail/SLA miss.
 
 5) Observability
-- Theo dõi trạng thái DAG trên Airflow UI (Gantt/Graph). Ghi nhận metrics (thời gian chạy, tỉ lệ fail) để tối ưu.
-
-```mermaid
-flowchart TD
-    start([Scheduled 02:00]) --> run_spiders[Task: run_spiders]
-    run_spiders --> ge_raw[Task: ge_validate_raw]
-    ge_raw -->|PASS| dbt_run[Task: dbt_run]
-    ge_raw -->|FAIL| alert1([Alert + Stop])
-    dbt_run --> ge_marts{Run ge_validate_marts?}
-    ge_marts -->|YES| ge_marts_task[Task: ge_validate_marts] --> publish[Task: publish_duckdb]
-    ge_marts -->|NO| publish
-    publish --> notify[Task: notify_success]
-
-    classDef t fill:#fff3e0,stroke:#e65100,stroke-width:1px
-    class run_spiders,ge_raw,dbt_run,ge_marts_task,publish,notify t
-```
+- Theo dõi trạng thái DAG trên Airflow UI (Gantt/Graph).
 
 #### Data Quality Implementation (Soda Core + dbt tests)
 
@@ -246,16 +185,24 @@ flowchart TD
 - Viết tests trong `schema.yml` của các model (built-in + dbt-expectations nếu cần).
 - Chạy `dbt test` sau `dbt run`. Fail thì alert và dừng publish.
 
+#### EL Implementation (DuckDB postgres_scanner)
+
+- Script: `scripts/sync_pg_to_duckdb.py`
+- Env vars:
+  - `POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD`
+  - `DUCKDB_PATH`, `DUCKDB_SCHEMA` (default: `raw`)
+  - `PG_TABLE` (default: `jobs`), `PG_CURSOR_COLUMN` (default: `scraped_at`)
+  - `SYNC_MODE` = `full` | `incremental` (default: `incremental`)
+- Full refresh:
+```bash
+set SYNC_MODE=full & python scripts/sync_pg_to_duckdb.py
+```
+- Incremental:
+```bash
+python scripts/sync_pg_to_duckdb.py
+```
+
 #### Data Flow chi tiết cho dbt Docs & Lineage
-
-1) Sinh tài liệu
-- Chạy `dbt docs generate` sau `dbt run` để tạo catalog + lineage diagrams; lưu trong `target/` và (tuỳ chọn) publish nội bộ.
-
-2) Exposures
-- Khai báo `exposures` trong dbt để mô tả dashboard Power BI và web app như consumer chính; giúp theo dõi tác động thay đổi.
-
-3) Source Freshness
-- Chạy `dbt source freshness` theo lịch để đo độ tươi của nguồn (PostgreSQL/raw), phản hồi vào monitoring/alerting.
 
 ```mermaid
 flowchart TD
@@ -291,6 +238,7 @@ flowchart TD
 - **OLTP Database**: PostgreSQL
 - **OLAP Database**: DuckDB
 - **Transformation**: dbt-duckdb
+- **EL**: DuckDB postgres_scanner script
 - **Data Quality**: Soda Core (raw) + dbt tests (post-transform)
 - **Visualization**: Apache Superset
 - **Backend**: FastAPI

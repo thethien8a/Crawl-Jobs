@@ -15,7 +15,7 @@ default_args = {
 with DAG(
     dag_id="crawljob_pipeline",
     default_args=default_args,
-    description="Crawl → Raw Gate (Soda) → Transform (dbt) → Test (dbt) → Publish",
+    description="Crawl → Raw Gate (Soda) → Sync (DuckDB) → Transform (dbt) → Test (dbt) → Publish",
     schedule_interval="0 2 * * *",
     start_date=datetime(2025, 1, 1),
     catchup=False,
@@ -64,7 +64,23 @@ with DAG(
         },
     )
 
-    # 3) Transform with dbt
+    # 3) Sync Postgres → DuckDB using postgres_scanner
+    duckdb_sync = BashOperator(
+        task_id="duckdb_sync",
+        bash_command=(
+            "python /opt/airflow/dags/scripts/sync_pg_to_duckdb.py"
+        ),
+        env={
+            **os.environ,
+            # Optional: override defaults via env, e.g. SYNC_MODE=full
+            # "SYNC_MODE": "incremental",
+            # "PG_TABLE": "jobs",
+            # "PG_CURSOR_COLUMN": "scraped_at",
+            # "DUCKDB_SCHEMA": "raw",
+        },
+    )
+
+    # 4) Transform with dbt
     dbt_run = BashOperator(
         task_id="dbt_run",
         bash_command="cd /opt/airflow/dags/dbt && dbt run",
@@ -73,7 +89,7 @@ with DAG(
         },
     )
 
-    # 4) Tests with dbt
+    # 5) Tests with dbt
     dbt_test = BashOperator(
         task_id="dbt_test",
         bash_command="cd /opt/airflow/dags/dbt && dbt test",
@@ -87,6 +103,7 @@ with DAG(
         >> soda_scan_check1
         >> soda_scan_check2
         >> soda_scan_check3
+        >> duckdb_sync
         >> dbt_run
         >> dbt_test
     )

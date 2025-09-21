@@ -1,31 +1,29 @@
 **PROJECT IDENTITY**
 - **Purpose:** End-to-end data pipeline scraping, validating, transforming, and serving job data from 10+ Vietnamese job sites
-- **Tech Stack (Current):** Python, Scrapy, Selenium, PostgreSQL, Airbyte (EL), DuckDB, dbt-duckdb, FastAPI, Vanilla JS, Docker, Soda Core, Airflow, Superset
+- **Tech Stack (Current):** Python, Scrapy, Selenium, PostgreSQL, DuckDB (postgres_scanner), dbt-duckdb, FastAPI, Vanilla JS, Docker, Soda Core, Airflow, Superset
 - **Data Quality:** Soda Core sequential checks (3 layers) + dbt tests (business rules)
 
 **CURRENT STATE (UPDATED: September 2025)**
-- **Status:** Active development with Airflow orchestration; Airbyte chosen for EL from PostgreSQL → DuckDB; transforms run in DuckDB via dbt-duckdb
-- **Architecture:** Scrapy → PostgreSQL (raw) → Soda Core → Airbyte (sync) → DuckDB → dbt-duckdb (transform + tests) → Superset
+- **Status:** Active development with Airflow orchestration; Airbyte removed; EL now uses DuckDB postgres_scanner (PostgreSQL → DuckDB)
+- **Architecture:** Scrapy → PostgreSQL (raw) → Soda Core → DuckDB postgres_scanner (sync) → dbt-duckdb (transform + tests) → Superset
 - **Recent Changes:**
-  - ✅ Switched to Airbyte for EL: PostgreSQL → DuckDB
-  - ✅ Updated README and plan diagrams to reflect dbt-duckdb only (no cross-DB dbt)
-  - ✅ Reinforced sequential Soda validation (check1 → check2 → check3)
-  - ✅ Makefile removed - not needed for current workflow
-  - ✅ pyproject.toml simplified to Black + isort only
+  - ✅ Replaced Airbyte with DuckDB postgres_scanner (script `scripts/sync_pg_to_duckdb.py`)
+  - ✅ Updated Airflow DAG to call DuckDB sync step
+  - ✅ Removed PyAirbyte files
+  - ✅ Updated README and requirements
+  - ✅ Code quality simplified (Black + isort)
 
 **NEXT STEPS**
-1. Configure and schedule Airbyte syncs in Airflow (per table, incremental).
-2. Create dbt-duckdb project and models (staging/dim/fact) in DuckDB.
-3. Wire Superset to DuckDB file/URI.
+1. Parameterize sync (per table, schedule) in Airflow via env.
+2. Build dbt-duckdb models (staging/dim/fact) and tests.
+3. Connect Superset to DuckDB file/URI.
 
 **STRENGTHS**
+- Simpler EL on Windows (no Docker connectors)
 - Clear separation OLTP/OLAP
-- Lightweight, cost-efficient analytics with DuckDB
 - Robust quality gates before sync and transform
-- Simplified tooling (Black + isort only)
 
 **AREAS TO IMPROVE**
-- Airbyte deployment & monitoring
+- Incremental sync strategy per stream (cursor/PK choices)
 - Single-writer discipline on DuckDB files
 - Alerting on sync/transform failures
-- API still uses SQL Server instead of PostgreSQL (inconsistency)
