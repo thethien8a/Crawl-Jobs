@@ -20,60 +20,70 @@ def ensure_duckdb(con: duckdb.DuckDBPyConnection, schema_name: str) -> None:
     con.execute(f"CREATE SCHEMA IF NOT EXISTS {schema_name};")
 
 
-def full_refresh(con: duckdb.DuckDBPyConnection, schema_name: str, table: str, pg_conn: str) -> None:
-    con.execute(
-        f"""
-        CREATE OR REPLACE TABLE {schema_name}.{table} AS
-        SELECT * FROM postgres_scan('{pg_conn}', 'public', '{table}')
-        """
-    )
-
-
 def incremental_by_timestamp(
     con: duckdb.DuckDBPyConnection,
     schema_name: str,
     table: str,
     pg_conn: str,
     cursor_column: str,
+
 ) -> None:
-    # Create table if not exists to support first run
-    con.execute(
-        f"CREATE TABLE IF NOT EXISTS {schema_name}.{table} AS SELECT * FROM postgres_scan('{pg_conn}', 'public', '{table}') WHERE 1=0"
-    )
-    # Insert only rows newer than current max(cursor_column)
+
+    # Ensure target table exists with the desired schema (including computed cols)
     con.execute(
         f"""
-        INSERT INTO {schema_name}.{table}
-        SELECT *
-        FROM postgres_scan('{pg_conn}', 'public', '{table}')
-        WHERE {cursor_column} > (SELECT COALESCE(MAX({cursor_column}), TIMESTAMP '1970-01-01') FROM {schema_name}.{table})
+            CREATE TABLE IF NOT EXISTS {schema_name}.{table} AS
+            SELECT *
+            FROM postgres_scan('{pg_conn}', 'public', '{table}')
+            WHERE 1=0
         """
+        
     )
 
+    if con.execute(f"SELECT COUNT(*) FROM {schema_name}.{table} WHERE DATE({cursor_column}) = CURRENT_DATE").fetchone()[0] == 0:
+        con.execute(f"INSERT INTO {schema_name}.{table} SELECT * FROM postgres_scan('{pg_conn}', 'public', '{table}') WHERE DATE({cursor_column}) = CURRENT_DATE")
+    else:
+        con.execute(
+            f"""
+                WITH max_cursor AS (
+                    SELECT 
+                        *
+                    FROM
+                        postgres_scan('{pg_conn}', 'public', '{table}')
+                    WHERE
+                        DATE({cursor_column}) = CURRENT_DATE
+                )
+                MERGE INTO {schema_name}.{table}
+                USING max_cursor
+                ON {schema_name}.{table}.job_title = max_cursor.job_title 
+                    AND {schema_name}.{table}.company_name = max_cursor.company_name 
+                    AND {schema_name}.{table}.source_site = max_cursor.source_site
+                WHEN MATCHED THEN
+                    UPDATE SET
+                        {schema_name}.{table}.* = max_cursor.*
+                WHEN NOT MATCHED THEN
+                    INSERT VALUES (max_cursor.*)
+            """
+        )
+        
+            
 
 def main() -> int:
     # Cấu hình DuckDB
     duckdb_path = os.getenv("DUCKDB_PATH")
-    schema_name = "raw"
+    schema_name = "staging"
     table = "jobs"
     cursor_column = "scraped_at"
-    
-    # Chỉ có 2 mode: full và incremental
-    mode = "incremental"
 
     pg_conn = build_pg_conn_string()
 
     con = duckdb.connect(duckdb_path)
     ensure_duckdb(con, schema_name)
 
-    if mode == "full":
-        full_refresh(con, schema_name, table, pg_conn)
-        print(f"Full refresh completed: {schema_name}.{table}")
-    else:
-        incremental_by_timestamp(con, schema_name, table, pg_conn, cursor_column)
-        print(
-            f"Incremental sync completed: {schema_name}.{table} using cursor '{cursor_column}'"
-        )
+    incremental_by_timestamp(con, schema_name, table, pg_conn, cursor_column)
+    print(
+        f"Incremental sync completed: {schema_name}.{table} using cursor '{cursor_column}'"
+    )
 
     con.close()
     return 0
