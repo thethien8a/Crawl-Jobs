@@ -19,54 +19,93 @@ def ensure_duckdb(con: duckdb.DuckDBPyConnection, schema_name: str) -> None:
     con.execute("INSTALL postgres_scanner; LOAD postgres_scanner;")
     con.execute(f"CREATE SCHEMA IF NOT EXISTS {schema_name};")
 
-
 def incremental_by_timestamp(
     con: duckdb.DuckDBPyConnection,
     schema_name: str,
     table: str,
     pg_conn: str,
     cursor_column: str,
-
 ) -> None:
-
-    # Ensure target table exists with the desired schema (including computed cols)
-    con.execute(
-        f"""
-            CREATE TABLE IF NOT EXISTS {schema_name}.{table} AS
-            SELECT *
+    
+    # Build today's source slice with computed scraped_date
+    src_cte = f"""
+        WITH src AS (
+            SELECT
+                job_url,
+                job_title,
+                company_name,
+                salary,
+                location,
+                job_type,
+                job_industry,
+                experience_level,
+                education_level,
+                job_position,
+                job_description,
+                requirements,
+                benefits,
+                job_deadline,
+                source_site,
+                search_keyword,
+                {cursor_column} AS scraped_at,
+                DATE({cursor_column}) AS scraped_date
             FROM postgres_scan('{pg_conn}', 'public', '{table}')
-            WHERE 1=0
+            WHERE DATE({cursor_column}) = CURRENT_DATE
+        )
+    """
+
+    # Ensure target table exists with desired shape
+    con.execute(
+        src_cte
+        + f"""
+        , base AS (
+            SELECT * FROM src WHERE 1=0
+        )
+        CREATE TABLE IF NOT EXISTS {schema_name}.{table} AS SELECT * FROM base;
         """
-        
     )
 
-    if con.execute(f"SELECT COUNT(*) FROM {schema_name}.{table} WHERE DATE({cursor_column}) = CURRENT_DATE").fetchone()[0] == 0:
-        con.execute(f"INSERT INTO {schema_name}.{table} SELECT * FROM postgres_scan('{pg_conn}', 'public', '{table}') WHERE DATE({cursor_column}) = CURRENT_DATE")
-    else:
-        con.execute(
-            f"""
-                WITH max_cursor AS (
-                    SELECT 
-                        *
-                    FROM
-                        postgres_scan('{pg_conn}', 'public', '{table}')
-                    WHERE
-                        DATE({cursor_column}) = CURRENT_DATE
-                )
-                MERGE INTO {schema_name}.{table}
-                USING max_cursor
-                ON {schema_name}.{table}.job_title = max_cursor.job_title 
-                    AND {schema_name}.{table}.company_name = max_cursor.company_name 
-                    AND {schema_name}.{table}.source_site = max_cursor.source_site
-                WHEN MATCHED THEN
-                    UPDATE SET
-                        {schema_name}.{table}.* = max_cursor.*
-                WHEN NOT MATCHED THEN
-                    INSERT VALUES (max_cursor.*)
-            """
-        )
-        
-            
+    # Daily upsert by key (job_url, scraped_date)
+    con.execute(
+        src_cte
+        + f"""
+        MERGE INTO {schema_name}.{table} AS t
+        USING src AS s
+        ON t.job_title = s.job_title AND 
+           t.company_name = s.company_name 
+           AND t.source_site = s.source_site
+           AND t.scraped_date = s.scraped_date
+        WHEN MATCHED THEN UPDATE SET
+            job_title        = s.job_title,
+            company_name     = s.company_name,
+            salary           = s.salary,
+            location         = s.location,
+            job_type         = s.job_type,
+            job_industry     = s.job_industry,
+            experience_level = s.experience_level,
+            education_level  = s.education_level,
+            job_position     = s.job_position,
+            job_description  = s.job_description,
+            requirements     = s.requirements,
+            benefits         = s.benefits,
+            job_deadline     = s.job_deadline,
+            source_site      = s.source_site,
+            search_keyword   = s.search_keyword,
+            scraped_at       = s.scraped_at
+        WHEN NOT MATCHED THEN INSERT (
+            job_url, job_title, company_name, salary, location, job_type, job_industry,
+            experience_level, education_level, job_position, job_description,
+            requirements, benefits, job_deadline, source_site, search_keyword,
+            scraped_at, scraped_date
+        ) VALUES (
+            s.job_url, s.job_title, s.company_name, s.salary, s.location, s.job_type, s.job_industry,
+            s.experience_level, s.education_level, s.job_position, s.job_description,
+            s.requirements, s.benefits, s.job_deadline, s.source_site, s.search_keyword,
+            s.scraped_at, s.scraped_date
+        );
+        """
+    )
+
 
 def main() -> int:
     # Cấu hình DuckDB
