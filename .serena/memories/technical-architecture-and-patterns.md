@@ -1,31 +1,63 @@
 **ARCHITECTURE OVERVIEW (UPDATED: DuckDB postgres_scanner EL)**
 
-Data Flow:
-Scrapy → PostgreSQL (raw) → Soda Core → DuckDB postgres_scanner (EL) → dbt-duckdb (transform + tests) → Superset
-FastAPI → PostgreSQL (serving API)
+**Complete Data Pipeline:**
+Scrapy (10 spiders) → PostgreSQL (raw) → Soda Core (3 checks) → DuckDB postgres_scanner (EL) → dbt-duckdb (transform + tests) → Superset (BI)
+FastAPI (PostgreSQL) → Vanilla JS (Frontend)
 
-Key Decisions:
-- Removed Airbyte due to Windows/Docker friction with Java connectors.
-- Adopted DuckDB `postgres_scanner` for EL: simpler, stable, no external services.
+**Key Architectural Decisions:**
+- **Removed Airbyte:** Due to Windows/Docker friction with Java connectors
+- **Adopted DuckDB postgres_scanner:** Simpler, stable, no external services
+- **OLTP vs OLAP separation:** PostgreSQL for raw data, DuckDB for analytics
+- **Quality-first approach:** 3-layer Soda validation before any downstream processing
 
-Components:
-1) Scraping (Scrapy + Selenium)
-2) OLTP (PostgreSQL)
-3) Data Quality (Soda Core check1/2/3)
-4) EL (DuckDB postgres_scanner via `scripts/sync_pg_to_duckdb.py`)
-5) Transform (dbt-duckdb)
-6) BI (Superset on DuckDB)
-7) Serving (FastAPI on PostgreSQL)
+**Component Details:**
 
-Airflow DAG Pattern:
-- run_spiders → soda_check1 → soda_check2 → soda_check3 → duckdb_sync → dbt_run → dbt_test → publish
+1) **Scraping Layer (Scrapy + Selenium)**
+   - **Spiders:** 10 specialized spiders for Vietnamese job sites
+   - **Middleware:** Selenium for JS-heavy sites (joboko, vietnamworks)
+   - **Patterns:** AutoThrottle rate limiting, retry logic, duplicate prevention
+   - **Data Model:** Comprehensive JobItem with 15+ fields including metadata
 
-Operational Patterns:
-- Full vs Incremental modes controlled by `SYNC_MODE` env.
-- Cursor column default `scraped_at`; override via env.
-- Primary keys/unique constraints enforced in downstream dbt models if needed.
+2) **OLTP Storage (PostgreSQL)**
+   - **Table:** `jobs` with UPSERT logic (ON CONFLICT DO UPDATE)
+   - **Schema:** 15+ columns covering job details, metadata, timestamps
+   - **Constraints:** Unique on (job_title, company_name, source_site)
 
-Risks & Mitigations:
-- File lock on DuckDB: avoid concurrent writers, serialize Airflow steps.
-- Incremental correctness: ensure cursor column monotonic per job; add dbt tests.
-- Network/auth to Postgres: validate with psycopg2 before sync.
+3) **Data Quality Gates (Soda Core)**
+   - **Check 1:** Schema validation, required fields, duplicates
+   - **Check 2:** Cross-spider completeness (ensures all 10 sites scraped)
+   - **Check 3:** Site-specific field completion rates
+   - **Sequential:** Must pass all checks before proceeding
+
+4) **EL Layer (DuckDB postgres_scanner)**
+   - **Incremental:** Daily sync using cursor column (default: scraped_at)
+   - **Method:** MERGE operations for efficient upserts
+   - **Configuration:** Environment-driven (table, schema, cursor column)
+   - **Single-writer:** Airflow serialization prevents conflicts
+
+5) **Transform Layer (dbt-duckdb)**
+   - **Models:** Staging → DIM/FACT architecture ready
+   - **Tests:** Business rule validations
+   - **Target:** Optimized for Superset BI consumption
+
+6) **Serving Layer (FastAPI)**
+   - **API:** RESTful with pagination, search, CORS
+   - **Current:** Connects to PostgreSQL (OLTP)
+   - **Future:** Should connect to DuckDB (OLAP) for analytics
+
+7) **Frontend (Vanilla JS)**
+   - **Framework:** Pure JavaScript with Bootstrap
+   - **Features:** Search, pagination, responsive design
+   - **Integration:** REST API consumption
+
+**Operational Patterns:**
+- **Airflow Orchestration:** DAG with sequential tasks
+- **Environment Configuration:** Comprehensive .env support
+- **Error Handling:** Retry logic at multiple levels
+- **Monitoring:** Soda alerts + potential logging improvements
+
+**Risks & Mitigations:**
+- **File lock on DuckDB:** Single-writer discipline via Airflow serialization
+- **Incremental correctness:** Cursor column validation + dbt tests
+- **Network/auth to Postgres:** Connection validation before sync
+- **Selenium reliability:** Fallback strategies + retry mechanisms
