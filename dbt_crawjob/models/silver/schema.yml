@@ -1,0 +1,30 @@
+version: 2
+
+models:
+  - name: stg_jobs
+    tests:
+      - not_null:
+          column_name: job_url
+      - not_null:
+          column_name: scraped_at
+      - not_null:
+          column_name: scraped_date
+      - unique:
+          column_name: job_url
+          config:
+            column_name: scraped_date
+    columns:
+      - name: job_url
+        tests: [not_null, unique]
+      - name: job_title
+        tests: [not_null]
+      - name: company_name
+        tests: [not_null]
+      - name: location
+        tests: [not_null]
+      - name: source_site
+        tests:
+          - accepted_values:
+              values: ['topcv.vn', 'careerlink.vn', 'careerviet.vn', 'itviec.com', '123job.vn', 'joboko.com', 'jobsgo.vn', 'jobstreet.com.vn', 'linkedin.com', 'vietnamworks.com']
+      - name: scraped_at
+        tests: [not_null]

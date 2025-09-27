@@ -1,0 +1,6 @@
+  crawljob:
+    target: dev
+    outputs:
+      dev:
+        type: duckdb
+        path: "{{ env_var('DUCKDB_PATH', 'D:/Practice/Scrapy/CrawlJob/DuckDB/warehouse.duckdb') }}"
