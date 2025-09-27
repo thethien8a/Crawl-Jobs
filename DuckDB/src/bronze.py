@@ -1,23 +1,32 @@
 import os
 import sys
+from typing import Optional
 
 import duckdb
 from dotenv import load_dotenv
 
 load_dotenv()
 
+def get_env(name: str, default: Optional[str] = None) -> str:
+    value = os.getenv(name, default)
+    if value is None or value == "":
+        raise RuntimeError(f"Missing required environment variable: {name}")
+    return value
+
+
 def build_pg_conn_string() -> str:
-    host = os.getenv("POSTGRES_HOST")
-    port = os.getenv("POSTGRES_PORT", "5432")
-    db = os.getenv("POSTGRES_DB")
-    user = os.getenv("POSTGRES_USER")
-    pwd = os.getenv("POSTGRES_PASSWORD")
+    host = get_env("POSTGRES_HOST")
+    port = get_env("POSTGRES_PORT", "5432")
+    db = get_env("POSTGRES_DB")
+    user = get_env("POSTGRES_USER")
+    pwd = get_env("POSTGRES_PASSWORD")
     return f"host={host} dbname={db} user={user} password={pwd} port={port}"
 
 
 def ensure_duckdb(con: duckdb.DuckDBPyConnection, schema_name: str) -> None:
     con.execute("INSTALL postgres_scanner; LOAD postgres_scanner;")
     con.execute(f"CREATE SCHEMA IF NOT EXISTS {schema_name};")
+
 
 def incremental_by_timestamp(
     con: duckdb.DuckDBPyConnection,
@@ -26,53 +35,45 @@ def incremental_by_timestamp(
     pg_conn: str,
     cursor_column: str,
 ) -> None:
-    
-    # Build today's source slice with computed scraped_date
-    src_cte = f"""
-        WITH src AS (
-            SELECT
-                job_url,
-                job_title,
-                company_name,
-                salary,
-                location,
-                job_type,
-                job_industry,
-                experience_level,
-                education_level,
-                job_position,
-                job_description,
-                requirements,
-                benefits,
-                job_deadline,
-                source_site,
-                search_keyword,
-                {cursor_column} AS scraped_at,
-                DATE({cursor_column}) AS scraped_date
-            FROM postgres_scan('{pg_conn}', 'public', '{table}')
-            WHERE DATE({cursor_column}) = CURRENT_DATE
-        )
-    """
+    # Define source CTE for today's data
+    con.execute(f"""
+        CREATE OR REPLACE TEMP TABLE src AS
+        SELECT
+            job_url,
+            job_title,
+            company_name,
+            salary,
+            location,
+            job_type,
+            job_industry,
+            experience_level,
+            education_level,
+            job_position,
+            job_description,
+            requirements,
+            benefits,
+            job_deadline,
+            source_site,
+            search_keyword,
+            {cursor_column} AS scraped_at,
+            DATE({cursor_column}) AS scraped_date
+        FROM postgres_scan('{pg_conn}', 'public', '{table}')
+        WHERE DATE({cursor_column}) = CURRENT_DATE
+    """)
 
-    # Ensure target table exists with desired shape
-    con.execute(
-        src_cte
-        + f"""
-        , base AS (
-            SELECT * FROM src WHERE 1=0
-        )
-        CREATE TABLE IF NOT EXISTS {schema_name}.{table} AS SELECT * FROM base;
-        """
-    )
+    # Create target table if not exists, inferring schema from source
+    con.execute(f"""
+        CREATE TABLE IF NOT EXISTS {schema_name}.{table} AS
+        SELECT * FROM src WHERE 1=0
+    """)
 
     # Daily upsert by key (job_url, scraped_date)
     con.execute(
-        src_cte
-        + f"""
+        f"""
         MERGE INTO {schema_name}.{table} AS t
         USING src AS s
-        ON t.job_title = s.job_title AND 
-           t.company_name = s.company_name 
+        ON t.job_title = s.job_title  
+           AND t.company_name = s.company_name 
            AND t.source_site = s.source_site
            AND t.scraped_date = s.scraped_date
         WHEN MATCHED THEN UPDATE SET
@@ -102,16 +103,17 @@ def incremental_by_timestamp(
             s.experience_level, s.education_level, s.job_position, s.job_description,
             s.requirements, s.benefits, s.job_deadline, s.source_site, s.search_keyword,
             s.scraped_at, s.scraped_date
-        );
-        """
-    )
+        )
+    """)
 
 
 def main() -> int:
+    
     # Cấu hình DuckDB
     duckdb_path = os.getenv("DUCKDB_PATH")
-    schema_name = "staging"
-    table = "jobs"
+    schema_name = os.getenv("DUCKDB_STAGING_SCHEMA","staging")
+    table = os.getenv("DUCKDB_STAGING_TABLE","jobs")
+
     cursor_column = "scraped_at"
 
     pg_conn = build_pg_conn_string()

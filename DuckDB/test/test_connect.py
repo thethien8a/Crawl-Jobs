@@ -1,6 +1,8 @@
 import duckdb
 from dotenv import load_dotenv
+import pandas as pd
 import os
+
 load_dotenv()
 
 def show_schemas(con):
@@ -17,6 +19,12 @@ def show_tables(con, schema_name):
         WHERE table_schema = '{schema_name}';
     """).fetchall())
 
+def remove_schema(con, schema_name):
+    con.execute(f"DROP SCHEMA IF EXISTS {schema_name}")
+
+def remove_table(con, schema_name, table_name):
+    con.execute(f"DROP TABLE IF EXISTS {schema_name}.{table_name}")
+
 def truncate_table(con, schema_name, table_name):
     con.execute(f"TRUNCATE TABLE {schema_name}.{table_name}")
 
@@ -27,7 +35,7 @@ def spacing():
     
 def main():
     con = duckdb.connect(os.getenv("DUCKDB_PATH"))
-    truncate_table(con, os.getenv("DUCKDB_STAGING_SCHEMA"), os.getenv("DUCKDB_STAGING_TABLE"))
+    show_schemas(con)
     con.close()
     
     
