@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: dim_company
+    tests:
+      - not_null:
+          column_name: company_id
+      - unique:
+          column_name: company_name_clean
+    columns:
+      - name: company_id
+        tests: [not_null, unique]
+      - name: company_name_clean
+        tests: [not_null, unique]
+
+  - name: fct_jobs
+    tests:
+      - not_null:
+          column_name: job_url
+      - not_null:
+          column_name: scraped_at
+    columns:
+      - name: job_url
+        tests: [not_null, unique]
+      - name: company_id
+        tests:
+          - relationships:
+              to: ref('dim_company')
+              field: company_id

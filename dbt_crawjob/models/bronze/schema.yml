@@ -1,0 +1,13 @@
+version: 2
+
+models:
+  - name: jobs
+    description: "Raw job data synced from PostgreSQL"
+    columns:
+      - name: job_url
+        description: "Unique URL of the job posting"
+        data_type: varchar
+        constraints:
+          - type: not_null
+          - type: unique
+      

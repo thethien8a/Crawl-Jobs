@@ -1,6 +1,7 @@
-  crawljob:
-    target: dev
-    outputs:
-      dev:
-        type: duckdb
-        path: "{{ env_var('DUCKDB_PATH', 'D:/Practice/Scrapy/CrawlJob/DuckDB/warehouse.duckdb') }}"
+crawljob:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      # DuckDB không cho đọc biến môi trường nên ta để đường dẫn cố định
+      path: "D:\\Practice\\Scrapy\\CrawlJob\\DuckDB\\warehouse.duckdb"
