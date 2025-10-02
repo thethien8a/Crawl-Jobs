@@ -66,3 +66,5 @@ great_expectations/uncommitted/
 gx/uncommitted/
 
 .github/instructions/
+
+test/display_data_dynamic.html
