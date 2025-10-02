@@ -29,7 +29,7 @@ def get_column_names(cursor):
 def get_data_from_postgre(conn):
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM jobs WHERE education_level IS NULL")
+        cursor.execute("SELECT * FROM jobs WHERE source_site = 'linkedin.com' ORDER BY id DESC;")
         rows = cursor.fetchall()
         column_names = get_column_names(cursor)
 

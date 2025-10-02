@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Data Display</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 100%;
+            overflow-x: auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            position: relative;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 800px;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            max-width: 200px;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .scroll-note {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            margin-top: 10px;
+        }
+        .no-data {
+            text-align: center;
+            color: #999;
+            font-style: italic;
+            padding: 20px;
+        }
+        .toggle-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .toggle-button:hover {
+            background-color: #45a049;
+        }
+        .full-view td,
+        .full-view th {
+            white-space: normal !important;
+            overflow: visible !important;
+            max-width: none !important;
+            word-wrap: break-word;
+            min-width: 150px;
+        }
+        .full-view {
+            overflow-x: visible;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="toggle-button" id="toggleView" onclick="toggleFullView()">Xem đầy đủ</button>
+        <h1>Job Data from Database</h1>
+<table id="jobTable">
+            <thead>
+                <tr id="tableHeader">
+                    <th>id</th>
+                    <th>job_title</th>
+                    <th>company_name</th>
+                    <th>salary</th>
+                    <th>location</th>
+                    <th>job_type</th>
+                    <th>job_industry</th>
+                    <th>experience_level</th>
+                    <th>education_level</th>
+                    <th>job_position</th>
+                    <th>job_deadline</th>
+                    <th>source_site</th>
+                    <th>job_url</th>
+                    <th>search_keyword</th>
+                    <th>scraped_at</th>
+                    <th>created_at</th>
+                    <th>updated_at</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr>
+                    <td title="332">332</td>
+                    <td title="Analyst">Analyst</td>
+                    <td title="Nam Ngan Organic Agriculture Co., Ltd">Nam Ngan Organic Agriculture Co., Ltd</td>
+                    <td title=""></td>
+                    <td title="Phú Mỹ, Ba Ria-Vung Tau, Vietnam">Phú Mỹ, Ba Ria-Vung Tau, Vietnam</td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title="linkedin.com">linkedin.com</td>
+                    <td title="https://www.linkedin.com/jobs/view/4304884392/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=gVHtrlihHP18YpZs0iigsg%3D%3D&amp;trk=flagship3_search_srp_jobs">https://www.linkedin.com/jobs/view/4304884392/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=gVHtrlihHP18YpZs0iigsg%3D%3D&amp;trk=flagship3_search_srp_jobs</td>
+                    <td title="data analyst">data analyst</td>
+                    <td title="2025-10-02 10:19:41.522707">2025-10-02 10:19:41.522707</td>
+                    <td title="2025-10-02 03:19:48.933860">2025-10-02 03:19:48.933860</td>
+                    <td title="2025-10-02 03:19:48.933860">2025-10-02 03:19:48.933860</td>
+                </tr>
+                <tr>
+                    <td title="331">331</td>
+                    <td title="Investment Data Analyst">Investment Data Analyst</td>
+                    <td title="High Five">High Five</td>
+                    <td title=""></td>
+                    <td title="Vietnam">Vietnam</td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title="linkedin.com">linkedin.com</td>
+                    <td title="https://www.linkedin.com/jobs/view/4305411361/?eBP=CwEAAAGZou19C1TCJjkIAhGoVf1OIEggSGIIm2_zsKlnVOoAbyWyOGf3Yke4k_ob7bWSMYqa9ZoZH5bBZEETRPA2GvqbbnEgroMX-EF4Bm21vqAfkVSCnVyR0nffnuk5M-S8vhQMdvnWPfnUJDtLkOfT8tWMLZBgGFVMWl2eeQJeiply7hkpz0Ib7yhD0qv4Yum2Je9DOL2ASiCOpyB4g2uGNnk-QAw0rcii68xmLvJNOrruH6HXK761wY2bYkDR-LBJ7moTVT7rTcnXdmO1NlPdKoojL4KQt-EkLBVFf0crRRllrJlzrrLONjnImsUpSE9oXLwO-esEM8lCNvuxBrckIcuDY-RBz71otmNISzVedKKi0yhf-Edyvws_gZKhNztZf1IteYoSeMJ1g915DhhlrYs6o8zV0xQqEcRPg3ZkFItsdEsJ9T0_qEnO-o3jDd8ZgSQn76UOn5yiGZ1T-icLbsA31WD0DZc3gSzZbAeBlVc-1BxCiPhDQDJ5bTM_SnwjtabwIzoVPug&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=5TFjUForVAIBkrHx2sUfpQ%3D%3D&amp;trk=flagship3_search_srp_jobs">https://www.linkedin.com/jobs/view/4305411361/?eBP=CwEAAAGZou19C1TCJjkIAhGoVf1OIEggSGIIm2_zsKlnVOoAbyWyOGf3Yke4k_ob7bWSMYqa9ZoZH5bBZEETRPA2GvqbbnEgroMX-EF4Bm21vqAfkVSCnVyR0nffnuk5M-S8vhQMdvnWPfnUJDtLkOfT8tWMLZBgGFVMWl2eeQJeiply7hkpz0Ib7yhD0qv4Yum2Je9DOL2ASiCOpyB4g2uGNnk-QAw0rcii68xmLvJNOrruH6HXK761wY2bYkDR-LBJ7moTVT7rTcnXdmO1NlPdKoojL4KQt-EkLBVFf0crRRllrJlzrrLONjnImsUpSE9oXLwO-esEM8lCNvuxBrckIcuDY-RBz71otmNISzVedKKi0yhf-Edyvws_gZKhNztZf1IteYoSeMJ1g915DhhlrYs6o8zV0xQqEcRPg3ZkFItsdEsJ9T0_qEnO-o3jDd8ZgSQn76UOn5yiGZ1T-icLbsA31WD0DZc3gSzZbAeBlVc-1BxCiPhDQDJ5bTM_SnwjtabwIzoVPug&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=5TFjUForVAIBkrHx2sUfpQ%3D%3D&amp;trk=flagship3_search_srp_jobs</td>
+                    <td title="data analyst">data analyst</td>
+                    <td title="2025-10-02 10:19:36.834450">2025-10-02 10:19:36.834450</td>
+                    <td title="2025-10-02 03:19:41.524763">2025-10-02 03:19:41.524763</td>
+                    <td title="2025-10-02 03:19:41.524763">2025-10-02 03:19:41.524763</td>
+                </tr>
+                <tr>
+                    <td title="330">330</td>
+                    <td title="Financial BI Analyst">Financial BI Analyst</td>
+                    <td title="Buymed">Buymed</td>
+                    <td title=""></td>
+                    <td title="Ho Chi Minh City, Vietnam">Ho Chi Minh City, Vietnam</td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title="linkedin.com">linkedin.com</td>
+                    <td title="https://www.linkedin.com/jobs/view/4299941419/?eBP=CwEAAAGZou19Cve9naLATL2bHpx8-uFNDxEhqgh-d01eo3JJJVCdtTGR3hgqBCJA4Wm7kDFsvgxAge2xtjrLJwJshP0FcZPnwwybabMp80EtcWfx_kjEFMTH3QV22Y0ewISr1IO3I4K6PzxqpYHP0G87B4W64V1dJrmByAkKMk1Nvt34DgudaDOPbNKbPsvy-gRyuPTdliCdpCi8NhOoab2Bww6wzXoTfUcLaMRsq45mCwuGpCYszXPknX_f2OAzB0RspEhpPxLJqRQVIsD4m-AD_7FzFp2rAFNfNrdEN5LnwvVsB_S5Ai01PZ0oWJNV7z8FMMHgQZ4m63MMbb3QJtCSs6T_B4ctPNuIehMz6X8u1rt1lYAVJ-tvqKbuAUJEbF1RxD9nDXQ3tpzZvA5zemVhJlIKSgCCKBElzRhstoOipxxhHr4JMhk0Y6vo70_cVlRsIj8spGjVszen3Bz9TLuUIQzT_CctqutFK6bpYCT1PU96jnBwKE5pb3xe0wSJYl59Zk3QpYdaIH3Nhg&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=iZaeFK%2FqFGtUh0fKHKgpbg%3D%3D&amp;trk=flagship3_search_srp_jobs">https://www.linkedin.com/jobs/view/4299941419/?eBP=CwEAAAGZou19Cve9naLATL2bHpx8-uFNDxEhqgh-d01eo3JJJVCdtTGR3hgqBCJA4Wm7kDFsvgxAge2xtjrLJwJshP0FcZPnwwybabMp80EtcWfx_kjEFMTH3QV22Y0ewISr1IO3I4K6PzxqpYHP0G87B4W64V1dJrmByAkKMk1Nvt34DgudaDOPbNKbPsvy-gRyuPTdliCdpCi8NhOoab2Bww6wzXoTfUcLaMRsq45mCwuGpCYszXPknX_f2OAzB0RspEhpPxLJqRQVIsD4m-AD_7FzFp2rAFNfNrdEN5LnwvVsB_S5Ai01PZ0oWJNV7z8FMMHgQZ4m63MMbb3QJtCSs6T_B4ctPNuIehMz6X8u1rt1lYAVJ-tvqKbuAUJEbF1RxD9nDXQ3tpzZvA5zemVhJlIKSgCCKBElzRhstoOipxxhHr4JMhk0Y6vo70_cVlRsIj8spGjVszen3Bz9TLuUIQzT_CctqutFK6bpYCT1PU96jnBwKE5pb3xe0wSJYl59Zk3QpYdaIH3Nhg&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=iZaeFK%2FqFGtUh0fKHKgpbg%3D%3D&amp;trk=flagship3_search_srp_jobs</td>
+                    <td title="data analyst">data analyst</td>
+                    <td title="2025-10-02 10:19:32.431959">2025-10-02 10:19:32.431959</td>
+                    <td title="2025-10-02 03:19:36.837701">2025-10-02 03:19:36.837701</td>
+                    <td title="2025-10-02 03:19:36.837701">2025-10-02 03:19:36.837701</td>
+                </tr>
+                <tr>
+                    <td title="329">329</td>
+                    <td title="Senior Data Analyst">Senior Data Analyst</td>
+                    <td title="Home Credit Vietnam">Home Credit Vietnam</td>
+                    <td title=""></td>
+                    <td title="Ho Chi Minh City, Vietnam">Ho Chi Minh City, Vietnam</td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title="linkedin.com">linkedin.com</td>
+                    <td title="https://www.linkedin.com/jobs/view/4267152579/?eBP=CwEAAAGZou19CmCJFv0VgCMmxmlnHp9sJKL8qoaTUfBMBueXRU4l74kVUug6bE1-OXSMTHx5QFHqdbUfRSKMuCieDC0QAVPBAtAQiEv13dIU1f_ZjxOfimDDu7bOhAfoaLBUejMS31aH4PaugiTHYggT4uxaUNfzeWWJ0hHUYX9KJYgxmS_R87beF5EUSQIaS9RpZ1oEZYKT6WpWDKFTRjEfR9AkZu4gkvlChWP5FJy5sqVf744FbVOOIs5sZwLDGYOZUFQ9HvvCPbYWxN_ezeASTJl-KU9N4tHxFHeZkCsENcFIdudfrjC1V6OzNRc0c-nB1AXACS_mkygue1sLhqTv3wJeWLuApiw9d1d_m4MmIGH6tFqtIUKAUbnabQI4zQtcaU0wTuC5oALO7JG2q0FJ4YpGYVxIzs8FHWAeUTAaPx6sLxQWhEgLjzrEFCY6Eaha10U_Hpqwe7Yyn24aMebt1lmVICAKxbtKirrsccAtCc7S7GrgXqWe8ijx8Biay1_jmK3jpxynQwo&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=cZaP4A82g6rNWR7ra9MUzA%3D%3D&amp;trk=flagship3_search_srp_jobs">https://www.linkedin.com/jobs/view/4267152579/?eBP=CwEAAAGZou19CmCJFv0VgCMmxmlnHp9sJKL8qoaTUfBMBueXRU4l74kVUug6bE1-OXSMTHx5QFHqdbUfRSKMuCieDC0QAVPBAtAQiEv13dIU1f_ZjxOfimDDu7bOhAfoaLBUejMS31aH4PaugiTHYggT4uxaUNfzeWWJ0hHUYX9KJYgxmS_R87beF5EUSQIaS9RpZ1oEZYKT6WpWDKFTRjEfR9AkZu4gkvlChWP5FJy5sqVf744FbVOOIs5sZwLDGYOZUFQ9HvvCPbYWxN_ezeASTJl-KU9N4tHxFHeZkCsENcFIdudfrjC1V6OzNRc0c-nB1AXACS_mkygue1sLhqTv3wJeWLuApiw9d1d_m4MmIGH6tFqtIUKAUbnabQI4zQtcaU0wTuC5oALO7JG2q0FJ4YpGYVxIzs8FHWAeUTAaPx6sLxQWhEgLjzrEFCY6Eaha10U_Hpqwe7Yyn24aMebt1lmVICAKxbtKirrsccAtCc7S7GrgXqWe8ijx8Biay1_jmK3jpxynQwo&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=cZaP4A82g6rNWR7ra9MUzA%3D%3D&amp;trk=flagship3_search_srp_jobs</td>
+                    <td title="data analyst">data analyst</td>
+                    <td title="2025-10-02 10:19:26.763450">2025-10-02 10:19:26.763450</td>
+                    <td title="2025-10-02 03:19:32.436871">2025-10-02 03:19:32.436871</td>
+                    <td title="2025-10-02 03:19:32.436871">2025-10-02 03:19:32.436871</td>
+                </tr>
+                <tr>
+                    <td title="328">328</td>
+                    <td title="57014P - Data Analyst (Supply Chain)">57014P - Data Analyst (Supply Chain)</td>
+                    <td title="Hewlett Packard Enterprise">Hewlett Packard Enterprise</td>
+                    <td title=""></td>
+                    <td title="Hanoi, Hanoi, Vietnam">Hanoi, Hanoi, Vietnam</td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title="linkedin.com">linkedin.com</td>
+                    <td title="https://www.linkedin.com/jobs/view/4297644295/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=DU6ClrVrVNl%2FAozmUHLN6g%3D%3D&amp;trk=flagship3_search_srp_jobs">https://www.linkedin.com/jobs/view/4297644295/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=DU6ClrVrVNl%2FAozmUHLN6g%3D%3D&amp;trk=flagship3_search_srp_jobs</td>
+                    <td title="data analyst">data analyst</td>
+                    <td title="2025-10-02 10:19:23.513055">2025-10-02 10:19:23.513055</td>
+                    <td title="2025-10-02 03:19:26.764525">2025-10-02 03:19:26.764525</td>
+                    <td title="2025-10-02 03:19:26.764525">2025-10-02 03:19:26.764525</td>
+                </tr>
+                <tr>
+                    <td title="327">327</td>
+                    <td title="Data Labeling Analyst I">Data Labeling Analyst I</td>
+                    <td title="GeoComply">GeoComply</td>
+                    <td title=""></td>
+                    <td title="Ho Chi Minh City Metropolitan Area">Ho Chi Minh City Metropolitan Area</td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title="linkedin.com">linkedin.com</td>
+                    <td title="https://www.linkedin.com/jobs/view/4296417811/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=i9HSeGCID3JpsaIWQ20JfQ%3D%3D&amp;trk=flagship3_search_srp_jobs">https://www.linkedin.com/jobs/view/4296417811/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=i9HSeGCID3JpsaIWQ20JfQ%3D%3D&amp;trk=flagship3_search_srp_jobs</td>
+                    <td title="data analyst">data analyst</td>
+                    <td title="2025-10-02 10:19:20.357583">2025-10-02 10:19:20.357583</td>
+                    <td title="2025-10-02 03:19:23.564479">2025-10-02 03:19:23.564479</td>
+                    <td title="2025-10-02 03:19:23.564479">2025-10-02 03:19:23.564479</td>
+                </tr>
+                <tr>
+                    <td title="326">326</td>
+                    <td title="Data Analyst">Data Analyst</td>
+                    <td title="Asiatek Consulting Vietnam">Asiatek Consulting Vietnam</td>
+                    <td title=""></td>
+                    <td title="Hanoi Capital Region">Hanoi Capital Region</td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title="linkedin.com">linkedin.com</td>
+                    <td title="https://www.linkedin.com/jobs/view/4306347260/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=QN9IH8b6TzckSbeQXCB%2FaQ%3D%3D&amp;trk=flagship3_search_srp_jobs">https://www.linkedin.com/jobs/view/4306347260/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=QN9IH8b6TzckSbeQXCB%2FaQ%3D%3D&amp;trk=flagship3_search_srp_jobs</td>
+                    <td title="data analyst">data analyst</td>
+                    <td title="2025-10-02 10:19:15.234732">2025-10-02 10:19:15.234732</td>
+                    <td title="2025-10-02 03:19:20.358731">2025-10-02 03:19:20.358731</td>
+                    <td title="2025-10-02 03:19:20.358731">2025-10-02 03:19:20.358731</td>
+                </tr>
+                <tr>
+                    <td title="325">325</td>
+                    <td title="Data Analyst">Data Analyst</td>
+                    <td title="Avery Dennison">Avery Dennison</td>
+                    <td title=""></td>
+                    <td title="Nhà Bè district, Ho Chi Minh City, Vietnam">Nhà Bè district, Ho Chi Minh City, Vietnam</td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title="linkedin.com">linkedin.com</td>
+                    <td title="https://www.linkedin.com/jobs/view/4301253099/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=mWUs1x0jRoAgKBGvm7SxAg%3D%3D&amp;trk=flagship3_search_srp_jobs">https://www.linkedin.com/jobs/view/4301253099/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=mWUs1x0jRoAgKBGvm7SxAg%3D%3D&amp;trk=flagship3_search_srp_jobs</td>
+                    <td title="data analyst">data analyst</td>
+                    <td title="2025-10-02 10:19:09.909837">2025-10-02 10:19:09.909837</td>
+                    <td title="2025-10-02 03:19:15.236090">2025-10-02 03:19:15.236090</td>
+                    <td title="2025-10-02 03:19:15.236090">2025-10-02 03:19:15.236090</td>
+                </tr>
+                <tr>
+                    <td title="324">324</td>
+                    <td title="Vietnamese Linguistic Expert">Vietnamese Linguistic Expert</td>
+                    <td title="Innodata Inc.">Innodata Inc.</td>
+                    <td title=""></td>
+                    <td title="Vietnam">Vietnam</td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title="linkedin.com">linkedin.com</td>
+                    <td title="https://www.linkedin.com/jobs/view/4300647460/?eBP=CwEAAAGZou19CuPe-gx79EcUN_CGujsUPTH8OCOAVMS3BYFE49q3lKXvGKzj8FhgOuUgVoHx91Z65fK2_sg79VCZcpMpu50pm351OnAByWlLBXSMEXpMRcYM8iCgoP-OXE3qpRHd_B6ubGmQRiPLAGMt0d2c099oZB-e_kYEJwNnXZMLzQO3Z-NcMOqCWDfUoz0LpDXSJFIoVujkcxV27Z_Nm-uo_F8Rs7WSjmh0XbL4TN3_G9mRcpJVxvqYMvi9J6qx54nnGozKf-G1PyTuYuH0avW2OChz-MVLPZdZ3Hd1-RRXAxlCSATDhLWGwPiLeayLu0kWiSMBCkImysx2DZBQO-HYz3b8FvPQZnia2iRFz0egTnAFqfLmSQK_oLv0uQ57yQaxserXRNpx0eCLSrdLZSJH9qRCTzj10q2quW1lZDO8fqDNJHCGUb5EieXIr-ysXwXcSVpw_Q35Fegkfh1eCygct562jUZ8_Er5wgTqWVELNw_WXEZ1TJzq0RfdTpUlIHp_axQn-pY&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=qyvoW1WajSuRdHdzyWkpfg%3D%3D&amp;trk=flagship3_search_srp_jobs">https://www.linkedin.com/jobs/view/4300647460/?eBP=CwEAAAGZou19CuPe-gx79EcUN_CGujsUPTH8OCOAVMS3BYFE49q3lKXvGKzj8FhgOuUgVoHx91Z65fK2_sg79VCZcpMpu50pm351OnAByWlLBXSMEXpMRcYM8iCgoP-OXE3qpRHd_B6ubGmQRiPLAGMt0d2c099oZB-e_kYEJwNnXZMLzQO3Z-NcMOqCWDfUoz0LpDXSJFIoVujkcxV27Z_Nm-uo_F8Rs7WSjmh0XbL4TN3_G9mRcpJVxvqYMvi9J6qx54nnGozKf-G1PyTuYuH0avW2OChz-MVLPZdZ3Hd1-RRXAxlCSATDhLWGwPiLeayLu0kWiSMBCkImysx2DZBQO-HYz3b8FvPQZnia2iRFz0egTnAFqfLmSQK_oLv0uQ57yQaxserXRNpx0eCLSrdLZSJH9qRCTzj10q2quW1lZDO8fqDNJHCGUb5EieXIr-ysXwXcSVpw_Q35Fegkfh1eCygct562jUZ8_Er5wgTqWVELNw_WXEZ1TJzq0RfdTpUlIHp_axQn-pY&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=qyvoW1WajSuRdHdzyWkpfg%3D%3D&amp;trk=flagship3_search_srp_jobs</td>
+                    <td title="data analyst">data analyst</td>
+                    <td title="2025-10-02 10:19:05.209755">2025-10-02 10:19:05.209755</td>
+                    <td title="2025-10-02 03:19:09.911431">2025-10-02 03:19:09.911431</td>
+                    <td title="2025-10-02 03:19:09.911431">2025-10-02 03:19:09.911431</td>
+                </tr>
+                <tr>
+                    <td title="323">323</td>
+                    <td title="Business Data Analyst">Business Data Analyst</td>
+                    <td title="NAB Innovation Centre Vietnam">NAB Innovation Centre Vietnam</td>
+                    <td title=""></td>
+                    <td title="Ho Chi Minh City, Vietnam">Ho Chi Minh City, Vietnam</td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title="linkedin.com">linkedin.com</td>
+                    <td title="https://www.linkedin.com/jobs/view/4304100624/?eBP=CwEAAAGZou19CmKiCwhflJWUFEHOPvL0UpvGdign2kt7Y7TvYge7tag8Udk7s9JjZku2HV7ljRitjARrbLmJyMNjp_DOuTs8tGu4nd2m7XPve27kj5qLRqdgo6RWKJYReOMNX-8orXt1xV-UiR2a0LR2JbATrZkBm76x9yb-RmlS2523mJEw3ylRESK_rC5zJJIQ_lwR9Ik-7xc2SgSvQc2OoQaUJqgVi5cEE3VE-fpfYwwjPZOi2IuFeyqDAj97Ik8mLTcYjZMd_Jq-zyMe4FX6gby5y6E8U95hC0qifMAkyIMewYqHXE3Er6xlD_bjMKh3uLFEaRtus2gZmnrt34OvkqPSFju73mVkgUTgK9gUkDWL0KbOMnOUEpU7NCB7orT4tUjPtnmGJtuPFxK-has05yThbFCl9QW2U-fHPKgUG0B0odOg2i47uc7vIT13YfesKrLA0fEBfZcOcWo78OaoH1fAFn82Q24kHRk&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=f9lJw%2FI%2BCQqLMk0v670yCw%3D%3D&amp;trk=flagship3_search_srp_jobs">https://www.linkedin.com/jobs/view/4304100624/?eBP=CwEAAAGZou19CmKiCwhflJWUFEHOPvL0UpvGdign2kt7Y7TvYge7tag8Udk7s9JjZku2HV7ljRitjARrbLmJyMNjp_DOuTs8tGu4nd2m7XPve27kj5qLRqdgo6RWKJYReOMNX-8orXt1xV-UiR2a0LR2JbATrZkBm76x9yb-RmlS2523mJEw3ylRESK_rC5zJJIQ_lwR9Ik-7xc2SgSvQc2OoQaUJqgVi5cEE3VE-fpfYwwjPZOi2IuFeyqDAj97Ik8mLTcYjZMd_Jq-zyMe4FX6gby5y6E8U95hC0qifMAkyIMewYqHXE3Er6xlD_bjMKh3uLFEaRtus2gZmnrt34OvkqPSFju73mVkgUTgK9gUkDWL0KbOMnOUEpU7NCB7orT4tUjPtnmGJtuPFxK-has05yThbFCl9QW2U-fHPKgUG0B0odOg2i47uc7vIT13YfesKrLA0fEBfZcOcWo78OaoH1fAFn82Q24kHRk&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=f9lJw%2FI%2BCQqLMk0v670yCw%3D%3D&amp;trk=flagship3_search_srp_jobs</td>
+                    <td title="data analyst">data analyst</td>
+                    <td title="2025-10-02 10:19:00.834344">2025-10-02 10:19:00.834344</td>
+                    <td title="2025-10-02 03:19:05.217364">2025-10-02 03:19:05.217364</td>
+                    <td title="2025-10-02 03:19:05.217364">2025-10-02 03:19:05.217364</td>
+                </tr>
+                <tr>
+                    <td title="322">322</td>
+                    <td title="Data Analyst">Data Analyst</td>
+                    <td title="VMO">VMO</td>
+                    <td title=""></td>
+                    <td title="Hanoi Capital Region">Hanoi Capital Region</td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title="linkedin.com">linkedin.com</td>
+                    <td title="https://www.linkedin.com/jobs/view/4306338957/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=wEOMsPl0Z9Jm%2FPh9O1xSSA%3D%3D&amp;trk=flagship3_search_srp_jobs">https://www.linkedin.com/jobs/view/4306338957/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=wEOMsPl0Z9Jm%2FPh9O1xSSA%3D%3D&amp;trk=flagship3_search_srp_jobs</td>
+                    <td title="data analyst">data analyst</td>
+                    <td title="2025-10-02 10:18:57.238119">2025-10-02 10:18:57.238119</td>
+                    <td title="2025-10-02 03:19:00.834033">2025-10-02 03:19:00.834033</td>
+                    <td title="2025-10-02 03:19:00.834033">2025-10-02 03:19:00.834033</td>
+                </tr>
+                <tr>
+                    <td title="321">321</td>
+                    <td title="Data Analyst">Data Analyst</td>
+                    <td title="CMC Global Company Limited.">CMC Global Company Limited.</td>
+                    <td title=""></td>
+                    <td title="Hanoi, Hanoi, Vietnam">Hanoi, Hanoi, Vietnam</td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title="linkedin.com">linkedin.com</td>
+                    <td title="https://www.linkedin.com/jobs/view/4304012518/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=0Xg5XpcwinF%2FwXh%2FV%2Bc0Eg%3D%3D&amp;trk=flagship3_search_srp_jobs">https://www.linkedin.com/jobs/view/4304012518/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=0Xg5XpcwinF%2FwXh%2FV%2Bc0Eg%3D%3D&amp;trk=flagship3_search_srp_jobs</td>
+                    <td title="data analyst">data analyst</td>
+                    <td title="2025-10-02 10:18:52.982936">2025-10-02 10:18:52.982936</td>
+                    <td title="2025-10-02 03:18:57.242913">2025-10-02 03:18:57.242913</td>
+                    <td title="2025-10-02 03:18:57.242913">2025-10-02 03:18:57.242913</td>
+                </tr>
+                <tr>
+                    <td title="320">320</td>
+                    <td title="Data Analyst (Finance)">Data Analyst (Finance)</td>
+                    <td title="12Go">12Go</td>
+                    <td title=""></td>
+                    <td title="Vietnam">Vietnam</td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title="linkedin.com">linkedin.com</td>
+                    <td title="https://www.linkedin.com/jobs/view/4306697491/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=qc9DwJN04%2BP1Y0VDUhN8tA%3D%3D&amp;trk=flagship3_search_srp_jobs">https://www.linkedin.com/jobs/view/4306697491/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=qc9DwJN04%2BP1Y0VDUhN8tA%3D%3D&amp;trk=flagship3_search_srp_jobs</td>
+                    <td title="data analyst">data analyst</td>
+                    <td title="2025-10-02 10:18:48.792228">2025-10-02 10:18:48.792228</td>
+                    <td title="2025-10-02 03:18:52.991550">2025-10-02 03:18:52.991550</td>
+                    <td title="2025-10-02 03:18:52.991550">2025-10-02 03:18:52.991550</td>
+                </tr>
+                <tr>
+                    <td title="319">319</td>
+                    <td title="[HN] DATA ANALYST">[HN] DATA ANALYST</td>
+                    <td title="CMC Technology &amp; Solution (CMC TS)">CMC Technology &amp; Solution (CMC TS)</td>
+                    <td title=""></td>
+                    <td title="Quận Cầu Giấy, Hanoi, Vietnam">Quận Cầu Giấy, Hanoi, Vietnam</td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title="linkedin.com">linkedin.com</td>
+                    <td title="https://www.linkedin.com/jobs/view/4302714190/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=%2BJs0ojDrAJ16sqoZCg5Zzw%3D%3D&amp;trk=flagship3_search_srp_jobs">https://www.linkedin.com/jobs/view/4302714190/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=%2BJs0ojDrAJ16sqoZCg5Zzw%3D%3D&amp;trk=flagship3_search_srp_jobs</td>
+                    <td title="data analyst">data analyst</td>
+                    <td title="2025-10-02 10:18:43.308676">2025-10-02 10:18:43.308676</td>
+                    <td title="2025-10-02 03:18:48.795394">2025-10-02 03:18:48.795394</td>
+                    <td title="2025-10-02 03:18:48.795394">2025-10-02 03:18:48.795394</td>
+                </tr>
+                <tr>
+                    <td title="318">318</td>
+                    <td title="Data Analyst">Data Analyst</td>
+                    <td title="Crimson Education">Crimson Education</td>
+                    <td title=""></td>
+                    <td title="Hanoi, Hanoi, Vietnam">Hanoi, Hanoi, Vietnam</td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title="linkedin.com">linkedin.com</td>
+                    <td title="https://www.linkedin.com/jobs/view/4297174748/?eBP=CwEAAAGZou19CijmDc2X-lhQVuU8Cg59I9fN06Kmzq2D7c72Nk2hEPIbm4CI2UDTe62faUl-UJ5clqXhQiRiPQh0ATShICkGoBJHibjkqjd1lqDlJAoyqikXUh9CWLYljhwUiXEZj1OvrccEv0Cip07fcKPyxlPbxCrI2RqaQQ4Lswem5cntjR2J0q099ZPikm21YkUXRDdm4ysSiF6Db0iLHunGVc42aHXclAwyYacrrTH2NZv6BNhcPB0vWn-5kZTnmyMVyxhyButL_O7GJ7xjOKwCr76uTaRvOoNeAvYQKz538gvGnnJXP4OwaRDGN9DUF0hprz0pSCdOYnNVtJljnVSs8P0L1HOJj14j0-l_DzxXAGRjPIWvel0FJOrVY_na6mnnOuMGgTfo4zVg5yv9VRvmOkV0jngXpz9BZKC8Qr05kWq7GP6ZxQQlKGVmnMo_zctsbCld5EPRB0Yl4gDa6geDBvI7nts7_JGJcRCNkrhxJtR53Qzpf4u_J3oofDiMa-z5awLhZKkJ-Q&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=hfm4Vk%2FnJR7rNsLLusSANA%3D%3D&amp;trk=flagship3_search_srp_jobs">https://www.linkedin.com/jobs/view/4297174748/?eBP=CwEAAAGZou19CijmDc2X-lhQVuU8Cg59I9fN06Kmzq2D7c72Nk2hEPIbm4CI2UDTe62faUl-UJ5clqXhQiRiPQh0ATShICkGoBJHibjkqjd1lqDlJAoyqikXUh9CWLYljhwUiXEZj1OvrccEv0Cip07fcKPyxlPbxCrI2RqaQQ4Lswem5cntjR2J0q099ZPikm21YkUXRDdm4ysSiF6Db0iLHunGVc42aHXclAwyYacrrTH2NZv6BNhcPB0vWn-5kZTnmyMVyxhyButL_O7GJ7xjOKwCr76uTaRvOoNeAvYQKz538gvGnnJXP4OwaRDGN9DUF0hprz0pSCdOYnNVtJljnVSs8P0L1HOJj14j0-l_DzxXAGRjPIWvel0FJOrVY_na6mnnOuMGgTfo4zVg5yv9VRvmOkV0jngXpz9BZKC8Qr05kWq7GP6ZxQQlKGVmnMo_zctsbCld5EPRB0Yl4gDa6geDBvI7nts7_JGJcRCNkrhxJtR53Qzpf4u_J3oofDiMa-z5awLhZKkJ-Q&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=hfm4Vk%2FnJR7rNsLLusSANA%3D%3D&amp;trk=flagship3_search_srp_jobs</td>
+                    <td title="data analyst">data analyst</td>
+                    <td title="2025-10-02 10:18:38.368351">2025-10-02 10:18:38.368351</td>
+                    <td title="2025-10-02 03:18:43.317970">2025-10-02 03:18:43.317970</td>
+                    <td title="2025-10-02 03:18:43.317970">2025-10-02 03:18:43.317970</td>
+                </tr>
+                <tr>
+                    <td title="317">317</td>
+                    <td title="Data Analyst">Data Analyst</td>
+                    <td title="Highlands Coffee®">Highlands Coffee®</td>
+                    <td title=""></td>
+                    <td title="Ho Chi Minh City, Vietnam">Ho Chi Minh City, Vietnam</td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title="linkedin.com">linkedin.com</td>
+                    <td title="https://www.linkedin.com/jobs/view/4297737391/?eBP=CwEAAAGZou19CudQ4TkwsLVBKu9FNYsBj-fyO_Ubk5GhilTWn3vMlker36F7XoP8net10GpLnhW-zstc1R2xCFvJJGnXzU48o1IWmFcyYJcuXFv5LvrgNK8lrcOSWYx1KxlHQnqFHPPi1cwSzJvUc-xl5WXEf1jdgkYeRau7uMnAoBjfxhg7jTOXnxQ-phvhcYj_J8-rdNldeGfIQR5U7sSvy6X-_Ny94VbEEt1DWpV0VOScqFWRDt29X_be_8FBb6g3YPKJscRmFg1CEir8dG3geKlYbby7nuS93LbCD-h8NukimlJYJYLjQGscNK2kklSELqhu2M-ByyuqfubE0RaohNKrPJJ10e6inUdCr3SiHyxcUXHOpbN8z8I5fW_I5_5t2MuceK5ZZxQdg779WvYsxDfdpjZ3uq4UM5vR0BiC6cVahc883M7HlrAnKJzCXzm0xiuWY2Pp4M_QuRChBJ90DpQJM2uyvR7L708&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=jtpZebuX%2FUjyvfPna0Jqbg%3D%3D&amp;trk=flagship3_search_srp_jobs">https://www.linkedin.com/jobs/view/4297737391/?eBP=CwEAAAGZou19CudQ4TkwsLVBKu9FNYsBj-fyO_Ubk5GhilTWn3vMlker36F7XoP8net10GpLnhW-zstc1R2xCFvJJGnXzU48o1IWmFcyYJcuXFv5LvrgNK8lrcOSWYx1KxlHQnqFHPPi1cwSzJvUc-xl5WXEf1jdgkYeRau7uMnAoBjfxhg7jTOXnxQ-phvhcYj_J8-rdNldeGfIQR5U7sSvy6X-_Ny94VbEEt1DWpV0VOScqFWRDt29X_be_8FBb6g3YPKJscRmFg1CEir8dG3geKlYbby7nuS93LbCD-h8NukimlJYJYLjQGscNK2kklSELqhu2M-ByyuqfubE0RaohNKrPJJ10e6inUdCr3SiHyxcUXHOpbN8z8I5fW_I5_5t2MuceK5ZZxQdg779WvYsxDfdpjZ3uq4UM5vR0BiC6cVahc883M7HlrAnKJzCXzm0xiuWY2Pp4M_QuRChBJ90DpQJM2uyvR7L708&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=jtpZebuX%2FUjyvfPna0Jqbg%3D%3D&amp;trk=flagship3_search_srp_jobs</td>
+                    <td title="data analyst">data analyst</td>
+                    <td title="2025-10-02 10:18:33.448076">2025-10-02 10:18:33.448076</td>
+                    <td title="2025-10-02 03:18:38.372270">2025-10-02 03:18:38.372270</td>
+                    <td title="2025-10-02 03:18:38.372270">2025-10-02 03:18:38.372270</td>
+                </tr>
+                <tr>
+                    <td title="316">316</td>
+                    <td title="Social Insight Analyst (Consumer Insight Team)">Social Insight Analyst (Consumer Insight Team)</td>
+                    <td title="MNR Consulting Services">MNR Consulting Services</td>
+                    <td title=""></td>
+                    <td title="Gia Bình, Bac Ninh, Vietnam">Gia Bình, Bac Ninh, Vietnam</td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title="linkedin.com">linkedin.com</td>
+                    <td title="https://www.linkedin.com/jobs/view/4282143554/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=zYpAYs7RcMxMSoMsIjRXXg%3D%3D&amp;trk=flagship3_search_srp_jobs">https://www.linkedin.com/jobs/view/4282143554/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=zYpAYs7RcMxMSoMsIjRXXg%3D%3D&amp;trk=flagship3_search_srp_jobs</td>
+                    <td title="data analyst">data analyst</td>
+                    <td title="2025-10-02 10:18:28.036475">2025-10-02 10:18:28.036475</td>
+                    <td title="2025-10-02 03:18:33.450334">2025-10-02 03:18:33.450334</td>
+                    <td title="2025-10-02 03:18:33.450334">2025-10-02 03:18:33.450334</td>
+                </tr>
+                <tr>
+                    <td title="315">315</td>
+                    <td title="[HN] Data Analyst (Fresher/Junior) - External Team">[HN] Data Analyst (Fresher/Junior) - External Team</td>
+                    <td title="Base Careers">Base Careers</td>
+                    <td title=""></td>
+                    <td title="Hanoi, Hanoi, Vietnam">Hanoi, Hanoi, Vietnam</td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title=""></td>
+                    <td title="linkedin.com">linkedin.com</td>
+                    <td title="https://www.linkedin.com/jobs/view/4303972321/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=CnEcgdAvIx6QSwwIJIiI9g%3D%3D&amp;trk=flagship3_search_srp_jobs">https://www.linkedin.com/jobs/view/4303972321/?eBP=NOT_ELIGIBLE_FOR_CHARGING&amp;refId=NqeFt71TMIdHjU1Ao81zWw%3D%3D&amp;trackingId=CnEcgdAvIx6QSwwIJIiI9g%3D%3D&amp;trk=flagship3_search_srp_jobs</td>
+                    <td title="data analyst">data analyst</td>
+                    <td title="2025-10-02 10:18:21.670346">2025-10-02 10:18:21.670346</td>
+                    <td title="2025-10-02 03:18:28.042892">2025-10-02 03:18:28.042892</td>
+                    <td title="2025-10-02 03:18:28.042892">2025-10-02 03:18:28.042892</td>
+                </tr>
+            </tbody>
+        </table>
+        <p class="scroll-note" id="scrollNote">You can scroll horizontally to see all columns</p>
+        <script>
+            function toggleFullView() {
+                const table = document.getElementById('jobTable');
+                const button = document.getElementById('toggleView');
+                const scrollNote = document.getElementById('scrollNote');
+                
+                table.classList.toggle('full-view');
+                if (table.classList.contains('full-view')) {
+                    button.textContent = 'Xem rút gọn';
+                    scrollNote.textContent = 'Bảng đang ở chế độ xem đầy đủ';
+                } else {
+                    button.textContent = 'Xem đầy đủ';
+                    scrollNote.textContent = 'You can scroll horizontally to see all columns';
+                }
+            }
+        </script>
+    </div>
+</body>
+</html>
