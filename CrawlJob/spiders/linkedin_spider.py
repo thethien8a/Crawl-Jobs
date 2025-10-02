@@ -21,6 +21,8 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 logging.getLogger("selenium.webdriver.remote.remote_connection").setLevel(
     logging.WARNING
 )
+# Suppress undetected-chromedriver DEBUG logs
+logging.getLogger("undetected_chromedriver").setLevel(logging.WARNING)
 
 # Prevent undetected-chromedriver destructor errors
 uc.Chrome.__del__ = lambda self: None
@@ -40,7 +42,7 @@ class LinkedinSpider(scrapy.Spider):
         super(LinkedinSpider, self).__init__(*args, **kwargs)
         self.keyword = keyword or "Data Analyst"
         self.location = "Vietnam"
-        self._max_pages = 1
+        self._max_pages = 2
         self._pages_crawled = 0
         self._click_delay_range = (2, 5)
         self.driver = None
@@ -52,7 +54,7 @@ class LinkedinSpider(scrapy.Spider):
         """Initializes the undetected-chromedriver"""
         options = uc.ChromeOptions()
         # Setting headless=True is the correct way for undetected-chromedriver
-        options.add_argument("--headless")
+        # options.add_argument("--headless")
         options.add_argument(
             f"--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
         )
@@ -61,7 +63,8 @@ class LinkedinSpider(scrapy.Spider):
         options.add_argument("--window-size=1920,1080")
 
         try:
-            self.driver = uc.Chrome(options=options, version_main=None)
+            # Force ChromeDriver version to match installed Chrome (140)
+            self.driver = uc.Chrome(options=options, version_main=140)
             self.logger.info("undetected-chromedriver initialized successfully.")
         except Exception as e:
             self.logger.error(f"Failed to initialize undetected-chromedriver: {e}")
@@ -192,10 +195,11 @@ class LinkedinSpider(scrapy.Spider):
         wait = WebDriverWait(self.driver, 15)
 
         time.sleep(1.5)
-
+        
         job_container = self.driver.find_element(
-            By.CSS_SELECTOR, "ul[class*='ZoMBgxcPjwbXwxVDiHJRnBmTIhQPBYxqqgkZo']"
+            By.XPATH, "//ul[li[starts-with(@id, 'ember')]]"
         )
+        
         job_elements = job_container.find_elements(By.CSS_SELECTOR, "li[id*='ember']")
         for job in job_elements:
             try:
