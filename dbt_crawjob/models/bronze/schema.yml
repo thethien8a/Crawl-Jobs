@@ -3,11 +3,57 @@ version: 2
 models:
   - name: jobs
     description: "Raw job data synced from PostgreSQL"
+    data_tests:
+      - row_count_in_range:
+          min_rows: 10
+          max_rows: 100000
+    
     columns:
       - name: job_url
-        description: "Unique URL of the job posting"
-        data_type: varchar
-        constraints:
-          - type: not_null
-          - type: unique
+        description: "Unique and not null URL of the job posting"
+        data_tests:
+          - not_null
+          - unique
+          - valid_url
       
+      - name: job_title
+        description: "Job title"
+        data_tests:
+          - not_null
+      
+      - name: company_name
+        description: "Company name"
+        data_tests:
+          - not_null
+      
+      - name: source_site
+        description: "Source website name (topcv, itviec, etc.)"
+        data_tests:
+          - not_null
+          - valid_source_site
+      
+      - name: scraped_at
+        description: "Timestamp when data was scraped"
+        data_tests:
+          - not_null
+          - is_recent:
+              days_ago: 7
+      
+      - name: scraped_date
+        description: "Date when data was scraped"
+        data_tests:
+          - not_null
+      
+      - name: salary
+        description: "Salary information"
+        data_tests:
+          - salary_has_currency:
+              severity: warn
+      
+      - name: job_deadline
+        description: "Job application deadline"
+        data_tests:
+          - deadline_after_scraped:
+              deadline_column: job_deadline
+              scraped_column: scraped_at
+              severity: warn

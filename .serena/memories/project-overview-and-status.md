@@ -1,32 +1,18 @@
-**PROJECT IDENTITY**
-- **Purpose:** End-to-end data pipeline scraping, validating, transforming, and serving job data from 10+ Vietnamese job sites
-- **Tech Stack (Current):** Python, Scrapy, Selenium, PostgreSQL, DuckDB (postgres_scanner), dbt-duckdb, FastAPI, Vanilla JS, Docker, Soda Core, Airflow, Superset
-- **Data Quality:** Soda Core sequential checks (3 layers) + dbt tests (business rules)
+**PROJECT OVERVIEW (REFRESHED: September 2025)**
 
-**CURRENT STATE (UPDATED: September 2025 - Full Sync)**
-- **Status:** Active development with Airflow orchestration; EL uses DuckDB postgres_scanner (PostgreSQL → DuckDB)
-- **Architecture:** Scrapy → PostgreSQL (raw) → Soda Core → DuckDB postgres_scanner (sync) → dbt-duckdb (transform + tests) → Superset
-- **Recent Changes:**
-  - ✅ Replaced Airbyte with DuckDB postgres_scanner (script `pg_to_duckdb/sync_pg_to_duckdb.py`)
-  - ✅ Updated Airflow DAG to call DuckDB sync step
-  - ✅ Removed PyAirbyte files
-  - ✅ Updated README and requirements
-  - ✅ Code quality simplified (Black + isort)
-  - ✅ Full codebase scan completed - all memories synchronized
+Pipeline:
+- Scrapy → PostgreSQL (raw) → Soda Core → DuckDB (Bronze via sync_pg_to_duck/sync.py) → dbt-duckdb (Silver/Gold) → Superset
+- FastAPI → PostgreSQL (serving API)
 
-**NEXT STEPS**
-1. Test sync script and verify data in DuckDB
-2. Parameterize sync (per table, schedule) in Airflow via env
-3. Build dbt-duckdb models (staging/dim/fact) and tests
-4. Connect Superset to DuckDB file/URI
+Current state:
+- Bronze: `bronze.jobs` populated via incremental sync (MERGE-by-day semantics)
+- Silver: `silver.stg_jobs` model ready (incremental, cleaned/normalized)
+- Gold: `gold.dim_company`, `gold.fct_jobs` models ready
+- dbt project: `dbt_crawjob/` with portable `profiles.yml` (use `--profiles-dir .`)
+- DuckDB file: `DuckDB/warehouse.duckdb` (query with `DuckDB/test/test_connect.py`)
 
-**STRENGTHS**
-- Simpler EL on Windows (no Docker connectors)
-- Clear separation OLTP/OLAP
-- Robust quality gates before sync and transform
-- Complete memory synchronization
-
-**AREAS TO IMPROVE**
-- Incremental sync strategy per stream (cursor/PK choices)
-- Single-writer discipline on DuckDB files
-- Alerting on sync/transform failures
+Next steps:
+- Run dbt: `dbt run --profiles-dir . -s silver.stg_jobs gold.dim_company gold.fct_jobs`
+- Add more dims (location, industry) and aggregates (agg_jobs_daily)
+- Integrate dbt tasks into Airflow DAG
+- Connect Superset to Gold schema in DuckDB

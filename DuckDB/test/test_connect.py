@@ -19,6 +19,17 @@ def show_tables(con, schema_name):
         WHERE table_schema = '{schema_name}';
     """).fetchall())
 
+def show_data_fields(con, schema_name, table_name):
+    schema_result = con.execute(f"""
+        SELECT column_name, data_type, is_nullable, column_default
+        FROM information_schema.columns 
+        WHERE table_schema = '{schema_name}' AND table_name = '{table_name}'
+        ORDER BY ordinal_position;
+    """).fetchall()
+    
+    for row in schema_result:
+        print(f"  {row[0]:<20} {row[1]:<15} {row[2]:<10} Default: {row[3]}")
+
 def remove_schema(con, schema_name):
     con.execute(f"DROP SCHEMA IF EXISTS {schema_name}")
 
@@ -35,7 +46,9 @@ def spacing():
     
 def main():
     con = duckdb.connect(os.getenv("DUCKDB_PATH"))
-    show_schemas(con)
+    
+    show_data_fields(con, "bronze", "jobs")
+    
     con.close()
     
     

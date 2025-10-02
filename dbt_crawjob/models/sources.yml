@@ -6,7 +6,4 @@ sources:
     tables:
       - name: jobs
         description: "Raw job data from PostgreSQL sync"
- 
-  - name: silver
-    schema: silver
     

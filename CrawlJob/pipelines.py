@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class CrawljobPipeline:
     def process_item(self, item, spider):
-        if not item.get("job_title"):
+        if not item.get('job_url'):
             return None
         return item
 
