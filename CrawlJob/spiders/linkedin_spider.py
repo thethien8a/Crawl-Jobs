@@ -15,6 +15,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from ..items import JobItem
+from ..utils import get_chrome_version
 
 logging.getLogger("selenium").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
@@ -63,8 +64,15 @@ class LinkedinSpider(scrapy.Spider):
         options.add_argument("--window-size=1920,1080")
 
         try:
-            # Force ChromeDriver version to match installed Chrome (140)
-            self.driver = uc.Chrome(options=options, version_main=140)
+            # Auto-detect Chrome version to match ChromeDriver
+            chrome_version = get_chrome_version()
+            if chrome_version:
+                self.logger.info(f"Using Chrome version: {chrome_version}")
+                self.driver = uc.Chrome(options=options, version_main=chrome_version)
+            else:
+                self.logger.info("Chrome version not detected, using auto-detection")
+                self.driver = uc.Chrome(options=options, version_main=None)
+            
             self.logger.info("undetected-chromedriver initialized successfully.")
         except Exception as e:
             self.logger.error(f"Failed to initialize undetected-chromedriver: {e}")
