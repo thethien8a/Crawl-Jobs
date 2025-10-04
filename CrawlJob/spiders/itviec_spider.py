@@ -14,12 +14,15 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from ..items import JobItem
+from ..utils import get_chrome_version
 
 logging.getLogger("selenium").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 logging.getLogger("selenium.webdriver.remote.remote_connection").setLevel(
     logging.WARNING
 )
+# Suppress undetected-chromedriver DEBUG logs
+logging.getLogger("undetected_chromedriver").setLevel(logging.WARNING)
 # Prevent undetected-chromedriver destructor errors
 uc.Chrome.__del__ = lambda self: None
 
@@ -81,7 +84,15 @@ class ItviecSpider(scrapy.Spider):
 
         # Set window size for consistency
         options.add_argument("--window-size=1920,1080")
-        driver = uc.Chrome(headless=True, options=options, version_main=None)
+        
+        # Auto-detect Chrome version to match ChromeDriver
+        chrome_version = get_chrome_version()
+        if chrome_version:
+            self.logger.info(f"Using Chrome version: {chrome_version}")
+            driver = uc.Chrome(headless=True, options=options, version_main=chrome_version)
+        else:
+            self.logger.info("Chrome version not detected, using auto-detection")
+            driver = uc.Chrome(headless=True, options=options, version_main=None)
 
         # Additional stealth scripts (optional, as undetected-chromedriver already provides most stealth)
         stealth_scripts = [
@@ -200,19 +211,17 @@ class ItviecSpider(scrapy.Spider):
 
         for job_link in job_links:
             try:
+                job_link.click()
                 job_url = job_link.get_attribute("data-url")
-                if job_url and job_url not in self._processed_urls:
+                if job_url and (job_url not in self._processed_urls):
                     self.logger.info(f"Processing job: {job_url}")
-
+                    
                     # Scroll to job link and click
                     self.driver.execute_script(
                         "arguments[0].scrollIntoView({block: 'center'});", job_link
                     )
                     time.sleep(0.5)
-
-                    # Click to load job detail
-                    job_link.click()
-
+                    
                     # Wait for job detail to load
                     wait.until(
                         EC.presence_of_element_located(
@@ -221,18 +230,15 @@ class ItviecSpider(scrapy.Spider):
                     )
 
                     # Extract job data
-                    item = self._extract_job_from_detail()
+                    item = self._extract_job_from_detail(job_url)
+                    
+                    
                     if item:
-                        item["source_site"] = "itviec.com"
-                        item["job_url"] = job_url
-                        item["search_keyword"] = self.keyword
-                        item["scraped_at"] = datetime.now().isoformat()
                         self._processed_urls.add(job_url)
                         yield item
-
+                        
                     # Wait before next job
                     time.sleep(random.uniform(*self._click_delay_range))
-
             except Exception as e:
                 self.logger.warning(f"Error processing job card: {e}")
                 continue
@@ -291,7 +297,7 @@ class ItviecSpider(scrapy.Spider):
             self.logger.warning(f"Error processing next page: {e}")
             return
 
-    def _extract_job_from_detail(self):
+    def _extract_job_from_detail(self, job_url):
         """Extract job data from detail panel"""
 
         try:
@@ -388,7 +394,16 @@ class ItviecSpider(scrapy.Spider):
 
             # ITviec không có job deadline
             item["job_deadline"] = None
-
+            
+            # metadata
+            item["source_site"] = "itviec.com"
+            
+            item["job_url"] = job_url
+            
+            item["search_keyword"] = self.keyword
+            
+            item["scraped_at"] = datetime.now().isoformat()
+            
             return item
 
         except Exception as e:
