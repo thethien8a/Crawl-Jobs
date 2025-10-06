@@ -153,5 +153,45 @@ cd path/to/dbt_duckdb_project
 - **FastAPI**: Xây dựng API hiệu năng cao.
 - **Và các công cụ khác trong DE Stack**: Airflow, dbt, DuckDB, Superset.
 
+## 📚 Tài liệu chi tiết
+
+Dự án có documentation đầy đủ về kiến trúc và best practices:
+
+### **Architecture & Design**
+- 📐 **[Data Warehouse Architecture](document/plan/DATA_WAREHOUSE_ARCHITECTURE.md)**: Kiến trúc chi tiết về Bronze-Silver-Gold layers, Star Schema, và Dimensional Modeling
+- 📊 **[SCD Guide](document/learning/data-warehouse-scd-guide.md)**: Hướng dẫn đầy đủ về Slowly Changing Dimensions (Type 0-6)
+- 🏗️ **[Data Engineering Stack Plan](document/plan/DATA_ENGINEERING_STACK_PLAN.md)**: Kế hoạch tổng thể về stack công nghệ
+
+### **Learning Resources**
+- 🔨 **[dbt Introduction](document/learning/dbt-introduction.md)**: Giới thiệu về dbt
+- 📝 **[dbt Testing Guide](document/learning/dbt-testing-guide.md)**: Best practices cho dbt tests
+- 🦆 **[DuckDB Guideline](document/learning/duckdb-guideline.md)**: Hướng dẫn sử dụng DuckDB
+- 🕷️ **[Spider Fix Guide](document/learning/itviec-spider-fix-stale-element.md)**: Xử lý Selenium issues
+
+### **Data Warehouse Highlights**
+
+#### **Bronze-Silver-Gold Architecture**
+```
+PostgreSQL (Raw) → Bronze (DuckDB) → Silver (Cleaned) → Gold (Analytics)
+```
+
+#### **Star Schema - Fact Tables**
+- `fct_jobs`: Core job postings fact
+- `fct_job_skills`: Job-skill bridge table
+- `fct_daily_job_stats`: Pre-aggregated metrics
+
+#### **Star Schema - Dimension Tables**
+- `dim_company` (SCD Type 2): Track company evolution
+- `dim_location`: Hierarchical location (City → Region)
+- `dim_industry`: Industry classification
+- `dim_job_category`: Job titles & seniority
+- `dim_skill` (SCD Type 3): Skills with trend tracking
+- `dim_source_site`: Job board metadata
+- `dim_date`: Standard date dimension
+
+**Xem chi tiết**: [Data Warehouse Architecture](document/plan/DATA_WAREHOUSE_ARCHITECTURE.md)
+
+---
+
 ## 🤝 Đóng góp
 Nếu bạn có ý tưởng cải thiện dự án, đừng ngần ngại tạo Pull Request hoặc mở một Issue.

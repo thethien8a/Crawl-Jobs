@@ -42,9 +42,7 @@ def close_connection(connection, cursor):
 if __name__ == "__main__":
     conn, cur = connect_to_postgres()
     if conn:
-        cur.execute("SELECT COUNT(*) FROM jobs;")
-        count = cur.fetchone()[0]
-        print(f"Số lượng bảng jobs: {count}")
+        cur.execute("DELETE FROM jobs WHERE ")
         conn.commit()
         close_connection(conn, cur)
     else:

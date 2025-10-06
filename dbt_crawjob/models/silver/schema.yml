@@ -1,0 +1,160 @@
+version: 2
+
+models:
+  - name: stg_jobs
+    description: |
+      **HYBRID APPROACH - Staging layer for ALL job sources in a single model**
+      
+      This model replaces the source-specific staging models (stg_joboko_jobs, stg_topcv_jobs, etc.)
+      with a single, unified approach that handles all sources using CASE WHEN logic.
+      
+      **Benefits:**
+      - Single file to maintain (vs 10+ separate files)
+      - Better performance (1 query vs 10 queries + UNION)
+      - DRY principle with reusable macros
+      - Clear visibility of all source-specific logic
+      - Easier to add new sources
+      
+      **Structure:**
+      1. `source` - Incremental filtering
+      2. `base_cleaning` - Common normalization for ALL sources
+      3. `source_specific` - Source-specific logic using CASE WHEN
+      4. `final` - Final column selection
+      
+      **Supported Sources:**
+      - JobOKO (vn.joboko.com)
+      - TopCV (topcv.vn)
+      - VietnamWorks (vietnamworks.com)
+      - ITviec (itviec.vn)
+      - LinkedIn, CareerLink, CareerViet, Job123, JobsGo, JobStreet (generic logic)
+    
+    config:
+      tags: ['staging', 'hybrid']
+    
+    data_tests:
+      - unique:
+          column_name: job_url
+      - row_count_in_range:
+          min_rows: 10
+          max_rows: 100000
+    
+    columns:
+      - name: job_url
+        description: "Unique URL of the job posting (PRIMARY KEY)"
+        tests:
+          - not_null
+          - unique
+      
+      - name: job_title
+        description: "Normalized job title (whitespace cleaned)"
+        tests:
+          - not_null
+      
+      - name: company_name
+        description: "Normalized company name (lowercase, trimmed)"
+        tests:
+          - not_null
+      
+      - name: salary
+        description: |
+          Salary information normalized by source:
+          - JobOKO: "Thỏa thuận" → "Negotiable"
+          - TopCV: "Up to X triệu" preserved, "Thỏa thuận" → "Negotiable"
+          - VietnamWorks: "You'll love it" → "Attractive"
+          - Others: Basic normalization
+        tests:
+          - salary_has_currency:
+              severity: warn
+      
+      - name: location
+        description: |
+          Job location normalized by source:
+          - JobOKO: "Khu vực: Hà Nội" → "Hà Nội"
+          - Others: Trimmed
+        tests:
+          - not_null:
+              severity: warn
+      
+      - name: job_type
+        description: "Employment type (Full-time, Part-time, Contract, etc.)"
+      
+      - name: experience_level
+        description: |
+          Experience level standardized by source:
+          - JobOKO: "Dưới 1 năm" → "< 1 year", "1-2 năm" → "1-2 years"
+          - TopCV: "1 năm" → "1 year", "Trên 5 năm" → "5+ years"
+          - VietnamWorks: "Experienced", "Manager", "Senior", "Junior"
+          - Others: "Entry Level" for no experience
+      
+      - name: education_level
+        description: |
+          Education level standardized:
+          - TopCV: "Đại học" → "Bachelor", "Thạc sĩ" → "Master"
+          - VietnamWorks: English terms preserved
+          - Others: Raw value
+      
+      - name: job_industry
+        description: "Industry or job category"
+      
+      - name: job_position
+        description: "Job position level (Intern, Staff, Manager, etc.)"
+      
+      - name: job_description
+        description: "Full job description text"
+      
+      - name: requirements
+        description: "Job requirements and qualifications"
+      
+      - name: benefits
+        description: "Benefits and perks offered"
+      
+      - name: job_deadline
+        description: "Application deadline in DD/MM/YYYY format"
+        tests:
+          - deadline_after_scraped:
+              deadline_column: job_deadline
+              scraped_column: scraped_at
+              severity: warn
+      
+      - name: source_site
+        description: "Original source website domain"
+        tests:
+          - not_null
+          - valid_source_site
+      
+      - name: source_name
+        description: |
+          Short source identifier for easier querying:
+          - joboko, topcv, vietnamworks, itviec, linkedin,
+            careerlink, careerviet, job123, jobsgo, jobstreet, unknown
+        tests:
+          - not_null
+          - accepted_values:
+              values: 
+                - 'joboko'
+                - 'topcv'
+                - 'vietnamworks'
+                - 'itviec'
+                - 'linkedin'
+                - 'careerlink'
+                - 'careerviet'
+                - 'job123'
+                - 'jobsgo'
+                - 'jobstreet'
+                - 'unknown'
+              severity: warn
+      
+      - name: search_keyword
+        description: "Keyword used to search for this job"
+      
+      - name: scraped_at
+        description: "Timestamp when data was scraped"
+        tests:
+          - not_null
+          - is_recent:
+              days_ago: 7
+      
+      - name: scraped_date
+        description: "Date when data was scraped (derived from scraped_at)"
+        tests:
+          - not_null

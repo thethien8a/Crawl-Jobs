@@ -7,6 +7,30 @@
 
 1. [🎯 Project Overview](#-project-overview)
 2. [🏗️ Architecture Design](#️-architecture-design)
+3. [📚 Documentation References](#-documentation-references)
+
+---
+
+## 📚 **DOCUMENTATION REFERENCES**
+
+### **Detailed Architecture Documents**
+- 📐 **[Data Warehouse Architecture](DATA_WAREHOUSE_ARCHITECTURE.md)**: 
+  - Complete Bronze-Silver-Gold layer design
+  - Star Schema with Fact & Dimension tables
+  - SCD (Slowly Changing Dimensions) implementation
+  - Query patterns and use cases
+  - Performance optimization strategies
+
+- 📊 **[SCD Guide](../learning/data-warehouse-scd-guide.md)**:
+  - SCD Types 0-6 explained with examples
+  - When to use each type
+  - dbt implementation patterns
+  - CrawlJob-specific SCD mapping
+
+### **Learning Resources**
+- 🔨 [dbt Introduction](../learning/dbt-introduction.md)
+- 📝 [dbt Testing Guide](../learning/dbt-testing-guide.md)
+- 🦆 [DuckDB Guideline](../learning/duckdb-guideline.md)
 
 ---
 

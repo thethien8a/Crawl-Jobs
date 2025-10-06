@@ -4,6 +4,116 @@ import unicodedata
 from selenium.webdriver.chrome.options import Options
 
 
+import logging
+import platform
+import subprocess
+
+
+def get_chrome_version():
+    """
+    Auto-detect installed Chrome browser version.
+    
+    Returns:
+        int: Major version number of Chrome (e.g., 140, 141)
+        None: If Chrome version cannot be detected
+    
+    Supports:
+        - Windows (registry query)
+        - macOS (Google Chrome.app)
+        - Linux (google-chrome --version)
+    """
+    system = platform.system()
+    logger = logging.getLogger(__name__)
+    
+    try:
+        if system == "Windows":
+            # Query Windows Registry for Chrome version
+            try:
+                output = subprocess.check_output(
+                    r'reg query "HKLM\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Google Chrome" /v DisplayVersion',
+                    shell=True,
+                    stderr=subprocess.DEVNULL
+                ).decode('utf-8')
+                
+                # Extract major version (e.g., "140.0.7339.208" -> 140)
+                match = re.search(r'DisplayVersion\s+REG_SZ\s+(\d+)\.', output)
+                if match:
+                    version = int(match.group(1))
+                    logger.info(f"Detected Chrome version: {version}")
+                    return version
+            except subprocess.CalledProcessError:
+                # Try alternative registry path (64-bit)
+                try:
+                    output = subprocess.check_output(
+                        r'reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Google Chrome" /v DisplayVersion',
+                        shell=True,
+                        stderr=subprocess.DEVNULL
+                    ).decode('utf-8')
+                    
+                    match = re.search(r'DisplayVersion\s+REG_SZ\s+(\d+)\.', output)
+                    if match:
+                        version = int(match.group(1))
+                        logger.info(f"Detected Chrome version: {version}")
+                        return version
+                except subprocess.CalledProcessError:
+                    pass
+        
+        elif system == "Darwin":  # macOS
+            # Check Google Chrome.app version
+            try:
+                output = subprocess.check_output(
+                    ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '--version'],
+                    stderr=subprocess.DEVNULL
+                ).decode('utf-8')
+                
+                # Extract major version from "Google Chrome 140.0.7339.208"
+                match = re.search(r'Google Chrome (\d+)\.', output)
+                if match:
+                    version = int(match.group(1))
+                    logger.info(f"Detected Chrome version: {version}")
+                    return version
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                pass
+        
+        elif system == "Linux":
+            # Try google-chrome command
+            try:
+                output = subprocess.check_output(
+                    ['google-chrome', '--version'],
+                    stderr=subprocess.DEVNULL
+                ).decode('utf-8')
+                
+                # Extract major version from "Google Chrome 140.0.7339.208"
+                match = re.search(r'Google Chrome (\d+)\.', output)
+                if match:
+                    version = int(match.group(1))
+                    logger.info(f"Detected Chrome version: {version}")
+                    return version
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                # Try chromium-browser as alternative
+                try:
+                    output = subprocess.check_output(
+                        ['chromium-browser', '--version'],
+                        stderr=subprocess.DEVNULL
+                    ).decode('utf-8')
+                    
+                    match = re.search(r'Chromium (\d+)\.', output)
+                    if match:
+                        version = int(match.group(1))
+                        logger.info(f"Detected Chromium version: {version}")
+                        return version
+                except (subprocess.CalledProcessError, FileNotFoundError):
+                    pass
+        
+        # If all methods fail
+        logger.warning(f"Could not detect Chrome version on {system}. Will use undetected-chromedriver auto-detection.")
+        return None
+    
+    except Exception as e:
+        logger.error(f"Error detecting Chrome version: {e}")
+        return None
+
+
 def encode_input(search_word):
     """Hàm này được sử dụng đễ mã hóa chuỗi đầu vào tìm kiếm thành dạng mong muốn
 
