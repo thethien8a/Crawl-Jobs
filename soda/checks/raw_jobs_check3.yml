@@ -1,4 +1,3 @@
-
 filter jobs [today]:
   where: scraped_at::date = CURRENT_DATE
 
