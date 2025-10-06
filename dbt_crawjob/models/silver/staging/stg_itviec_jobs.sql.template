@@ -1,0 +1,82 @@
+{{
+  config(
+    materialized='incremental',
+    schema='silver',
+    unique_key='job_url',
+    incremental_strategy='merge',
+    on_schema_change='append_new_columns'
+  )
+}}
+
+-- TEMPLATE: Copy file này để tạo staging model cho source mới
+-- Thay thế 'itviec' và 'itviec.vn' bằng tên source của bạn
+
+with source as (
+  select *
+  from {{ source('bronze', 'jobs') }}
+  where source_site = 'itviec.vn'  -- TODO: Thay thế bằng source_site của bạn
+  {% if is_incremental() %}
+    and scraped_at > (select coalesce(max(scraped_at), '1970-01-01') from {{ this }})
+  {% endif %}
+),
+
+cleaned as (
+  select
+    -- Primary keys
+    job_url,
+    
+    -- Normalized job information
+    {{ clean_whitespace('job_title') }} as job_title,
+    lower({{ clean_whitespace('company_name') }}) as company_name,
+    
+    -- Source-specific: Salary handling
+    -- TODO: Customize logic cho source của bạn
+    {{ normalize_salary('salary', 'generic') }} as salary,
+    
+    -- Source-specific: Location cleaning  
+    {{ clean_whitespace('location') }} as location,
+    
+    -- Job details
+    job_type,
+    
+    -- Source-specific: Experience level normalization
+    -- TODO: Customize logic cho source của bạn
+    {{ normalize_experience('experience_level', 'generic') }} as experience_level,
+    
+    -- Education level
+    -- TODO: Thêm logic chuẩn hóa nếu cần
+    trim(education_level) as education_level,
+    
+    job_industry,
+    job_position,
+    
+    -- Content fields
+    job_description,
+    requirements,
+    benefits,
+    
+    -- Deadline handling
+    {{ normalize_deadline('job_deadline') }} as job_deadline,
+    
+    -- Metadata
+    source_site,
+    search_keyword,
+    
+    -- Timestamps
+    scraped_at,
+    date(scraped_at) as scraped_date,
+    
+    -- Add source identifier
+    'itviec' as source_name  -- TODO: Thay thế bằng tên source của bạn
+    
+  from source
+)
+
+select * from cleaned
+
+-- NOTES:
+-- 1. Sử dụng macros có sẵn: clean_whitespace(), normalize_salary(), normalize_experience(), normalize_deadline()
+-- 2. Customize case statements trong phần "Source-specific" cho logic riêng
+-- 3. Test kỹ với dữ liệu thật trước khi deploy
+-- 4. Thêm vào stg_jobs_unified.sql sau khi hoàn thành
+-- 5. Update schema.yml với tests phù hợp
