@@ -22,5 +22,5 @@ soda-core==3.3.8
 soda-core-postgres==3.3.8
 
 # DuckDB sync (scanner + engine)
-duckdb==1.0.0
+duckdb==1.1.0
 duckdb-engine==0.11.0
