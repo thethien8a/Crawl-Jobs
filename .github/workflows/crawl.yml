@@ -6,7 +6,7 @@ on:
       spider:
         description: "Tên spider khớp với --spider trong scripts/run_spider.py"
         required: true
-        default: "all"
+        default: "githubactions_version"
         type: choice
         options:
           - jobsgo
@@ -18,6 +18,7 @@ on:
           - itviec
           - careerlink
           - vietnamworks
+          - githubactions_version
           - all
       keyword:
         description: "Từ khóa tìm kiếm việc làm"
@@ -53,7 +54,7 @@ jobs:
       LINKEDIN_EMAIL: ${{ secrets.LINKEDIN_EMAIL }}
       LINKEDIN_PASS: ${{ secrets.LINKEDIN_PASS }}
       PYTHONUNBUFFERED: "1"
-      SPIDER: ${{ github.event.inputs.spider || 'all' }}
+      SPIDER: ${{ github.event.inputs.spider || 'githubactions_version' }}
       KEYWORD: ${{ github.event.inputs.keyword || 'data analyst' }}
       OUTPUT_FILE: ${{ github.event.inputs.output || 'artifacts/jobs.json' }}
     steps:
@@ -89,12 +90,4 @@ jobs:
           name: crawl-${{ env.SPIDER }}
           path: ${{ env.OUTPUT_FILE }}
           if-no-files-found: warn
-
-      - name: Upload screenshots (for debugging)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: screenshots-${{ env.SPIDER }}
-          path: artifacts/screenshots/
-          if-no-files-found: ignore
 

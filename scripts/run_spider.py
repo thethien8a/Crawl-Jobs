@@ -45,6 +45,7 @@ def main():
             "careerlink",
             "vietnamworks",
             "all",
+            "githubactions_version"
         ],
         default="jobsgo",
         help="Spider to run",
@@ -92,12 +93,20 @@ def main():
             process.crawl(LinkedinSpider, keyword=args.keyword)
         elif args.spider == "topcv":
             process.crawl(TopcvSpider, keyword=args.keyword)
-        elif args.spider == "itviec": #Trang này đang sửa lỗi vì extract dữ liệu đang bị lỗi
+        elif args.spider == "itviec": 
             process.crawl(ItviecSpider, keyword=args.keyword)
         elif args.spider == "careerlink":
             process.crawl(CareerlinkSpider, keyword=args.keyword)
         elif args.spider == "vietnamworks":
             process.crawl(VietnamworksSpider, keyword=args.keyword)
+        elif args.spider == "githubactions_version":
+            process.crawl(JobsgoSpider, keyword=args.keyword)
+            process.crawl(JobokoSpider, keyword=args.keyword)
+            process.crawl(Job123Spider, keyword=args.keyword)
+            process.crawl(CareervietSpider, keyword=args.keyword)
+            process.crawl(ItviecSpider, keyword=args.keyword)
+            process.crawl(CareerlinkSpider, keyword=args.keyword)
+            process.crawl(VietnamworksSpider, keyword=args.keyword)        
         elif args.spider == "all":
             process.crawl(JobsgoSpider, keyword=args.keyword)
             process.crawl(JobokoSpider, keyword=args.keyword)
@@ -106,7 +115,7 @@ def main():
             # process.crawl(JobStreetSpider, keyword=args.keyword)
             process.crawl(LinkedinSpider, keyword=args.keyword)
             process.crawl(TopcvSpider, keyword=args.keyword)
-            # process.crawl(ItviecSpider, keyword=args.keyword)
+            process.crawl(ItviecSpider, keyword=args.keyword)
             process.crawl(CareerlinkSpider, keyword=args.keyword)
             process.crawl(VietnamworksSpider, keyword=args.keyword)
 
