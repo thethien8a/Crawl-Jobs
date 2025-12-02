@@ -1,7 +1,6 @@
 import os
 import sys
 from typing import Optional
-
 import duckdb
 from dotenv import load_dotenv
 
@@ -13,7 +12,6 @@ def get_env(name: str, default: Optional[str] = None) -> str:
         raise RuntimeError(f"Missing required environment variable: {name}")
     return value
 
-
 def build_pg_conn_string() -> str:
     host = get_env("POSTGRES_HOST")
     port = get_env("POSTGRES_PORT", "5432")
@@ -21,7 +19,6 @@ def build_pg_conn_string() -> str:
     user = get_env("POSTGRES_USER")
     pwd = get_env("POSTGRES_PASSWORD")
     return f"host={host} dbname={db} user={user} password={pwd} port={port}"
-
 
 def ensure_duckdb(con: duckdb.DuckDBPyConnection, schema_name: str) -> None:
     con.execute("INSTALL postgres_scanner; LOAD postgres_scanner;")
@@ -58,7 +55,7 @@ def incremental_by_timestamp(
             {cursor_column} AS scraped_at,
             DATE({cursor_column}) AS scraped_date
         FROM postgres_scan('{pg_conn}', 'public', '{table}')
-        WHERE DATE({cursor_column}) = CURRENT_DATE
+        WHERE DATE({cursor_column}) > (select coalesce(max(scraped_date), '1970-01-01') FROM {schema_name}.{table})
     """)
 
     # Create target table if not exists, inferring schema from source

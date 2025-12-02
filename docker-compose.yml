@@ -1,17 +1,17 @@
-services:
-  db:
-    image: postgres:15
-    restart: always
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "5432:5432"
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    networks:
-      - crawljob-network
+# services:
+#   db:
+#     image: postgres:15
+#     restart: always
+#     environment:
+#       POSTGRES_DB: ${POSTGRES_DB}
+#       POSTGRES_USER: ${POSTGRES_USER}
+#       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+#     ports:
+#       - "5432:5432"
+#     volumes:
+#       - db_data:/var/lib/postgresql/data
+#     networks:
+#       - crawljob-network
 
   # Trong trường hợp nếu thích sử dụng docker pgadmin để có giao diện postgresql dễ quản lý
   # và không thích sử dụng command line để quản lý postgresql
@@ -37,9 +37,9 @@ services:
   # Tiếp sử dụng: \dt để xem các bảng hiện có
   # Sau câu lệnh này chỉ cần nhập lệnh sql vào để thực hiện
 
-volumes:
-  db_data:
+# volumes:
+#   db_data:
 
-networks:
-  crawljob-network:
-    driver: bridge
+# networks:
+#   crawljob-network:
+#     driver: bridge

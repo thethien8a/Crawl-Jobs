@@ -6,7 +6,14 @@ Usage: python run_spider.py --spider joboko --keyword "python developer"
 
 import argparse
 import sys
+from pathlib import Path
+import sys
 
+# Đảm bảo rằng thư mục Crawljob được import đúng cách
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+    
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 
@@ -16,11 +23,10 @@ from CrawlJob.spiders.itviec_spider import ItviecSpider
 from CrawlJob.spiders.job123_spider import Job123Spider
 from CrawlJob.spiders.joboko_spider import JobokoSpider
 from CrawlJob.spiders.jobsgo_spider import JobsgoSpider
-from CrawlJob.spiders.jobstreet_spider import JobStreetSpider
+# from CrawlJob.spiders.jobstreet_spider import JobStreetSpider
 from CrawlJob.spiders.linkedin_spider import LinkedinSpider
 from CrawlJob.spiders.topcv_spider import TopcvSpider
 from CrawlJob.spiders.vietnamworks_spider import VietnamworksSpider
-
 
 def main():
     # Common practices advice of Scrapy
@@ -32,10 +38,10 @@ def main():
             "joboko",
             "123job",
             "careerviet",
-            "jobstreet",
+            # "jobstreet", Trang này không còn tồn tại ở Việt Nam nữa rồi
             "linkedin",
             "topcv",
-            "itviec",
+            "itviec", # Trang này đang sửa lỗi vì extract dữ liệu đang bị lỗi
             "careerlink",
             "vietnamworks",
             "all",
@@ -80,13 +86,13 @@ def main():
             process.crawl(Job123Spider, keyword=args.keyword)
         elif args.spider == "careerviet":
             process.crawl(CareervietSpider, keyword=args.keyword)
-        elif args.spider == "jobstreet":
-            process.crawl(JobStreetSpider, keyword=args.keyword)
+        # elif args.spider == "jobstreet":
+        #     process.crawl(JobStreetSpider, keyword=args.keyword)
         elif args.spider == "linkedin":
             process.crawl(LinkedinSpider, keyword=args.keyword)
         elif args.spider == "topcv":
             process.crawl(TopcvSpider, keyword=args.keyword)
-        elif args.spider == "itviec":
+        elif args.spider == "itviec": #Trang này đang sửa lỗi vì extract dữ liệu đang bị lỗi
             process.crawl(ItviecSpider, keyword=args.keyword)
         elif args.spider == "careerlink":
             process.crawl(CareerlinkSpider, keyword=args.keyword)
@@ -97,10 +103,10 @@ def main():
             process.crawl(JobokoSpider, keyword=args.keyword)
             process.crawl(Job123Spider, keyword=args.keyword)
             process.crawl(CareervietSpider, keyword=args.keyword)
-            process.crawl(JobStreetSpider, keyword=args.keyword)
+            # process.crawl(JobStreetSpider, keyword=args.keyword)
             process.crawl(LinkedinSpider, keyword=args.keyword)
             process.crawl(TopcvSpider, keyword=args.keyword)
-            process.crawl(ItviecSpider, keyword=args.keyword)
+            # process.crawl(ItviecSpider, keyword=args.keyword)
             process.crawl(CareerlinkSpider, keyword=args.keyword)
             process.crawl(VietnamworksSpider, keyword=args.keyword)
 

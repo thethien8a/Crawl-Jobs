@@ -19,11 +19,10 @@ with source as (
 
 base_cleaning as (
   select
-    -- Primary key
     job_url,
     
     -- Common text normalization
-    {{ clean_whitespace('job_title') }} as job_title,
+    {{ normalize_job_title('job_title') }} as job_title,
     lower({{ clean_whitespace('company_name') }}) as company_name,
     {{ clean_whitespace('location') }} as location_raw,
     

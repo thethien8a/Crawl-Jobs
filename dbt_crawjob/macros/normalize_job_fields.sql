@@ -84,3 +84,7 @@
     else null
   end
 {% endmacro %}
+
+{% macro normalize_job_title(job_title_column) %}
+  
+{% endmacro %}

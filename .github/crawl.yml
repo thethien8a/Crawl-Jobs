@@ -1,0 +1,79 @@
+name: Crawl Job Spiders
+
+on:
+  workflow_dispatch:
+    inputs:
+      spider:
+        description: "Tên spider khớp với --spider trong scripts/run_spider.py"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - jobsgo
+          - joboko
+          - 123job
+          - careerviet
+          - linkedin
+          - topcv
+          - itviec
+          - careerlink
+          - vietnamworks
+          - all
+      keyword:
+        description: "Từ khóa tìm kiếm việc làm"
+        required: true
+        default: "data analyst"
+        type: string
+      output:
+        description: "Đường dẫn file JSON kết quả (tương đối so với repo root)"
+        required: true
+        default: "artifacts/jobs.json"
+        type: string
+  schedule:
+    - cron: "0 17 * * *" 
+
+jobs:
+  crawl:
+    name: Run Scrapy spiders
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      PYTHONUNBUFFERED: "1"
+      SPIDER: ${{ github.event.inputs.spider || 'all' }}
+      KEYWORD: ${{ github.event.inputs.keyword || 'data analyst' }}
+      OUTPUT_FILE: ${{ github.event.inputs.output || 'artifacts/jobs.json' }}
+    steps:
+      - name: Checkout repository 
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Prepare output directory
+        run: |
+          mkdir -p "$(dirname "${{ env.OUTPUT_FILE }}")"
+
+      - name: Run Scrapy spiders
+        run: |
+          python scripts/run_spider.py \
+            --spider "${{ env.SPIDER }}" \
+            --keyword "${{ env.KEYWORD }}" \
+            --output "${{ env.OUTPUT_FILE }}"
+
+      - name: Upload crawl artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crawl-${{ env.SPIDER }}
+          path: ${{ env.OUTPUT_FILE }}
+          if-no-files-found: warn
+

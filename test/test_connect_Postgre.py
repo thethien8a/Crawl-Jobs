@@ -3,6 +3,7 @@ import os
 import psycopg2
 from dotenv import load_dotenv
 from psycopg2 import Error
+import pandas as pd
 
 load_dotenv()
 
@@ -41,9 +42,3 @@ def close_connection(connection, cursor):
 
 if __name__ == "__main__":
     conn, cur = connect_to_postgres()
-    if conn:
-        cur.execute("DELETE FROM jobs WHERE ")
-        conn.commit()
-        close_connection(conn, cur)
-    else:
-        print("Không thể kết nối đến database.")

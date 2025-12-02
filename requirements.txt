@@ -1,7 +1,4 @@
 agate==1.9.1
-airbyte==0.31.3
-airbyte-api==0.52.2
-airbyte-cdk==6.61.6
 airbyte_protocol_models_dataclasses==0.17.1
 airbyte_protocol_models_pdv2==0.13.1
 altair==4.2.2
