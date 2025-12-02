@@ -116,12 +116,6 @@ class LinkedinSpider(scrapy.Spider):
             wait.until(EC.presence_of_element_located((By.ID, "global-nav-search")))
             self.logger.info("Successfully logged in to LinkedIn.")
             return True
-
-        except TimeoutException:
-            self.logger.error(
-                "Login to LinkedIn failed. Timed out waiting for elements."
-            )
-            self.driver.save_screenshot("linkedin_login_error.png")
             return False
         except Exception as e:
             self.logger.error(f"An unexpected error occurred during login: {e}")
