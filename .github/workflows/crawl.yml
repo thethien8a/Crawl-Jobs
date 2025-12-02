@@ -39,6 +39,15 @@ jobs:
     permissions:
       contents: read
     env:
+      POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
+      POSTGRES_PORT: ${{ secrets.POSTGRES_PORT }}
+      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      ITVIEC_EMAIL: ${{ secrets.ITVIEC_EMAIL }}
+      ITVIEC_PASS: ${{ secrets.ITVIEC_PASS }}
+      LINKEDIN_EMAIL: ${{ secrets.LINKEDIN_EMAIL }}
+      LINKEDIN_PASS: ${{ secrets.LINKEDIN_PASS }}
       PYTHONUNBUFFERED: "1"
       SPIDER: ${{ github.event.inputs.spider || 'all' }}
       KEYWORD: ${{ github.event.inputs.keyword || 'data analyst' }}
