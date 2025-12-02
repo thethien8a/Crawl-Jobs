@@ -216,62 +216,34 @@ class ItviecSpider(scrapy.Spider):
             ),
         )
 
-        job_index = 0
-        while True:
-            job_links = self.driver.find_elements(
-                By.CSS_SELECTOR, "h3[data-url*='/it-jobs/']"
-            )
-            if job_index >= len(job_links):
-                break
 
+        job_elements = self.driver.find_elements(By.CSS_SELECTOR, "h3[data-url*='/it-jobs/']")
+        
+        for job in job_elements:
             try:
-                job_link = job_links[job_index]
-                job_url = job_link.get_attribute("data-url")
-
-                if not job_url:
-                    job_index += 1
-                    continue
-
-                if job_url in self._processed_urls:
-                    job_index += 1
-                    continue
-
                 self.driver.execute_script(
-                    "arguments[0].scrollIntoView({block: 'center'});", job_link
+                    "arguments[0].scrollIntoView({block: 'center'});", job
                 )
-                wait.until(EC.element_to_be_clickable(job_link))
-
-                job_link.click()
+                time.sleep(0.3)
+                job.click()
+                
                 wait.until(
                     EC.presence_of_element_located(
                         (By.CSS_SELECTOR, "div[class*='preview-job-wrapper']")
                     )
                 )
-
+                
+                job_url = job.get_attribute("data-url")
+                
                 self.logger.info(f"Processing job: {job_url}")
                 item = self._extract_job_from_detail(job_url)
 
                 if item:
                     self._processed_urls.add(job_url)
-                    yield item
-
-                time.sleep(random.uniform(*self._click_delay_range))
-                job_index += 1
-
-            except StaleElementReferenceException:
-                self.logger.debug(
-                    "Stale element encountered at index %d, retrying", job_index
-                )
-                time.sleep(0.5)
-                continue
-            except TimeoutException as e:
-                self.logger.warning(
-                    "Timeout while processing job at index %d: %s", job_index, e
-                )
-                job_index += 1
+                    yield item            
             except Exception as e:
-                self.logger.warning(f"Error processing job card at index {job_index}: {e}")
-                job_index += 1
+                self.logger.warning(f"Error processing job card: {e}")
+                continue
 
         try:
 
