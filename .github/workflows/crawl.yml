@@ -33,7 +33,7 @@ on:
     - cron: "0 17 * * *" 
   push:
     branches:
-      - masters
+      - master
 
 jobs:
   crawl:
