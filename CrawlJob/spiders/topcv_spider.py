@@ -13,20 +13,19 @@ class TopcvSpider(scrapy.Spider):
 
     # Conservative per-domain throttling to reduce 429s
     custom_settings = {
-        "DOWNLOAD_DELAY": 3,
+        "DOWNLOAD_DELAY": 6,
         "RANDOMIZE_DOWNLOAD_DELAY": True,
-        "CONCURRENT_REQUESTS_PER_DOMAIN": 2,
+        "CONCURRENT_REQUESTS_PER_DOMAIN": 1,
         "CONCURRENT_REQUESTS_PER_IP": 1,
         "AUTOTHROTTLE_ENABLED": True,
-        "AUTOTHROTTLE_START_DELAY": 2,
-        "AUTOTHROTTLE_MAX_DELAY": 30,
-        "AUTOTHROTTLE_TARGET_CONCURRENCY": 0.5,
-        "RETRY_TIMES": 5,
+        "AUTOTHROTTLE_START_DELAY": 4,
+        "AUTOTHROTTLE_MAX_DELAY": 75,
+        "AUTOTHROTTLE_TARGET_CONCURRENCY": 0.25,
+        "RETRY_TIMES": 6,
         "RETRY_HTTP_CODES": [429, 500, 502, 503, 504, 522, 524, 408],
-        "COOKIES_ENABLED": True,
-        # Optional exponential backoff (supported in recent Scrapy)
         "RETRY_BACKOFF_BASE": 2,
-        "RETRY_BACKOFF_MAX": 60,
+        "RETRY_BACKOFF_MAX": 120,
+        "COOKIES_ENABLED": True,
     }
 
     # Let Scrapy pass 429 responses to callbacks so RetryMiddleware + AutoThrottle can adapt
@@ -39,7 +38,7 @@ class TopcvSpider(scrapy.Spider):
         super(TopcvSpider, self).__init__(*args, **kwargs)
         self.keyword = keyword or "data analyst"
         self._count_page = 0
-        self._max_page = 2
+        self._max_page = 1
         self.unique_job_urls = set()
 
     def start_requests(self):
@@ -112,6 +111,12 @@ class TopcvSpider(scrapy.Spider):
                     title = [t.strip() for t in title_texts if t.strip()]
                     title = " ".join(title)
             item["job_title"] = title.strip() if title else None
+        
+        # If job title contains unwanted text, remove it
+        if item["job_title"]:
+            unwanted_text = "Thông tin Địa điểm làm việc Mô tả công việc Yêu cầu ứng viên Quyền lợi được hưởng Phân tích mức độ phù hợp của bạn với công việc New"
+            if unwanted_text in item["job_title"]:
+                item["job_title"] = item["job_title"].replace(unwanted_text, "").strip()
 
         # Company name
         if "brand" in response.url:

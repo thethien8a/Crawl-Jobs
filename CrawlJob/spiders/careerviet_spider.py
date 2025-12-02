@@ -70,9 +70,13 @@ class CareervietSpider(scrapy.Spider):
 
         # Details
         item["job_type"] = self._extract_detail_text(response, "Hình thức")
-        item["experience_level"] = " ".join(
-            self._extract_detail_text(response, "Kinh nghiệm").split()
-        )
+        
+        try:
+            item["experience_level"] = " ".join(
+                self._extract_detail_text(response, "Kinh nghiệm").split()
+            )
+        except:
+            item["experience_level"] = None
 
         # Education level
         item["education_level"] = None

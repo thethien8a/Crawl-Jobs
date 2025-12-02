@@ -2,13 +2,14 @@
 import logging
 import os
 import random
+import math
 import time
 from datetime import datetime
 
 import scrapy
 import undetected_chromedriver as uc
 from dotenv import load_dotenv
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -89,10 +90,10 @@ class ItviecSpider(scrapy.Spider):
         chrome_version = get_chrome_version()
         if chrome_version:
             self.logger.info(f"Using Chrome version: {chrome_version}")
-            driver = uc.Chrome(headless=True, options=options, version_main=chrome_version)
+            driver = uc.Chrome(headless=False, options=options, version_main=chrome_version)
         else:
             self.logger.info("Chrome version not detected, using auto-detection")
-            driver = uc.Chrome(headless=True, options=options, version_main=None)
+            driver = uc.Chrome(headless=False, options=options, version_main=None)
 
         # Additional stealth scripts (optional, as undetected-chromedriver already provides most stealth)
         stealth_scripts = [
@@ -183,7 +184,10 @@ class ItviecSpider(scrapy.Spider):
         if not self.driver or "sign_in" in self.driver.current_url:
             self.logger.error("Login failed or was not completed. Halting spider.")
             return
-
+        
+        # After login, page may be appear blur
+        self._fix_blur_page()
+        
         url = f"https://itviec.com/it-jobs/{self.keyword}"
 
         self.driver.get(url)
@@ -203,45 +207,71 @@ class ItviecSpider(scrapy.Spider):
         """Process all visible job cards on current page"""
         wait = WebDriverWait(self.driver, 10)
 
-        # Find all job card links
-        job_links = self.driver.find_elements(
-            By.CSS_SELECTOR, "h3[data-url*='/it-jobs/']"
+        self.logger.info(
+            "Found %d job cards",
+            len(
+                self.driver.find_elements(
+                    By.CSS_SELECTOR, "h3[data-url*='/it-jobs/']"
+                )
+            ),
         )
-        self.logger.info(f"Found {len(job_links)} job cards")
 
-        for job_link in job_links:
+        job_index = 0
+        while True:
+            job_links = self.driver.find_elements(
+                By.CSS_SELECTOR, "h3[data-url*='/it-jobs/']"
+            )
+            if job_index >= len(job_links):
+                break
+
             try:
-                job_link.click()
+                job_link = job_links[job_index]
                 job_url = job_link.get_attribute("data-url")
-                if job_url and (job_url not in self._processed_urls):
-                    self.logger.info(f"Processing job: {job_url}")
-                    
-                    # Scroll to job link and click
-                    self.driver.execute_script(
-                        "arguments[0].scrollIntoView({block: 'center'});", job_link
-                    )
-                    time.sleep(0.5)
-                    
-                    # Wait for job detail to load
-                    wait.until(
-                        EC.presence_of_element_located(
-                            (By.CSS_SELECTOR, "div[class*='preview-job-wrapper']")
-                        )
-                    )
 
-                    # Extract job data
-                    item = self._extract_job_from_detail(job_url)
-                    
-                    
-                    if item:
-                        self._processed_urls.add(job_url)
-                        yield item
-                        
-                    # Wait before next job
-                    time.sleep(random.uniform(*self._click_delay_range))
-            except Exception as e:
-                self.logger.warning(f"Error processing job card: {e}")
+                if not job_url:
+                    job_index += 1
+                    continue
+
+                if job_url in self._processed_urls:
+                    job_index += 1
+                    continue
+
+                self.driver.execute_script(
+                    "arguments[0].scrollIntoView({block: 'center'});", job_link
+                )
+                wait.until(EC.element_to_be_clickable(job_link))
+
+                job_link.click()
+                wait.until(
+                    EC.presence_of_element_located(
+                        (By.CSS_SELECTOR, "div[class*='preview-job-wrapper']")
+                    )
+                )
+
+                self.logger.info(f"Processing job: {job_url}")
+                item = self._extract_job_from_detail(job_url)
+
+                if item:
+                    self._processed_urls.add(job_url)
+                    yield item
+
+                time.sleep(random.uniform(*self._click_delay_range))
+                job_index += 1
+
+            except StaleElementReferenceException:
+                self.logger.debug(
+                    "Stale element encountered at index %d, retrying", job_index
+                )
+                time.sleep(0.5)
                 continue
+            except TimeoutException as e:
+                self.logger.warning(
+                    "Timeout while processing job at index %d: %s", job_index, e
+                )
+                job_index += 1
+            except Exception as e:
+                self.logger.warning(f"Error processing job card at index {job_index}: {e}")
+                job_index += 1
 
         try:
 
@@ -409,7 +439,17 @@ class ItviecSpider(scrapy.Spider):
         except Exception as e:
             self.logger.error(f"Error extracting job data: {e}")
             return None
-
+   
+    def _fix_blur_page(self):
+        """Fix blur page after login"""
+        try:
+            modal = self.driver.find_element(By.CSS_SELECTOR, "div.modal-content.text-center")
+            if modal:
+                remind_later_button = self.driver.find_element(By.XPATH, "//button[contains(text(), 'Remind me later')]")
+                remind_later_button.click()
+        except Exception:
+            pass
+            
     def closed(self, reason):
         """Robust driver cleanup for Windows compatibility"""
         if hasattr(self, "driver") and self.driver:

@@ -88,7 +88,14 @@ class JobsgoSpider(scrapy.Spider):
 
         # Meta list ngay dưới tiêu đề: Mức lương / Hạn nộp / Địa điểm
         item["salary"] = self._extract_value_by_label(response, "Mức lương")
-        item["job_deadline"] = self._extract_value_by_label(response, "Hạn nộp")
+        item["job_deadline"] = self._extract_deadline_by_label(response, "Hạn nộp")
+        item["experience_level"] = self._extract_value_by_label(
+            response, "Kinh nghiệm"
+        )
+        item["education_level"] = self._extract_value_by_label(
+            response, "Bằng cấp"
+        )
+        
         item["location"] = clean_location(
             response.css(
                 'a[href="#places"].position-relative.text-truncate.d-inline-block::text'
@@ -97,16 +104,11 @@ class JobsgoSpider(scrapy.Spider):
 
         # Thông tin chung (panel bên dưới)
         item["job_type"] = self._extract_common_section_value(response, "Loại hình")
-        item["experience_level"] = self._extract_common_section_value(
-            response, "Yêu cầu kinh nghiệm"
-        )
-        item["education_level"] = self._extract_common_section_value(
-            response, "Yêu cầu bằng cấp"
-        )
+
         item["job_industry"] = self._extract_common_section_links(response, "Lĩnh vực")
 
         # Chức danh (vị trí)
-        item["job_position"] = self._extract_common_section_value(response, "chức vụ")
+        item["job_position"] = self._extract_common_section_value(response, "Cấp bậc")
 
         # Job description and requirements (lấy từ các section tiêu đề h3)
         item["job_description"] = self._extract_section_list_text(
@@ -135,7 +137,7 @@ class JobsgoSpider(scrapy.Spider):
         return text.strip() if text else None
 
     def _extract_value_by_label(self, response, label_text):
-        """Lấy giá trị trong thẻ <li> có chứa nhãn (ví dụ: Mức lương/Hạn nộp/Địa điểm)"""
+        """Lấy giá trị trong thẻ <li> có chứa nhãn"""
         texts = response.xpath(
             f'//li[.//text()[contains(., "{label_text}")]]//strong//text()'
         ).get()
@@ -145,6 +147,18 @@ class JobsgoSpider(scrapy.Spider):
             value = ""
         return value
 
+
+    def _extract_deadline_by_label(self, response, label_text):
+        """Lấy giá trị trong thẻ <p> có chứa nhãn"""
+        texts = response.xpath(
+            f'//p[.//text()[contains(., "{label_text}")]]//strong//text()'
+        ).get()
+        if texts:
+            value = texts.strip()
+        else:
+            value = ""
+        return value
+    
     def _extract_common_section_value(self, response, label_text):
         """Trong khối 'Thông Tin Chung', lấy strong ngay sau nhãn label_text"""
         try:

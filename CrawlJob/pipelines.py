@@ -4,7 +4,6 @@
 # See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 
 import logging
-
 import psycopg2
 from itemadapter import ItemAdapter
 from scrapy.utils.project import get_project_settings
@@ -19,12 +18,17 @@ class CrawljobPipeline:
         return item
 
 
-# PostgreSQL Pipeline (MỚI hoặc thay thế SQLServerPipeline)
+# PostgreSQL Pipeline với BATCH INSERT để tối ưu hiệu suất
 class PostgreSQLPipeline:
     def __init__(self):
         settings = get_project_settings()
         self.conn = None
         self.cursor = None
+
+        # Batch insert configuration
+        self.batch_size = settings.get("POSTGRES_BATCH_SIZE", 50)  # Số items trong 1 batch
+        self.items_buffer = []  # Buffer để chứa items trước khi insert
+        self.items_count = 0  # Đếm số items đã xử lý
 
         self.db_params = {
             "host": settings.get("POSTGRES_HOST"),
@@ -37,10 +41,11 @@ class PostgreSQLPipeline:
         # Thử kết nối ngay khi khởi tạo
         try:
             self.conn = psycopg2.connect(**self.db_params)
-            self.conn.autocommit = True  # Set autocommit to True
+            self.conn.autocommit = False  # TẮT autocommit để sử dụng batch insert
             self.cursor = self.conn.cursor()
-            logger.info("Connected to PostgreSQL successfully.")
+            logger.info(f"Connected to PostgreSQL successfully. Batch size: {self.batch_size}")
             self._create_table_if_not_exists(self.cursor)
+            self.conn.commit()  # Commit sau khi tạo bảng
         except psycopg2.Error as e:
             logger.error(f"Error connecting to PostgreSQL: {e}")
             # Xử lý lỗi kết nối, có thể raise ngoại lệ hoặc dừng spider
@@ -79,32 +84,56 @@ class PostgreSQLPipeline:
         )
 
     def process_item(self, item, spider):
+        """
+        Thêm item vào buffer.
+        Khi buffer đầy (đủ batch_size) → Flush toàn bộ buffer vào database.
+        """
         if not self.conn or not self.cursor:
             logger.error("Database connection not available. Skipping item.")
             return item
 
         adapter = ItemAdapter(item)
 
-        # Lấy giá trị cho các trường
-        job_title = adapter.get("job_title")
-        company_name = adapter.get("company_name")
-        salary = adapter.get("salary")
-        location = adapter.get("location")
-        job_type = adapter.get("job_type")
-        job_industry = adapter.get("job_industry")
-        experience_level = adapter.get("experience_level")
-        education_level = adapter.get("education_level")
-        job_position = adapter.get("job_position")
-        job_description = adapter.get("job_description")
-        requirements = adapter.get("requirements")
-        benefits = adapter.get("benefits")
-        job_deadline = adapter.get("job_deadline")
-        source_site = adapter.get("source_site")
-        job_url = adapter.get("job_url")
-        search_keyword = adapter.get("search_keyword")
-        scraped_at = adapter.get("scraped_at")
+        # Lấy giá trị cho các trường và lưu vào buffer
+        item_data = (
+            adapter.get("job_title"),
+            adapter.get("company_name"),
+            adapter.get("salary"),
+            adapter.get("location"),
+            adapter.get("job_type"),
+            adapter.get("job_industry"),
+            adapter.get("experience_level"),
+            adapter.get("education_level"),
+            adapter.get("job_position"),
+            adapter.get("job_description"),
+            adapter.get("requirements"),
+            adapter.get("benefits"),
+            adapter.get("job_deadline"),
+            adapter.get("source_site"),
+            adapter.get("job_url"),
+            adapter.get("search_keyword"),
+            adapter.get("scraped_at"),
+        )
 
-        # Logic UPSERT (INSERT ON CONFLICT DO UPDATE) cho PostgreSQL
+        # Thêm vào buffer
+        self.items_buffer.append(item_data)
+        self.items_count += 1
+
+        # Nếu buffer đầy → Flush ngay
+        if len(self.items_buffer) >= self.batch_size:
+            self._flush_items()
+
+        return item
+
+    def _flush_items(self):
+        """
+        Insert tất cả items trong buffer vào database bằng 1 lần execute.
+        Sau đó clear buffer.
+        """
+        if not self.items_buffer:
+            return  # Không có gì để insert
+
+        # SQL UPSERT cho batch insert
         upsert_sql = """
         INSERT INTO jobs (
             job_title, company_name, salary, location, job_type, job_industry,
@@ -132,39 +161,40 @@ class PostgreSQLPipeline:
             scraped_at = EXCLUDED.scraped_at,
             updated_at = CURRENT_TIMESTAMP;
         """
+
         try:
-            self.cursor.execute(
-                upsert_sql,
-                (
-                    job_title,
-                    company_name,
-                    salary,
-                    location,
-                    job_type,
-                    job_industry,
-                    experience_level,
-                    education_level,
-                    job_position,
-                    job_description,
-                    requirements,
-                    benefits,
-                    job_deadline,
-                    source_site,
-                    job_url,
-                    search_keyword,
-                    scraped_at,
-                ),
+            # Sử dụng executemany để insert nhiều rows cùng lúc
+            self.cursor.executemany(upsert_sql, self.items_buffer)
+            self.conn.commit()  # Commit sau khi insert batch
+            
+            logger.info(
+                f"Batch inserted {len(self.items_buffer)} items successfully. "
+                f"Total processed: {self.items_count}"
             )
-            # self.conn.commit() # No commit needed if autocommit is True
-            logger.info(f"Item saved/updated: {job_title} at {company_name}")
+            
+            # Clear buffer sau khi insert thành công
+            self.items_buffer.clear()
+            
         except psycopg2.Error as e:
-            logger.error(f"Error saving item to PostgreSQL: {e}")
-            # self.conn.rollback() # No rollback needed with autocommit
-        return item
+            logger.error(f"Error batch inserting items to PostgreSQL: {e}")
+            self.conn.rollback()  # Rollback nếu có lỗi
+            self.items_buffer.clear()
 
     def close_spider(self, spider):
+        """
+        Khi spider kết thúc:
+        1. Flush các items còn lại trong buffer (nếu có)
+        2. Đóng cursor và connection
+        """
+        # Flush items còn lại trong buffer
+        if self.items_buffer:
+            logger.info(f"Flushing {len(self.items_buffer)} remaining items before closing...")
+            self._flush_items()
+        
+        # Đóng connection
         if self.cursor:
             self.cursor.close()
         if self.conn:
             self.conn.close()
-        logger.info("PostgreSQL connection closed.")
+        
+        logger.info(f"PostgreSQL connection closed. Total items processed: {self.items_count}")

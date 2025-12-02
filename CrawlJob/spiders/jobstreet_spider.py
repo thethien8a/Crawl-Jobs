@@ -1,3 +1,7 @@
+"""
+Spider for JobStreet.vn trang này không còn tồn tại ở Việt Nam nữa rồi
+"""
+
 from datetime import datetime
 from urllib.parse import urlencode
 
