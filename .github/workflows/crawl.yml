@@ -31,9 +31,9 @@ on:
         type: string
   schedule:
     - cron: "0 17 * * *" 
-  push:
-    branches:
-      - master
+  # push:
+  #   branches:
+  #     - master
 
 jobs:
   crawl:
