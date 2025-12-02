@@ -90,3 +90,11 @@ jobs:
           path: ${{ env.OUTPUT_FILE }}
           if-no-files-found: warn
 
+      - name: Upload screenshots (for debugging)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ env.SPIDER }}
+          path: artifacts/screenshots/
+          if-no-files-found: ignore
+

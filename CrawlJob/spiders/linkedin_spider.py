@@ -4,6 +4,7 @@ import os
 import random
 import time
 from datetime import datetime
+from pathlib import Path
 from urllib.parse import urlencode
 
 import scrapy
@@ -16,6 +17,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from ..items import JobItem
 from ..utils import get_chrome_version
+
+# Screenshot directory for debugging
+SCREENSHOTS_DIR = Path("artifacts/screenshots")
 
 logging.getLogger("selenium").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
@@ -50,6 +54,19 @@ class LinkedinSpider(scrapy.Spider):
         self._processed_hrefs = set()
         self.__username = os.getenv("LINKEDIN_EMAIL")
         self.__password = os.getenv("LINKEDIN_PASS")
+
+    def _save_screenshot(self, name: str) -> str:
+        """
+        Saves a screenshot with timestamp to artifacts/screenshots/.
+        Returns the full path of the saved screenshot.
+        """
+        SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"{self.name}_{name}_{timestamp}.png"
+        filepath = SCREENSHOTS_DIR / filename
+        self.driver.save_screenshot(str(filepath))
+        self.logger.info(f"Screenshot saved: {filepath}")
+        return str(filepath)
 
     def _init_driver(self):
         """Initializes the undetected-chromedriver"""
@@ -119,7 +136,7 @@ class LinkedinSpider(scrapy.Spider):
             return False
         except Exception as e:
             self.logger.error(f"An unexpected error occurred during login: {e}")
-            self.driver.save_screenshot("linkedin_login_error.png")
+            self._save_screenshot("login_error")
             return False
 
     def start_requests(self):
