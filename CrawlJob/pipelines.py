@@ -134,7 +134,7 @@ class PostgreSQLPipeline:
             return  # Không có gì để insert
 
         # SQL UPSERT cho batch insert
-        upsert_sql = """
+        insert_sql = """
         INSERT INTO jobs (
             job_title, company_name, salary, location, job_type, job_industry,
             experience_level, education_level, job_position, job_description,
@@ -142,29 +142,28 @@ class PostgreSQLPipeline:
             search_keyword, scraped_at, updated_at
         ) VALUES (
             %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP
-        ) ON CONFLICT (job_title, company_name, source_site) DO UPDATE SET
-            job_title = EXCLUDED.job_title,
-            company_name = EXCLUDED.company_name,
-            salary = EXCLUDED.salary,
-            location = EXCLUDED.location,
-            job_type = EXCLUDED.job_type,
-            job_industry = EXCLUDED.job_industry,
-            experience_level = EXCLUDED.experience_level,
-            education_level = EXCLUDED.education_level,
-            job_position = EXCLUDED.job_position,
-            job_description = EXCLUDED.job_description,
-            requirements = EXCLUDED.requirements,
-            benefits = EXCLUDED.benefits,
-            job_deadline = EXCLUDED.job_deadline,
-            job_url = EXCLUDED.job_url,
-            search_keyword = EXCLUDED.search_keyword,
-            scraped_at = EXCLUDED.scraped_at,
-            updated_at = CURRENT_TIMESTAMP;
         """
-
+        # ) ON CONFLICT (job_url) DO UPDATE SET
+        #     job_title = EXCLUDED.job_title,
+        #     company_name = EXCLUDED.company_name,
+        #     salary = EXCLUDED.salary,
+        #     location = EXCLUDED.location,
+        #     job_type = EXCLUDED.job_type,
+        #     job_industry = EXCLUDED.job_industry,
+        #     experience_level = EXCLUDED.experience_level,
+        #     education_level = EXCLUDED.education_level,
+        #     job_position = EXCLUDED.job_position,
+        #     job_description = EXCLUDED.job_description,
+        #     requirements = EXCLUDED.requirements,
+        #     benefits = EXCLUDED.benefits,
+        #     job_deadline = EXCLUDED.job_deadline,
+        #     job_url = EXCLUDED.job_url,
+        #     search_keyword = EXCLUDED.search_keyword,
+        #     scraped_at = EXCLUDED.scraped_at,
+        #     updated_at = CURRENT_TIMESTAMP;
         try:
             # Sử dụng executemany để insert nhiều rows cùng lúc
-            self.cursor.executemany(upsert_sql, self.items_buffer)
+            self.cursor.executemany(insert_sql, self.items_buffer)
             self.conn.commit()  # Commit sau khi insert batch
             
             logger.info(
