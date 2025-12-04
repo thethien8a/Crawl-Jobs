@@ -1,6 +1,0 @@
-version: 2
-
-data_tests:
-  - name: exist_today
-    description: "Check if data exists for CURRENT_DATE in jobs table of schema bronze"
-  

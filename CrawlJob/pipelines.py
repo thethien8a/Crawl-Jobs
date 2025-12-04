@@ -67,7 +67,7 @@ class PostgreSQLPipeline:
             salary VARCHAR(200),
             location VARCHAR(200), -- NOT NULL
             job_type VARCHAR(100),
-            job_industry VARCHAR(200),
+            job_industry VARCHAR(500),
             experience_level VARCHAR(200),
             education_level VARCHAR(200),
             job_position VARCHAR(200),

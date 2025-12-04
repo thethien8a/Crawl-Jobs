@@ -1,7 +1,0 @@
-crawljob:
-  target: dev
-  outputs:
-    dev:
-      type: duckdb
-      # DuckDB không cho đọc biến môi trường nên ta để đường dẫn cố định
-      path: "D:\\Practice\\Scrapy\\CrawlJob\\DuckDB\\warehouse.duckdb"
