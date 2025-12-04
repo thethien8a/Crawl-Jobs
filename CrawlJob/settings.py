@@ -81,7 +81,7 @@ POSTGRES_USER = os.getenv("POSTGRES_USER", "scrapy_user")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "scrapy_password")
 
 # Batch Insert Configuration
-POSTGRES_BATCH_SIZE = 50  # Số items được insert trong 1 batch (Tăng = nhanh hơn nhưng dùng nhiều RAM hơn)
+POSTGRES_BATCH_SIZE = 50 
 
 # Scraping Configuration
 DOWNLOAD_DELAY = 2
