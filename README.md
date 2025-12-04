@@ -106,54 +106,6 @@ graph TB
     class E,F ui
 ```
 
-### Chi tiết các thành phần:
-
-1.  **Collection Layer (Scrapy):**
-    *   Nhiệm vụ: Thu thập dữ liệu từ các nguồn job board.
-    *   Đầu ra: Dữ liệu thô được làm sạch cơ bản.
-    *   Destination: Ghi trực tiếp vào bảng `staging_jobs` trên Supabase.
-
-2.  **OLTP Layer (Supabase - PostgreSQL):**
-    *   Vai trò: Operational Database & Staging Area.
-    *   Chức năng: 
-        *   Lưu trữ dữ liệu "nóng" (việc làm đang tuyển, dữ liệu mới nhất).
-        *   Cung cấp API cho **Website tra cứu việc làm**.
-        *   Tận dụng tính năng Realtime/Auth của Supabase để xây dựng App nhanh chóng.
-
-3.  **Orchestration Layer (Airflow):**
-    *   Vai trò: Điều phối luồng dữ liệu (ETL Pipeline).
-    *   Nhiệm vụ:
-        *   Lên lịch chạy Spider định kỳ.
-        *   **Sync Job:** Query dữ liệu mới từ Supabase -> Load vào Google BigQuery (Batch processing).
-
-4.  **OLAP Layer (Google BigQuery):**
-    *   Vai trò: Data Warehouse (Kho dữ liệu phân tích).
-    *   Chức năng:
-        *   Lưu trữ lịch sử dài hạn (Historical Data).
-        *   Xử lý các truy vấn nặng: Phân tích xu hướng lương, kỹ năng hot, biến động thị trường.
-        *   Nguồn dữ liệu cho các báo cáo Insight (Looker Studio, Metabase).
-
-## 📂 Cấu Trúc Thư Mục (Project Structure)
-
-```text
-CrawlJob/
-├── airflow/                # Airflow DAGs & Configuration
-│   └── dags/
-│       ├── sync_supabase_bigquery.py  # ETL: Supabase -> BigQuery
-│       └── trigger_spiders.py         # Schedule Scrapy Jobs
-├── api/                    # Backend API (nếu cần custom logic ngoài Supabase)
-├── CrawlJob/               # Scrapy Project Core
-│   ├── spiders/            # Các Spider thu thập dữ liệu
-│   ├── items.py            # Định nghĩa cấu trúc dữ liệu (Data Models)
-│   ├── pipelines.py        # Xử lý dữ liệu trước khi lưu vào Supabase
-│   └── settings.py         # Cấu hình Scrapy (Delay, User-Agent, DB Connect)
-├── notebooks/              # Jupyter Notebooks (EDA, Data Analysis, Test DuckDB/BQ)
-├── scripts/                # Utility Scripts (Chạy spider thủ công, helper tools)
-├── web/                    # Frontend (Website tra cứu việc làm đơn giản)
-├── docker-compose.yml      # Setup môi trường (Airflow, Local DB...)
-├── requirements.txt        # Python Dependencies
-└── README.md               # Project Documentation
-```
 
 ## 🚀 Getting Started
 
