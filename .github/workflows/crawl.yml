@@ -23,7 +23,7 @@ on:
       keyword:
         description: "Từ khóa tìm kiếm việc làm"
         required: true
-        default: "data analyst"
+        default: "data"
         type: string
       output:
         description: "Đường dẫn file JSON kết quả (tương đối so với repo root)"

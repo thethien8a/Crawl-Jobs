@@ -52,7 +52,7 @@ def main():
         help="Spider to run",
     )
     parser.add_argument(
-        "--keyword", default="data analyst", help="Job keyword to search for"
+        "--keyword", default="data", help="Job keyword to search for"
     )
     parser.add_argument(
         "--output", default="jobs.json", help="Output file for JSON results"
