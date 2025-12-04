@@ -25,7 +25,7 @@ class PostgreSQLPipeline:
         self.conn = None
         self.cursor = None
 
-        # Batch insert configuration
+    
         self.batch_size = settings.get("POSTGRES_BATCH_SIZE", 50)  # Số items trong 1 batch
         self.items_buffer = []  # Buffer để chứa items trước khi insert
         self.items_count = 0  # Đếm số items đã xử lý
@@ -48,7 +48,10 @@ class PostgreSQLPipeline:
             self.conn.commit()  # Commit sau khi tạo bảng
         except psycopg2.Error as e:
             logger.error(f"Error connecting to PostgreSQL: {e}")
-            # Xử lý lỗi kết nối, có thể raise ngoại lệ hoặc dừng spider
+            if self.conn:
+                self.conn.rollback()
+            self.conn = None
+            self.cursor = None
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -57,7 +60,7 @@ class PostgreSQLPipeline:
     def _create_table_if_not_exists(self, cursor):
         cursor.execute(
             """
-        CREATE TABLE IF NOT EXISTS jobs (
+        CREATE TABLE IF NOT EXISTS staging_jobs (
             id SERIAL PRIMARY KEY,
             job_title VARCHAR(500), -- NOT NULL
             company_name VARCHAR(500), -- NOT NULL
@@ -77,8 +80,7 @@ class PostgreSQLPipeline:
             search_keyword VARCHAR(200), -- NOT NULL
             scraped_at TIMESTAMP, -- NOT NULL
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- NOT NULL
-            updated_at TIMESTAMP, -- NOT NULL
-            UNIQUE(job_title, company_name, source_site)
+            updated_at TIMESTAMP -- NOT NULL
         );
         """
         )
@@ -133,38 +135,21 @@ class PostgreSQLPipeline:
         if not self.items_buffer:
             return  # Không có gì để insert
 
-        # SQL UPSERT cho batch insert
+
         insert_sql = """
-        INSERT INTO jobs (
+        INSERT INTO staging_jobs (
             job_title, company_name, salary, location, job_type, job_industry,
             experience_level, education_level, job_position, job_description,
             requirements, benefits, job_deadline, source_site, job_url,
             search_keyword, scraped_at, updated_at
         ) VALUES (
             %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP
+        )
         """
-        # ) ON CONFLICT (job_url) DO UPDATE SET
-        #     job_title = EXCLUDED.job_title,
-        #     company_name = EXCLUDED.company_name,
-        #     salary = EXCLUDED.salary,
-        #     location = EXCLUDED.location,
-        #     job_type = EXCLUDED.job_type,
-        #     job_industry = EXCLUDED.job_industry,
-        #     experience_level = EXCLUDED.experience_level,
-        #     education_level = EXCLUDED.education_level,
-        #     job_position = EXCLUDED.job_position,
-        #     job_description = EXCLUDED.job_description,
-        #     requirements = EXCLUDED.requirements,
-        #     benefits = EXCLUDED.benefits,
-        #     job_deadline = EXCLUDED.job_deadline,
-        #     job_url = EXCLUDED.job_url,
-        #     search_keyword = EXCLUDED.search_keyword,
-        #     scraped_at = EXCLUDED.scraped_at,
-        #     updated_at = CURRENT_TIMESTAMP;
         try:
             # Sử dụng executemany để insert nhiều rows cùng lúc
             self.cursor.executemany(insert_sql, self.items_buffer)
-            self.conn.commit()  # Commit sau khi insert batch
+            self.conn.commit()  
             
             logger.info(
                 f"Batch inserted {len(self.items_buffer)} items successfully. "
