@@ -45,7 +45,8 @@ def main():
             "careerlink",
             "vietnamworks",
             "all",
-            "githubactions_version"
+            "githubactions_version",
+            "local_version"
         ],
         default="jobsgo",
         help="Spider to run",
@@ -106,7 +107,10 @@ def main():
             process.crawl(CareervietSpider, keyword=args.keyword)
             process.crawl(ItviecSpider, keyword=args.keyword)
             process.crawl(CareerlinkSpider, keyword=args.keyword)
-            process.crawl(VietnamworksSpider, keyword=args.keyword)        
+            process.crawl(VietnamworksSpider, keyword=args.keyword)
+        elif args.spider == "local_version":
+            process.crawl(LinkedinSpider, keyword=args.keyword)
+            process.crawl(TopcvSpider, keyword=args.keyword) 
         elif args.spider == "all":
             process.crawl(JobsgoSpider, keyword=args.keyword)
             process.crawl(JobokoSpider, keyword=args.keyword)
