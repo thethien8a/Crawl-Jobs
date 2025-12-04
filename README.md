@@ -7,44 +7,103 @@ Dự án thu thập, lưu trữ và phân tích dữ liệu việc làm nghành 
 Mô hình tổng quan luồng dữ liệu (Data Flow):
 
 ```mermaid
-graph LR
-    subgraph "Collection Layer"
-        A[Scrapy Spiders] 
+graph TB
+    subgraph Scheduling_Layer["🗓️ Scheduling Layer"]
+        subgraph GitHub_Actions["☁️ GitHub Actions (Cloud Server)"]
+            GA_CRON["⏰ Cron Schedule<br/>*/6 * * * *"]
+            GA_TOPCV["🕷️ 123Job Spider"]
+            GA_VNW["🕷️ VietnamWorks Spider"]
+            GA_SCRIPT["📜 Python Script<br/>scrape_easy.py"]
+        end
+        
+        subgraph Airflow_Local["🏠 Apache Airflow (Local Server)"]
+            AF_DAG["📋 DAG: scrape_hard_sites<br/>0 2 * * *"]
+            AF_LINKEDIN["🕷️ LinkedIn Spider"]
+            AF_GLASSDOOR["🕷️ TopCV Spider"]
+            AF_ANTIBOT["🛡️ Anti-bot Handler<br/>Proxy + Rotating UA"]
+            AF_SCRIPT["📜 Python Script<br/>scrape_hard.py"]
+        end
     end
 
-    subgraph "OLTP / Staging (Supabase)"
-        B[(Table: staging_jobs)]
-        B1[Web App Backend]
+    subgraph Collection_Layer["🔍 Collection Layer"]
+        A["🕸️ Scrapy Spiders"]
     end
 
-    subgraph "Orchestration (Airflow)"
-        C[ETL DAGs]
+    subgraph OLTP_Staging["💾 OLTP / Staging (Supabase)"]
+        B[("📥 staging_jobs")]
+        B3[("⚠️ quarantine_jobs")]
+        B2[("✅ jobs")]
+        B1["🖥️ Web App Backend"]
     end
 
-    subgraph "OLAP / Data Warehouse (BigQuery)"
-        D[(Dataset: job_market)]
-        D1[Table: raw_jobs]
-        D2[Table: dim_skills]
-        D3[Table: fact_market_trends]
+    subgraph Orchestration["⚙️ Orchestration (Airflow)"]
+        C1["📤 Task: Extract"]
+        C2["✔️ Task: Validate DQ"]
+        C3["🔄 Task: Upsert"]
+        C4["📦 Task: Load to DW"]
     end
 
-    subgraph "User Interface"
-        E[Job Search Website]
-        F[BI Reports / Dashboard]
+    subgraph OLAP_DW["📊 OLAP / Data Warehouse (BigQuery)"]
+        D1[("🗃️ raw_jobs")]
+        D2[("🏷️ dim_skills")]
+        D3[("📈 fact_market_trends")]
     end
 
-    %% Flows
-    A -->|Upsert Raw Data| B
-    B <-->|Read/Write Hot Data| B1
+    subgraph User_Interface["👤 User Interface"]
+        E["🌐 Job Search Website"]
+        F["📊 BI Dashboard"]
+    end
+
+    %% GitHub Actions Flow
+    GA_CRON --> GA_TOPCV
+    GA_CRON --> GA_VNW
+    GA_TOPCV --> GA_SCRIPT
+    GA_VNW --> GA_SCRIPT
+    GA_SCRIPT --> A
+
+    %% Airflow Local Flow
+    AF_DAG --> AF_LINKEDIN
+    AF_DAG --> AF_GLASSDOOR
+    AF_LINKEDIN --> AF_ANTIBOT
+    AF_GLASSDOOR --> AF_ANTIBOT
+    AF_ANTIBOT --> AF_SCRIPT
+    AF_SCRIPT --> A
+
+    %% Collection to Staging
+    A -->|"Insert Raw"| B
+    
+    %% ETL Pipeline
+    C1 -->|"Read"| B
+    C1 --> C2
+    C2 -->|"PASS ✅"| C3
+    C2 -->|"FAIL ❌"| B3
+    C3 -->|"Upsert"| B2
+    C3 --> C4
+    C4 -->|"Batch Load"| D1
+    
+    %% Backend & UI
+    B2 <-->|"Read/Write"| B1
     B1 --> E
     
-    C -->|Extract New Data (Daily)| B
-    C -->|Batch Load| D1
-    
-    D1 -->|SQL Transform| D2
-    D1 -->|SQL Transform| D3
-    
+    %% Data Warehouse Transform
+    D1 --> D2
+    D1 --> D3
     D3 --> F
+
+    %% Styling
+    classDef github fill:#24292e,stroke:#ffffff,color:#ffffff
+    classDef airflow fill:#017cee,stroke:#ffffff,color:#ffffff
+    classDef scrapy fill:#60a839,stroke:#ffffff,color:#ffffff
+    classDef supabase fill:#3ecf8e,stroke:#ffffff,color:#ffffff
+    classDef bigquery fill:#4285f4,stroke:#ffffff,color:#ffffff
+    classDef ui fill:#ff6b6b,stroke:#ffffff,color:#ffffff
+
+    class GA_CRON,GA_TOPCV,GA_VNW,GA_SCRIPT github
+    class AF_DAG,AF_LINKEDIN,AF_GLASSDOOR,AF_ANTIBOT,AF_SCRIPT airflow
+    class A scrapy
+    class B,B2,B3,B1 supabase
+    class D1,D2,D3 bigquery
+    class E,F ui
 ```
 
 ### Chi tiết các thành phần:
@@ -131,10 +190,4 @@ BQ_PROJECT_ID=...
 BQ_DATASET_ID=...
 ```
 
-## 📊 Roadmap
-- [x] Xây dựng Scrapy Spider cơ bản.
-- [x] Thiết lập lưu trữ Staging trên Supabase.
-- [ ] Xây dựng luồng Airflow Sync dữ liệu sang BigQuery.
-- [ ] Phát triển Web UI tra cứu đơn giản.
-- [ ] Xây dựng Dashboard phân tích Insight trên BigQuery.
 
