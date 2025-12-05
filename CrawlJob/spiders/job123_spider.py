@@ -1,11 +1,10 @@
-import re
+
 from datetime import datetime
-from urllib.parse import quote, urljoin
+from urllib.parse import quote
 
 import scrapy
 
 from ..items import JobItem
-from ..utils import encode_input
 
 
 class Job123Spider(scrapy.Spider):
@@ -16,7 +15,7 @@ class Job123Spider(scrapy.Spider):
         super(Job123Spider, self).__init__(*args, **kwargs)
         self.keyword = keyword or "data analyst"
         self._pages_crawled = 0
-        self._max_pages = 3
+        self._max_pages = 1
 
     def start_requests(self):
         base_url = "https://123job.vn/tuyen-dung"

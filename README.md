@@ -13,7 +13,7 @@ graph TB
             GA_CRON["⏰ Cron Schedule<br/>*/6 * * * *"]
             GA_TOPCV["🕷️ 123Job Spider"]
             GA_VNW["🕷️ VietnamWorks Spider"]
-            GA_SCRIPT["📜 Python Script<br/>scrape_easy.py"]
+            GA_SCRIPT["📜 Python Script<br/>run_spider.py"]
         end
         
         subgraph Airflow_Local["🏠 Apache Airflow (Local Server)"]
@@ -21,7 +21,7 @@ graph TB
             AF_LINKEDIN["🕷️ LinkedIn Spider"]
             AF_GLASSDOOR["🕷️ TopCV Spider"]
             AF_ANTIBOT["🛡️ Anti-bot Handler<br/>Proxy + Rotating UA"]
-            AF_SCRIPT["📜 Python Script<br/>scrape_hard.py"]
+            AF_SCRIPT["📜 Python Script<br/>run_spider.py"]
         end
     end
 
