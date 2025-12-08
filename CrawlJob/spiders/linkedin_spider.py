@@ -43,7 +43,7 @@ class LinkedinSpider(scrapy.Spider):
         super(LinkedinSpider, self).__init__(*args, **kwargs)
         self.keyword = keyword or "Data Analyst"
         self.location = "Vietnam"
-        self._max_pages = 2
+        self._max_pages = 3
         self._pages_crawled = 0
         self._click_delay_range = (2, 5)
         self.driver = None

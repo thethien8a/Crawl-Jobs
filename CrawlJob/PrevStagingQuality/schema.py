@@ -24,15 +24,17 @@ class PrevStagingQualitySchema(BaseModel):
 
     @field_validator('job_title', 'company_name', 'location', 'job_description', 'source_site')
     @classmethod
-    def must_not_be_empty(cls, v: str) -> str:
+    def must_not_be_empty(cls, v: str, info) -> str:
         if not v or not v.strip():
-            raise ValueError(f'Không được để {v} trống hoặc chỉ chứa khoảng trắng')
+            raise ValueError(f'Không được để trống {info.field_name}')
         return v.strip()
     
     @field_validator('company_name', 'salary', 'location', 'job_type', 'job_industry', 'experience_level', 'education_level', 'job_position')
     @classmethod
     def limit_string_length(cls, v: str) -> str:
         max_length = 500
-        if len(v) > max_length:
+        if not v:
+            return v
+        elif len(v) > max_length:
             return v[:max_length]
         return v.strip()

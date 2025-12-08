@@ -88,8 +88,6 @@ def main():
             process.crawl(Job123Spider, keyword=args.keyword)
         elif args.spider == "careerviet":
             process.crawl(CareervietSpider, keyword=args.keyword)
-        # elif args.spider == "jobstreet":
-        #     process.crawl(JobStreetSpider, keyword=args.keyword)
         elif args.spider == "linkedin":
             process.crawl(LinkedinSpider, keyword=args.keyword)
         elif args.spider == "topcv":
@@ -102,12 +100,12 @@ def main():
             process.crawl(VietnamworksSpider, keyword=args.keyword)
         elif args.spider == "githubactions_version":
             process.crawl(JobsgoSpider, keyword=args.keyword)
+            process.crawl(CareerlinkSpider, keyword=args.keyword)
+            process.crawl(VietnamworksSpider, keyword=args.keyword)
             process.crawl(JobokoSpider, keyword=args.keyword)
             process.crawl(Job123Spider, keyword=args.keyword)
             process.crawl(CareervietSpider, keyword=args.keyword)
             process.crawl(ItviecSpider, keyword=args.keyword)
-            process.crawl(CareerlinkSpider, keyword=args.keyword)
-            process.crawl(VietnamworksSpider, keyword=args.keyword)
         elif args.spider == "local_version":
             process.crawl(LinkedinSpider, keyword=args.keyword)
             process.crawl(TopcvSpider, keyword=args.keyword) 

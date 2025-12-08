@@ -10,12 +10,38 @@ from scrapy.utils.project import get_project_settings
 
 logger = logging.getLogger(__name__)
 
+from scrapy.exceptions import DropItem
+from pydantic import ValidationError
+from .PrevStagingQuality.schema import PrevStagingQualitySchema
 
-class CrawljobPipeline:
+class ValidateItemPipeline:
     def process_item(self, item, spider):
-        if not item.get('job_url'):
-            return None
-        return item
+        try:
+            job_data = PrevStagingQualitySchema(**item)
+            item['job_title'] = job_data.job_title
+            item['company_name'] = job_data.company_name
+            item['location'] = job_data.location
+            item['job_description'] = job_data.job_description
+            item['source_site'] = job_data.source_site
+            item['job_url'] = job_data.job_url
+            item['salary'] = job_data.salary
+            item['job_type'] = job_data.job_type
+            item['job_industry'] = job_data.job_industry
+            item['experience_level'] = job_data.experience_level
+            item['education_level'] = job_data.education_level
+            item['job_position'] = job_data.job_position
+            item['requirements'] = job_data.requirements
+            item['benefits'] = job_data.benefits
+            item['job_deadline'] = job_data.job_deadline
+            item['search_keyword'] = job_data.search_keyword
+            item['scraped_at'] = job_data.scraped_at
+
+            return item
+            
+        except ValidationError as e:
+            error_msg = str(e)
+            spider.logger.warning(f"⚠️ Drop Item: {error_msg} | URL: {item.get('job_url', 'No URL')}")
+            raise DropItem(f"Validation failed: {e}")
 
 
 # PostgreSQL Pipeline với BATCH INSERT để tối ưu hiệu suất
@@ -62,25 +88,25 @@ class PostgreSQLPipeline:
             """
         CREATE TABLE IF NOT EXISTS staging_jobs (
             id SERIAL PRIMARY KEY,
-            job_title VARCHAR(500), -- NOT NULL
-            company_name VARCHAR(500), -- NOT NULL
-            salary VARCHAR(200),
-            location VARCHAR(200), -- NOT NULL
-            job_type VARCHAR(100),
+            job_title VARCHAR(500) NOT NULL,
+            company_name VARCHAR(500) NOT NULL,
+            salary VARCHAR(500),
+            location VARCHAR(500) NOT NULL,
+            job_type VARCHAR(500),
             job_industry VARCHAR(500),
-            experience_level VARCHAR(200),
-            education_level VARCHAR(200),
-            job_position VARCHAR(200),
-            job_description TEXT, -- NOT NULL
+            experience_level VARCHAR(500),
+            education_level VARCHAR(500),
+            job_position VARCHAR(500),
+            job_description TEXT NOT NULL,
             requirements TEXT,
             benefits TEXT,
-            job_deadline VARCHAR(200),
-            source_site VARCHAR(100), -- NOT NULL
-            job_url VARCHAR(1000), -- NOT NULL
-            search_keyword VARCHAR(200), -- NOT NULL
-            scraped_at TIMESTAMP, -- NOT NULL
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- NOT NULL
-            updated_at TIMESTAMP -- NOT NULL
+            job_deadline VARCHAR(500),
+            source_site VARCHAR(500) NOT NULL,
+            job_url VARCHAR(1000) NOT NULL,
+            search_keyword VARCHAR(500) NOT NULL,
+            scraped_at TIMESTAMP NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            updated_at TIMESTAMP
         );
         """
         )

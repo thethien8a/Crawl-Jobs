@@ -54,10 +54,6 @@ CONCURRENT_REQUESTS = 16
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
-# NOTE: Selenium is disabled for JobOKO (use default Scrapy downloader)
-# DOWNLOADER_MIDDLEWARES = {
-#    "CrawlJob.selenium_middleware.SeleniumMiddleware": 543,
-# }
 
 # Enable or disable extensions
 # See https://docs.scrapy.org/en/latest/topics/extensions.html
@@ -68,8 +64,8 @@ CONCURRENT_REQUESTS = 16
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    "CrawlJob.pipelines.CrawljobPipeline": 200,
-    "CrawlJob.pipelines.PostgreSQLPipeline": 300,
+    "CrawlJob.pipelines.ValidateItemPipeline": 200,
+    "CrawlJob.pipelines.PostgreSQLPipeline": 300
 }
 
 
@@ -81,7 +77,7 @@ POSTGRES_USER = os.getenv("POSTGRES_USER", "scrapy_user")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "scrapy_password")
 
 # Batch Insert Configuration
-POSTGRES_BATCH_SIZE = 50 
+POSTGRES_BATCH_SIZE = 20
 
 # Scraping Configuration
 DOWNLOAD_DELAY = 2

@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import scrapy
 
 from ..items import JobItem
-from ..utils import clean_location, encode_input
+from ..utils import encode_input
 
 
 class CareerlinkSpider(scrapy.Spider):
