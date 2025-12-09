@@ -35,3 +35,10 @@ class JobItem(scrapy.Item):
 
     # Timestamp
     scraped_at = scrapy.Field()
+
+    # Quarantine metadata (pipeline flags + error context)
+    need_quarantine = scrapy.Field()
+    quarantine_error_field = scrapy.Field()
+    quarantine_error_message = scrapy.Field()
+    quarantine_bug_time = scrapy.Field()
+    quarantine_raw_item = scrapy.Field()
