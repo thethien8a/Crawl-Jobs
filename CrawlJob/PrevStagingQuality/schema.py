@@ -31,10 +31,10 @@ class PrevStagingQualitySchema(BaseModel):
     
     @field_validator('company_name', 'salary', 'location', 'job_type', 'job_industry', 'experience_level', 'education_level', 'job_position')
     @classmethod
-    def limit_string_length(cls, v: str) -> str:
+    def limit_string_length(cls, v: str, info) -> str:
         max_length = 500
         if not v:
             return v
-        elif len(v) > max_length:
-            return v[:max_length]
+        if len(v) > max_length:
+            raise ValueError(f'{info.field_name} Không được vượt quá {max_length} ký tự')
         return v.strip()
