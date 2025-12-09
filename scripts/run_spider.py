@@ -41,7 +41,7 @@ def main():
             # "jobstreet", Trang này không còn tồn tại ở Việt Nam nữa rồi
             "linkedin",
             "topcv",
-            "itviec", # Trang này đang sửa lỗi vì extract dữ liệu đang bị lỗi
+            "itviec",
             "careerlink",
             "vietnamworks",
             "all",
