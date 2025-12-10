@@ -31,7 +31,8 @@ on:
         default: "artifacts/jobs.json"
         type: string
   schedule:
-    - cron: "0 17 * * *" 
+    - cron: "0 17 * * *"
+    - cron: "0 5 * * *"
   # push:
   #   branches:
   #     - master
