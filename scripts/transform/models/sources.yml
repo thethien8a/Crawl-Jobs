@@ -1,0 +1,7 @@
+version: 2
+
+sources:
+  - name: scrapy_raw 
+    schema: public 
+    tables:
+      - name: staging_jobs 
