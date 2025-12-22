@@ -23,7 +23,6 @@ from CrawlJob.spiders.itviec_spider import ItviecSpider
 from CrawlJob.spiders.job123_spider import Job123Spider
 from CrawlJob.spiders.joboko_spider import JobokoSpider
 from CrawlJob.spiders.jobsgo_spider import JobsgoSpider
-# from CrawlJob.spiders.jobstreet_spider import JobStreetSpider
 from CrawlJob.spiders.linkedin_spider import LinkedinSpider
 from CrawlJob.spiders.topcv_spider import TopcvSpider
 from CrawlJob.spiders.vietnamworks_spider import VietnamworksSpider
@@ -48,7 +47,7 @@ def main():
             "githubactions_version",
             "local_version"
         ],
-        default="jobsgo",
+        default="local_version",
         help="Spider to run",
     )
     parser.add_argument(
