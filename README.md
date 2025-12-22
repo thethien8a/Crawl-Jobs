@@ -1,145 +1,64 @@
-# CrawlJob - Vietnam Job Market Analytics Platform
+# Job Crawling & Analytics Data Pipeline Plan
 
-Dự án thu thập, lưu trữ và phân tích dữ liệu việc làm nghành data từ các trang tuyển dụng lớn tại Việt Nam (TopCV, Linkedin, ITViec, JobStreet, v.v.). Hệ thống được thiết kế theo kiến trúc Hybrid, tách biệt giữa nhu cầu truy xuất nhanh cho ứng dụng (OLTP) và nhu cầu phân tích dữ liệu lớn (OLAP).
+## 1. Tổng quan dự án (Project Overview)
+Dự án xây dựng hệ thống thu thập dữ liệu việc làm (Job Crawling), làm sạch và chuẩn hóa để phục vụ hai mục đích chính:
+1.  **Web App Job Search**: Cung cấp API dữ liệu sạch, chuẩn hóa cho ứng dụng tìm kiếm việc làm.
+2.  **Analytics Dashboard**: Cung cấp dữ liệu mô hình Dim/Fact để phân tích xu hướng thị trường lao động.
 
-## 🏗 Kiến Trúc Hệ Thống (Architecture)
+## 2. Kiến trúc dữ liệu (Data Architecture)
+Dự án sử dụng kiến trúc **ELT (Extract - Load - Transform)** tập trung hoàn toàn trên **Supabase (PostgreSQL)**.
 
-Mô hình tổng quan luồng dữ liệu (Data Flow):
+### Mô hình Medallion (Bronze -> Silver -> Gold)
+Dữ liệu sẽ được tổ chức thành 3 tầng (Schemas) riêng biệt trong cùng một Database Supabase:
 
-```mermaid
-graph TB
-    subgraph Scheduling_Layer["🗓️ Scheduling Layer"]
-        subgraph GitHub_Actions["☁️ GitHub Actions (Cloud Server)"]
-            GA_CRON["⏰ Cron Schedule<br/>*/6 * * * *"]
-            GA_TOPCV["🕷️ 123Job Spider"]
-            GA_VNW["🕷️ VietnamWorks Spider"]
-            GA_SCRIPT["📜 Python Script<br/>run_spider.py"]
-        end
-        
-        subgraph Airflow_Local["🏠 Apache Airflow (Local Server)"]
-            AF_DAG["📋 DAG: scrape_hard_sites<br/>0 2 * * *"]
-            AF_LINKEDIN["🕷️ LinkedIn Spider"]
-            AF_GLASSDOOR["🕷️ TopCV Spider"]
-            AF_ANTIBOT["🛡️ Anti-bot Handler<br/>Proxy + Rotating UA"]
-            AF_SCRIPT["📜 Python Script<br/>run_spider.py"]
-        end
-    end
+| Tầng (Layer) | Schema Name | Vai trò | Mô tả |
+| :--- | :--- | :--- | :--- |
+| **Bronze** | `raw_data` | **Raw / Staging** | Chứa dữ liệu thô nguyên bản từ Scrapy. Chấp nhận duplicate, null, lỗi format. Là nơi đổ dữ liệu đầu vào. |
+| **Silver** | `app_layer` | **Clean / Serving** | Dữ liệu đã được làm sạch, deduplicate, chuẩn hóa (lương, địa điểm, kỹ năng). **Dùng cho Web App API**. |
+| **Gold** | `analytics_dw` | **Analytics / Mart** | Dữ liệu được mô hình hóa dạng **Star Schema** (Dim/Fact). Tối ưu cho truy vấn báo cáo. **Dùng cho Dashboard**. |
 
-    subgraph Collection_Layer["🔍 Collection Layer"]
-        A["🕸️ Scrapy Spiders"]
-    end
+## 3. Công nghệ sử dụng (Tech Stack)
 
-    subgraph OLTP_Staging["💾 OLTP / Staging (Supabase)"]
-        B[("📥 staging_jobs")]
-        B3[("⚠️ quarantine_jobs")]
-        B2[("✅ jobs")]
-        B1["🖥️ Web App Backend"]
-    end
+*   **Ingestion (Thu thập):** Python Scrapy.
+*   **Data Warehouse:** Supabase (PostgreSQL).
+*   **Transformation (Biến đổi):** **dbt (data build tool)**.
+*   **Orchestration (Điều phối):** Airflow (điều phối chỉnh) và GitHub Actions (chỉ để chạy scripts thu thập dữ liệu định kỳ)
+*   **Visualization:** PowerBI 
 
-    subgraph Orchestration["⚙️ Orchestration (Airflow)"]
-        C1["📤 Task: Extract"]
-        C2["✔️ Task: Validate DQ"]
-        C3["🔄 Task: Upsert"]
-        C4["📦 Task: Load to DW"]
-    end
+## 4. Chi tiết triển khai (Implementation Plan)
 
-    subgraph OLAP_DW["📊 OLAP / Data Warehouse (BigQuery)"]
-        D1[("🗃️ raw_jobs")]
-        D2[("🏷️ dim_skills")]
-        D3[("📈 fact_market_trends")]
-    end
-
-    subgraph User_Interface["👤 User Interface"]
-        E["🌐 Job Search Website"]
-        F["📊 BI Dashboard"]
-    end
-
-    %% GitHub Actions Flow
-    GA_CRON --> GA_TOPCV
-    GA_CRON --> GA_VNW
-    GA_TOPCV --> GA_SCRIPT
-    GA_VNW --> GA_SCRIPT
-    GA_SCRIPT --> A
-
-    %% Airflow Local Flow
-    AF_DAG --> AF_LINKEDIN
-    AF_DAG --> AF_GLASSDOOR
-    AF_LINKEDIN --> AF_ANTIBOT
-    AF_GLASSDOOR --> AF_ANTIBOT
-    AF_ANTIBOT --> AF_SCRIPT
-    AF_SCRIPT --> A
-
-    %% Collection to Staging
-    A -->|"Insert Raw"| B
-    
-    %% ETL Pipeline
-    C1 -->|"Read"| B
-    C1 --> C2
-    C2 -->|"PASS ✅"| C3
-    C2 -->|"FAIL ❌"| B3
-    C3 -->|"Upsert"| B2
-    C3 --> C4
-    C4 -->|"Batch Load"| D1
-    
-    %% Backend & UI
-    B2 <-->|"Read/Write"| B1
-    B1 --> E
-    
-    %% Data Warehouse Transform
-    D1 --> D2
-    D1 --> D3
-    D3 --> F
-
-    %% Styling
-    classDef github fill:#24292e,stroke:#ffffff,color:#ffffff
-    classDef airflow fill:#017cee,stroke:#ffffff,color:#ffffff
-    classDef scrapy fill:#60a839,stroke:#ffffff,color:#ffffff
-    classDef supabase fill:#3ecf8e,stroke:#ffffff,color:#ffffff
-    classDef bigquery fill:#4285f4,stroke:#ffffff,color:#ffffff
-    classDef ui fill:#ff6b6b,stroke:#ffffff,color:#ffffff
-
-    class GA_CRON,GA_TOPCV,GA_VNW,GA_SCRIPT github
-    class AF_DAG,AF_LINKEDIN,AF_GLASSDOOR,AF_ANTIBOT,AF_SCRIPT airflow
-    class A scrapy
-    class B,B2,B3,B1 supabase
-    class D1,D2,D3 bigquery
-    class E,F ui
+### Bước 1: Thiết lập Database (Supabase)
+Tạo các schema cần thiết để phân tách dữ liệu:
+```sql
+CREATE SCHEMA IF NOT EXISTS raw_data;
+CREATE SCHEMA IF NOT EXISTS app_layer;
+CREATE SCHEMA IF NOT EXISTS analytics_dw;
 ```
 
+### Bước 2: Ingestion (Scrapy -> Raw)
+*   Spider cào dữ liệu và lưu vào bảng trong schema `raw_data` (ví dụ: `raw_data.jobs_raw`).
+*   Giữ nguyên logic cào hiện tại, chỉ thay đổi đích đến là bảng raw.
 
-## 🚀 Getting Started
+### Bước 3: Transformation (dbt)
+Sử dụng **dbt** để quản lý toàn bộ logic biến đổi SQL.
 
-### 1. Prerequisites
-*   Python 3.10+
-*   Docker & Docker Compose (cho Airflow)
-*   Tài khoản Supabase & Google Cloud Platform (BigQuery API enabled)
+#### 3.1. Bronze to Silver (Raw -> App)
+*   **Mục tiêu:** Làm sạch dữ liệu để Web App sử dụng.
+*   **Các tác vụ:**
+    *   **Deduplication:** Loại bỏ tin tuyển dụng trùng lặp (dựa trên URL hoặc Title + Company).
+    *   **Standardization:**
+        *   Lương: Parse text "10-20 triệu" -> `min_salary: 10000000`, `max_salary: 20000000`.
+        *   Địa điểm: Map "TP.HCM", "Hồ Chí Minh" -> "Ho Chi Minh".
+    *   **Validation:** Loại bỏ các bản ghi rác, thiếu thông tin quan trọng.
+*   **Output:** Bảng `app_layer.jobs`.
 
-### 2. Setup Environment
-```bash
-# Clone project
-git clone <repo-url>
-cd CrawlJob
-
-# Tạo môi trường ảo
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Cài đặt thư viện
-pip install -r requirements.txt
-```
-
-### 3. Configuration (.env)
-Tạo file `.env` từ `env.example` và điền các thông tin credentials:
-```ini
-# Supabase
-SUPABASE_URL=...
-SUPABASE_KEY=...
-DB_CONNECTION_STRING=postgresql://user:pass@host:port/dbname
-
-# Google Cloud (BigQuery)
-GOOGLE_APPLICATION_CREDENTIALS=path/to/service-account.json
-BQ_PROJECT_ID=...
-BQ_DATASET_ID=...
-```
-
-
+#### 3.2. Silver to Gold (App -> Analytics)
+*   **Mục tiêu:** Xây dựng Data Mart cho Dashboard.
+*   **Mô hình Star Schema:**
+    *   **Fact Table:** `analytics_dw.fact_job_posts` (Chứa các metric, khóa ngoại).
+    *   **Dimension Tables:**
+        *   `analytics_dw.dim_company` (Thông tin công ty).
+        *   `analytics_dw.dim_location` (Địa điểm).
+        *   `analytics_dw.dim_date` (Ngày tháng).
+        *   `analytics_dw.dim_industry` (Ngành nghề).
+        *   `analytics_dw.dim_skills` (Kỹ năng yêu cầu).
