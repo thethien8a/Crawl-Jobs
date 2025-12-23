@@ -33,9 +33,9 @@ on:
   schedule:
     - cron: "0 17 * * *"
     - cron: "0 5 * * *"
-  # push:
-  #   branches:
-  #     - master
+  push:
+    branches:
+      - master
 
 jobs:
   crawl:
@@ -79,7 +79,7 @@ jobs:
 
       - name: Run Scrapy spiders
         run: |
-          python scripts/extract_and_load/run_spider.py \
+          python -m scripts.extract_and_load.run_spider.py \
             --spider "${{ env.SPIDER }}" \
             --keyword "${{ env.KEYWORD }}" \
             --output "${{ env.OUTPUT_FILE }}"
