@@ -79,7 +79,7 @@ jobs:
 
       - name: Run Scrapy spiders
         run: |
-          python scripts/run_spider.py \
+          python scripts/extract_and_load/run_spider.py \
             --spider "${{ env.SPIDER }}" \
             --keyword "${{ env.KEYWORD }}" \
             --output "${{ env.OUTPUT_FILE }}"
