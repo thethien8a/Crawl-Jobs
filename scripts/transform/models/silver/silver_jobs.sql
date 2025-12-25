@@ -26,25 +26,23 @@ SELECT
         'job_title', 
         'company_name', 
         'source_site'
-    ]) }} as job_id,
-    
-    job_title,
-    {{ clean_company('company_name') }} as company_name
-    -- location
-    -- salary,
-    -- job_type,
-    -- experience_level,
-    
-    -- CASE 
-    --     WHEN location LIKE '%Hà Nội%' THEN 'Hà Nội'
-    --     WHEN location LIKE '%Hồ Chí Minh%' OR location LIKE '%TP.HCM%' THEN 'TP. HCM'
-    --     WHEN location LIKE '%Đà Nẵng%' THEN 'Đà Nẵng'
-    --     ELSE 'Tỉnh thành khác'
-    -- END as city,
-
-    -- source_site,
-    -- job_url,
-    -- scraped_at
+    ]) }} as job_id,   
+    {{ clean_job_title('job_title') }},
+    {{ clean_company('company_name') }},
+    {{ clean_location('location') }},
+    {{ clean_salary('salary') }},
+    {{ clean_job_type('job_type') }},
+    {{ clean_job_industry('job_industry') }},
+    {{ clean_experience_level('experience_level') }},
+    {{ clean_edu_level('education_level') }},
+    {{ clean_job_position('job_position') }},
+    {{ clean_job_deadline('job_deadline') }},
+    {{ clean_job_description('job_description') }},
+    {{ clean_requirements('requirements') }},
+    {{ clean_benefits('benefits') }},
+    source_site,
+    job_url,
+    scraped_at
     
 FROM deduplicated
 WHERE row_num = 1

@@ -17,6 +17,6 @@
                 '[\(\)\[\]\-\,]', ' ', 'g'
             )
         )
-    )
+    ) AS company_name
 {% endmacro %}
 
