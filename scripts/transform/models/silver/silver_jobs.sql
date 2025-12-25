@@ -1,10 +1,15 @@
 {{ config(
-    materialized='table',
-    schema='app_layer'
+    materialized='incremental',
+    schema='app_layer',
+    unique_key='job_id',
+    on_schema_change='sync_all_columns'
 ) }}
 
 WITH staged_data AS (
     SELECT * FROM {{ ref('stg_jobs') }}
+    {% if is_incremental() %}
+    WHERE scraped_at > (SELECT MAX(scraped_at) FROM {{ this }})
+    {% endif %}
 ),
 
 deduplicated AS (
@@ -36,10 +41,8 @@ SELECT
     {{ clean_experience_level('experience_level') }},
     {{ clean_edu_level('education_level') }},
     {{ clean_job_position('job_position') }},
+    {{ clean_des_bene_req('job_description', 'benefits', 'requirements') }},
     {{ clean_job_deadline('job_deadline') }},
-    {{ clean_job_description('job_description') }},
-    {{ clean_requirements('requirements') }},
-    {{ clean_benefits('benefits') }},
     source_site,
     job_url,
     scraped_at
