@@ -211,6 +211,7 @@ class PostgreSQLPipeline:
         return cls()
 
     def _create_table_if_not_exists(self, cursor):
+        # 1. Tạo bảng staging_jobs
         cursor.execute(
             """
         CREATE TABLE IF NOT EXISTS staging_jobs (
@@ -236,6 +237,16 @@ class PostgreSQLPipeline:
             updated_at TIMESTAMP
         );
         """
+        )
+
+        # 2. Tạo Indexes để tối ưu tốc độ Read cho dbt và Deduplication
+        # Index cho việc lọc incremental (WHERE scraped_at > ...)
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_scraped_at ON staging_jobs (scraped_at DESC);"
+        )
+        # Index cho việc nhóm dữ liệu theo URL (PARTITION BY job_url)
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_staging_jobs_job_url ON staging_jobs (job_url);"
         )
 
     def process_item(self, item, spider):
