@@ -11,7 +11,7 @@
     {{ clean_col }} as job_title,
 
     CASE 
-        WHEN {{ clean_col }} ~ '(data|du lieu| dữ liệu)' THEN TRUE
+        WHEN {{ clean_col }} ~ '(data|du lieu|dữ liệu)' THEN TRUE
         ELSE FALSE
     END as is_data_related,
 
@@ -26,7 +26,7 @@
     END as is_analyst_related,
 
     CASE
-        WHEN {{ clean_col }} ~ '(science| scientist)' THEN TRUE
+        WHEN {{ clean_col }} ~ '(science|scientist)' THEN TRUE
         ELSE FALSE
     END as is_scientist_related
     

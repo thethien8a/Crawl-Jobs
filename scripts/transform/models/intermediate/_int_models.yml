@@ -1,0 +1,21 @@
+# version: 2
+
+# models:
+#   - name: int_jobs_cleaned
+#     description: "Tầng trung gian thực hiện làm sạch và chuẩn hóa dữ liệu từ Staging trước khi đưa vào Silver (Kết hợp từ Bronze và Intermediate cũ)."
+#     columns:
+#       - name: job_id
+#         tests:
+#           - not_null
+#       - name: job_title
+#         description: "Tiêu đề công việc đã được làm sạch"
+#         tests:
+#           - not_null
+#       - name: salary
+#         description: "Lương đã được chuẩn hóa."
+#       - name: job_type
+#         tests:
+#           - accepted_values:
+#               arguments:
+#                 values: ['toàn thời gian', 'bán thời gian', 'thực tập', 'không đề cập', 'freelance']
+#               severity: warn

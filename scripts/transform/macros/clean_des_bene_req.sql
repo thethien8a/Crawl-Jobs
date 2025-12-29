@@ -67,7 +67,7 @@
     CASE 
         WHEN {{ normalized_text }} ~ '\y(git|github|gitlab|version\s?control|docker|kubernetes|k8s|ci\s?cd|jenkins|terraform|api|rest\s?api|testing|unit\s?test|qa)\y' THEN TRUE 
         ELSE FALSE 
-    END as has_\_devops_skills,
+    END as has_devops_skills,
 
     -- ========================================
     -- 2. PHÚC LỢI & MÔI TRƯỜNG (BENEFITS & PERKS - GROUPED)
