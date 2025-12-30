@@ -270,7 +270,7 @@ class LinkedinSpider(scrapy.Spider):
         # Lấy mô tả công việc an toàn
         description = _text_or_empty(By.CSS_SELECTOR, "div[class='mt4'] p[dir='ltr']")
         item["job_description"] = description
-
+        item["salary"] = None
         item["requirements"] = None
         item["benefits"] = None
 

@@ -47,7 +47,7 @@ class CareervietSpider(scrapy.Spider):
 
         # Next page
         self._pages_crawled += 1
-        next_page = response.css('a[class*="next-page"]::attr(href)').get()
+        next_page = response.css('li[class*="next-page"] a::attr(href)').get()
         if next_page and self._pages_crawled < self._max_pages:
             yield response.follow(
                 next_page, callback=self.parse_search_results, meta=response.meta

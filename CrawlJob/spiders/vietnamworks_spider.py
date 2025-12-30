@@ -226,6 +226,7 @@ class VietnamworksSpider(scrapy.Spider):
                     EC.element_to_be_clickable(expand_button)
                 )
                 expand_button.click()
+                time.sleep(1)  # Chờ nội dung bung ra hoàn toàn
             except (NoSuchElementException, Exception):
                 logger.info("No expand button found or already expanded")
 
@@ -339,28 +340,49 @@ class VietnamworksSpider(scrapy.Spider):
     def _go_to_next_page(self):
         """Navigate to next page, return True if successful"""
         try:
-            next_button = self._driver.find_element(
-                By.CSS_SELECTOR, "li.page-item.btn-default"
-            )
-            if next_button.is_displayed():
-                next_button.click()
-                time.sleep(3)
-                return True
-            else:
-                return False
+            # Sử dụng XPath để tìm chính xác button có nội dung là ">" nằm trong pagination
+            # Cách này bền vững hơn vì ký tự ">" của nút Next rất ít khi thay đổi
+            xpath_next = "//ul[contains(@class, 'pagination')]//li[contains(@class, 'btn-default')]//button[text()='>']"
 
+            # Đợi nút xuất hiện và có thể click được
+            next_button = WebDriverWait(self._driver, 7).until(
+                EC.element_to_be_clickable((By.XPATH, xpath_next))
+            )
+
+            # Scroll xuống để đảm bảo nút nằm trong khung nhìn (tránh bị banner che)
+            self._driver.execute_script(
+                "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});",
+                next_button,
+            )
+            time.sleep(1)  # Chờ một chút sau khi scroll
+
+            next_button.click()
+            logger.info("Successfully navigated to the next page.")
+            time.sleep(3)  # Chờ trang mới load
+            return True
+
+        except (NoSuchElementException, TimeoutException):
+            logger.info(
+                "Next button not found or not clickable - might be on the last page."
+            )
+            return False
         except Exception as e:
             logger.warning(f"Error navigating to next page: {e}")
             return False
 
     def _get_text_by_xpath_text(self, label_text):
-        """Find element by text and get next sibling text"""
+        """Find element by text and get the most relevant next text node"""
         try:
-            # Use XPath to find element containing the label text, then get next sibling
-            xpath = f"//*[contains(text(), '{label_text}')]/following-sibling::*[1]"
-            element = self._driver.find_element(By.XPATH, xpath)
+            # Sử dụng . thay vì text() để lấy toàn bộ text bên trong, bao gồm cả thẻ con
+            # normalize-space() giúp loại bỏ khoảng trắng thừa/xuống dòng
+            xpath = f"//*[contains(normalize-space(.), '{label_text}')]/following::*[1]"
+            
+            # Chờ một chút cho phần tử này xuất hiện
+            element = WebDriverWait(self._driver, 5).until(
+                EC.presence_of_element_located((By.XPATH, xpath))
+            )
             return element.text.strip()
-        except (NoSuchElementException, Exception):
+        except (NoSuchElementException, TimeoutException, Exception):
             return None
 
     def _cleanup_driver(self):
