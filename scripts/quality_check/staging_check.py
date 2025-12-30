@@ -10,11 +10,12 @@ def get_quality_data():
     cursor = connection.cursor()
     
     try:
-        cursor.execute("SELECT 1 FROM pg_views WHERE viewname = 'quality_check_staging_zone'")
-        if not cursor.fetchone():
-            sql_command(cursor, CREATE_VIEW_QUALITY_CHECK_STAGING_ZONE)
+        cursor.execute("DROP VIEW IF EXISTS quality_check_staging_zone CASCADE")
+        sql_command(cursor, CREATE_VIEW_QUALITY_CHECK_STAGING_ZONE)
+        connection.commit()
     except Exception as e:
-        print(e)
+        print(f"Error creating view: {e}")
+        connection.rollback()
     
     results = sql_command(cursor, SELECT_QUALITY_CHECK_STAGING_ZONE)
 
@@ -97,7 +98,6 @@ if __name__ == "__main__":
             'rate_null_requirements',
             'rate_null_benefits',
             'rate_null_job_deadline',
-            'rate_null_search_keyword',
             'rate_null_job_type',
             'rate_null_job_industry',
             'rate_null_experience_level',

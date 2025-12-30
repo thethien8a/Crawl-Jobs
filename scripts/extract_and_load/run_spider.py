@@ -34,7 +34,7 @@ def main():
         "--spider",
         choices=[
             "jobsgo",
-            "joboko",
+            # "joboko",
             "123job",
             "careerviet",
             # "jobstreet", Trang này không còn tồn tại ở Việt Nam nữa rồi
@@ -81,8 +81,8 @@ def main():
     try:
         if args.spider == "jobsgo":
             process.crawl(JobsgoSpider, keyword=args.keyword)
-        elif args.spider == "joboko":
-            process.crawl(JobokoSpider, keyword=args.keyword)
+        # elif args.spider == "joboko":
+        #     process.crawl(JobokoSpider, keyword=args.keyword)
         elif args.spider == "123job":
             process.crawl(Job123Spider, keyword=args.keyword)
         elif args.spider == "careerviet":
@@ -101,7 +101,7 @@ def main():
             process.crawl(JobsgoSpider, keyword=args.keyword)
             process.crawl(CareerlinkSpider, keyword=args.keyword)
             process.crawl(VietnamworksSpider, keyword=args.keyword)
-            process.crawl(JobokoSpider, keyword=args.keyword)
+            # process.crawl(JobokoSpider, keyword=args.keyword)
             process.crawl(Job123Spider, keyword=args.keyword)
             process.crawl(CareervietSpider, keyword=args.keyword)
             process.crawl(ItviecSpider, keyword=args.keyword)
@@ -110,10 +110,9 @@ def main():
             process.crawl(TopcvSpider, keyword=args.keyword) 
         elif args.spider == "all":
             process.crawl(JobsgoSpider, keyword=args.keyword)
-            process.crawl(JobokoSpider, keyword=args.keyword)
+            # process.crawl(JobokoSpider, keyword=args.keyword)
             process.crawl(Job123Spider, keyword=args.keyword)
             process.crawl(CareervietSpider, keyword=args.keyword)
-            # process.crawl(JobStreetSpider, keyword=args.keyword)
             process.crawl(LinkedinSpider, keyword=args.keyword)
             process.crawl(TopcvSpider, keyword=args.keyword)
             process.crawl(ItviecSpider, keyword=args.keyword)

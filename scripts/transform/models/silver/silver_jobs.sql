@@ -9,7 +9,16 @@
             IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'silver_jobs_pk') THEN 
                 ALTER TABLE {{ this }} ADD CONSTRAINT silver_jobs_pk PRIMARY KEY (job_id); 
             END IF; 
-         END $$;"
+         END $$;",
+        "CREATE EXTENSION IF NOT EXISTS pg_trgm;",
+        "CREATE INDEX IF NOT EXISTS idx_silver_jobs_scraped_at ON {{ this }} (scraped_at DESC);",
+        "CREATE INDEX IF NOT EXISTS idx_silver_jobs_location ON {{ this }} (location);",
+        "CREATE INDEX IF NOT EXISTS idx_silver_jobs_job_type ON {{ this }} (job_type);",
+        "CREATE INDEX IF NOT EXISTS idx_silver_jobs_work_arrangement ON {{ this }} (work_arrangement);",
+        "CREATE INDEX IF NOT EXISTS idx_silver_jobs_trgm_title ON {{ this }} USING GIN (job_title gin_trgm_ops);",
+        "CREATE INDEX IF NOT EXISTS idx_silver_jobs_trgm_position ON {{ this }} USING GIN (job_position gin_trgm_ops);",
+        "CREATE INDEX IF NOT EXISTS idx_silver_jobs_fts_title ON {{ this }} USING GIN (to_tsvector('english', COALESCE(job_title, '')));",
+        "CREATE INDEX IF NOT EXISTS idx_silver_jobs_fts_position ON {{ this }} USING GIN (to_tsvector('english', COALESCE(job_position, '')));"
     ]
 ) }}
 

@@ -1,0 +1,56 @@
+version: 2
+
+models:
+  - name: int_jobs_cleaned
+    columns:
+      - name: location
+        data_tests:
+          - ratio_unknown_upgrade:
+              threshold: 0.1
+              unknown_value: 'Không xác định'
+      - name: job_url
+        data_tests:
+          - unique
+      - name: min_monthly_salary
+        data_tests:
+          - less_than_or_equal:
+              compare_column: max_monthly_salary
+              config:
+                severity: warn
+          - max_value:
+              value: 100000000
+              config:
+                severity: warn
+      - name: max_monthly_salary
+        data_tests:
+          - max_value:
+              value: 200000000
+              config:
+                severity: warn
+      - name: job_industry
+        data_tests:
+          - ratio_unknown_upgrade:
+              threshold: 0.1
+              unknown_value: 'Khác'
+              config:
+                severity: error
+      - name: min_exp_level
+        data_tests:
+          - max_value:
+              value: 12
+              config:
+                severity: warn
+      - name: max_exp_level
+        data_tests:
+          - max_value:
+              value: 12
+              config:
+                severity: warn
+      - name: job_position
+        data_tests:
+          - ratio_unknown_upgrade:
+              threshold: 0.02
+              unknown_value: 'Không đề cập'
+              except_source_site: ['itviec.com','linkedin.com']
+              config:
+                severity: error

@@ -5,7 +5,8 @@
     on_schema_change='sync_all_columns',
     indexes=[
       {'columns': ['job_title', 'company_name', 'source_site', 'scraped_at']},
-      {'columns': ['scraped_at']}
+      {'columns': ['scraped_at']},
+      {'columns': ['company_name']}
     ]
 ) }}
 
@@ -58,4 +59,5 @@ SELECT
     ]) }} AS job_id,
     *
 FROM cleaned_fields
+WHERE company_name <> ''
 
