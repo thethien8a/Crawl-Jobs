@@ -5,17 +5,14 @@ import time
 from datetime import datetime, timedelta
 
 import scrapy
-from selenium import webdriver
+import undetected_chromedriver as uc
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from webdriver_manager.chrome import ChromeDriverManager
 
 from ..items import JobItem
-from ..utils import create_stealth_chrome_options
+from ..utils import get_chrome_version
 
 # Suppress verbose Selenium and urllib3 logs
 logging.getLogger("selenium").setLevel(logging.WARNING)
@@ -35,32 +32,31 @@ class VietnamworksSpider(scrapy.Spider):
 
     def __init__(self, keyword=None):
         self.keyword = keyword or "data analyst"
-        self._max_page = 3
+        self._max_page = 1
         self._processed_urls = set()
         self._driver = None
         self._init_selenium_driver()
 
     def _init_selenium_driver(self):
-        """Initialize Selenium Chrome driver for URL collection with enhanced stealth options"""
+        """Initialize undetected-chromedriver for URL collection"""
+        options = uc.ChromeOptions()
+        options.add_argument("--headless")
+        options.add_argument("--window-size=1920,1080")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36")
+        
         try:
-            # Use centralized chrome options configuration
-            chrome_options = create_stealth_chrome_options(
-                headless=True, window_size="1920,1080"  # Set to True for headless mode
+            chrome_version = get_chrome_version()
+            self._driver = uc.Chrome(
+                options=options,
+                version_main=chrome_version,
+                headless=True,
+                use_subprocess=True
             )
-
-            service = Service(ChromeDriverManager().install())
-            self._driver = webdriver.Chrome(service=service, options=chrome_options)
-
-            # Execute script to hide webdriver property
-            self._driver.execute_script(
-                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
-            )
-
-            logger.info(
-                "Selenium Chrome driver initialized successfully for VietnamWorks"
-            )
+            logger.info("undetected-chromedriver initialized successfully for VietnamWorks")
         except Exception as e:
-            logger.error(f"Failed to initialize Selenium driver: {e}")
+            logger.error(f"Failed to initialize undetected-chromedriver: {e}")
             raise
 
     def start_requests(self):
@@ -135,11 +131,122 @@ class VietnamworksSpider(scrapy.Spider):
     def parse_job_detail(self, response):
         """Parse job detail page and yield JobItem to Scrapy pipeline"""
         try:
-            item = self._parse_job_with_selenium(response.url)
-            yield item
+            # Render detail page with Selenium so hidden sections (e.g. after "Xem thêm") are visible
+            self._driver.get(response.url)
+
+            # Wait for page ready
+            WebDriverWait(self._driver, 10).until(
+                lambda d: d.execute_script("return document.readyState") == "complete"
+            )
+
+            # Try to expand hidden content
+            try:
+                xem_them_btn = WebDriverWait(self._driver, 3).until(
+                    EC.element_to_be_clickable(
+                        (By.CSS_SELECTOR, "button[aria-label='Xem thêm']")
+                    )
+                )
+                xem_them_btn.click()
+                time.sleep(1.5)  # allow content to render
+            except TimeoutException:
+                pass
+
+            # Rebuild response with rendered HTML
+            rendered_response = response.replace(body=self._driver.page_source)
+
+            # Extract job data using rendered content
+            item = self._extract_job_data_from_response(rendered_response)
+            if item:
+                yield item
 
         except Exception as e:
             logger.error(f"Error in parse_job_detail for {response.url}: {e}")
+
+    def _extract_job_data_from_response(self, response):
+        """Extract job data using Scrapy selectors (faster than Selenium)"""
+        item = JobItem()
+        
+        try:
+            # Job Title
+            item["job_title"] = response.css("h1[name='title']::text").get()
+
+            # Company Name
+            item["company_name"] = response.css("a[href*='nha-tuyen-dung']::text").get()
+
+            # Salary
+            item["salary"] = response.css("span[class*='cVbwLK']::text").get()
+
+            # Location
+            item["location"] = response.css("div[class*='ebdjLi'] span::text").get()
+
+            # Job Type
+            item["job_type"] = self._get_text_by_label(response, "LOẠI HÌNH LÀM VIỆC")
+
+            # Experience Level
+            experience_raw = self._get_text_by_label(response, "SỐ NĂM KINH NGHIỆM TỐI THIỂU")
+            item["experience_level"] = f"{experience_raw} năm" if experience_raw else None
+
+            # Education Level
+            item["education_level"] = self._get_text_by_label(response, "TRÌNH ĐỘ HỌC VẤN TỐI THIỂU")
+
+            # Job Description
+            item["job_description"] = self._get_text_by_label(response, "Mô tả công việc")
+
+            # Job Industry
+            item["job_industry"] = self._get_text_by_label(response, "LĨNH VỰC")
+
+            # Job Position
+            item["job_position"] = self._get_text_by_label(response, "CẤP BẬC")
+
+            # Job Deadline
+            job_deadline_text = response.xpath("//span[contains(text(), 'Hết hạn trong')]//text()").get()
+            if job_deadline_text:
+                match = re.search(r"\d+", job_deadline_text)
+                number_in_text = int(match.group()) if match else 0
+                if "ngày" in job_deadline_text:
+                    item["job_deadline"] = (
+                        datetime.now() + timedelta(days=number_in_text)
+                    ).strftime("%Y-%m-%d")
+                else:
+                    item["job_deadline"] = (
+                        datetime.now() + timedelta(days=number_in_text * 30)
+                    ).strftime("%Y-%m-%d")
+
+            # Requirements
+            item["requirements"] = self._get_text_by_label(response, "Yêu cầu")
+
+            # Benefits
+            benefits_section = response.xpath("//h2[contains(@class, 'sc-ab270149-0') and contains(@class, 'iJCYCD') and contains(text(), 'phúc lợi')]/following-sibling::*//text()").getall()
+            item["benefits"] = " ".join([t.strip() for t in benefits_section if t.strip()]) if benefits_section else None
+
+            # Metadata
+            item["source_site"] = "vietnamworks.com"
+            item["job_url"] = response.url
+            item["search_keyword"] = self.keyword
+            item["scraped_at"] = datetime.now().isoformat()
+
+            # Clean up all fields
+            for key in item.fields:
+                if key in item and isinstance(item[key], str):
+                    item[key] = item[key].strip()
+
+            return item
+
+        except Exception as e:
+            logger.error(f"Error extracting job data with Scrapy for {response.url}: {e}")
+            return None
+
+    def _get_text_by_label(self, response, label_text):
+        """Find element by text and get the text of the following element"""
+        try:
+            # Similar logic to _get_text_by_xpath_text but for Scrapy response
+            xpath = f"//*[contains(normalize-space(.), '{label_text}')]/following::*[1]//text()"
+            texts = response.xpath(xpath).getall()
+            if texts:
+                return " ".join([t.strip() for t in texts if t.strip()]).strip()
+        except Exception:
+            pass
+        return None
 
     def _scroll_to_load_content(self, scroll_incre=1000):
         """Scroll down to load dynamic content gradually like a human"""
@@ -197,118 +304,6 @@ class VietnamworksSpider(scrapy.Spider):
 
         return list(job_urls)
 
-    def _parse_job_with_selenium(self, job_url):
-        """Parse individual job page using Selenium only"""
-        try:
-            logger.info(f"Parsing job: {job_url}")
-            self._driver.get(job_url)
-
-            # Wait for page to load
-            WebDriverWait(self._driver, 10).until(
-                lambda d: d.execute_script("return document.readyState") == "complete"
-            )
-            
-            expand_button = self._driver.find_element(
-                By.XPATH, '//button[contains(text(), "Xem đầy đủ mô tả công việc")]'
-            )
-            if expand_button:
-                expand_button.click()
-            
-            expand_button_2 = self._driver.find_element(
-                By.XPATH, '//button[contains(text(), "Xem thêm")]'
-            )
-            if expand_button_2:
-                expand_button_2.click()
-
-            # Extract job data using Selenium only
-            job_data = self._extract_job_data_with_selenium(job_url)
-            return job_data
-
-        except Exception as e:
-            logger.error(f"Error parsing job {job_url}: {e}")
-            return None
-
-    def _extract_job_data_with_selenium(self, job_url):
-        """Extract job data using Selenium WebDriver"""
-        item = JobItem()
-
-        try:
-            # Job Title
-            item["job_title"] = self._safe_get_text("h1[name='title']")
-
-            # Company Name
-            item["company_name"] = self._safe_get_text("a[href*='nha-tuyen-dung']")
-
-            # Salary
-            item["salary"] = self._safe_get_text("span[class*='cVbwLK']")
-
-            # Location
-            div_contain_span_location = self._driver.find_element(
-                By.CSS_SELECTOR, "div[class*='ebdjLi']"
-            )
-            span_location = div_contain_span_location.find_element(
-                By.CSS_SELECTOR, "span"
-            )
-            item["location"] = span_location.text
-
-            # Job Type
-            item["job_type"] = self._get_text_by_xpath_text("LOẠI HÌNH LÀM VIỆC")
-
-            # Experience Level
-            item["experience_level"] = (
-                self._get_text_by_xpath_text("SỐ NĂM KINH NGHIỆM TỐI THIỂU") + " năm"
-            )
-
-            # Education Level
-            item["education_level"] = self._get_text_by_xpath_text(
-                "TRÌNH ĐỘ HỌC VẤN TỐI THIỂU"
-            )
-
-            # Job Description
-            item["job_description"] = self._get_text_by_xpath_text("Mô tả công việc")
-
-            # Job Industry
-            item["job_industry"] = self._get_text_by_xpath_text("LĨNH VỰC")
-
-            # Job Position
-            item["job_position"] = self._get_text_by_xpath_text("CẤP BẬC")
-
-            # Job Deadline
-            job_deadline_text = self._safe_get_text(
-                "//span[contains(text(), 'Hết hạn trong')]", By.XPATH
-            )
-            if job_deadline_text:
-                match = re.search(r"\d+", job_deadline_text)
-                number_in_text = int(match.group()) if match else 0
-                if "ngày" in job_deadline_text:
-                    item["job_deadline"] = (
-                        datetime.now() + timedelta(days=number_in_text)
-                    ).strftime("%Y-%m-%d")
-                else:
-                    item["job_deadline"] = (
-                        datetime.now() + timedelta(days=number_in_text * 30)
-                    ).strftime("%Y-%m-%d")
-
-            # Requirements
-            item["requirements"] = self._get_text_by_xpath_text("Yêu cầu")
-
-            # Không có benefits trên trang web
-            item["benefits"] = None
-
-            # Metadata
-            item["source_site"] = "vietnamworks.com"
-            item["job_url"] = job_url
-            item["search_keyword"] = self.keyword
-            item["scraped_at"] = datetime.now().isoformat()
-
-            time.sleep(2)
-
-            return item
-
-        except Exception as e:
-            logger.error(f"Error extracting job data with Selenium: {e}")
-            return None
-
     def _go_to_next_page(self):
         """Navigate to next page, return True if successful"""
         try:
@@ -330,24 +325,15 @@ class VietnamworksSpider(scrapy.Spider):
             logger.info("Successfully navigated to the next page.")
             time.sleep(3)  # Chờ trang mới load
             return True
-        except Exception as e:
-            logger.error(f"Error navigating to next page: {e}")
-            return False
 
-    def _get_text_by_xpath_text(self, label_text):
-        """Find element by text and get the most relevant next text node"""
-        try:
-            # Sử dụng . thay vì text() để lấy toàn bộ text bên trong, bao gồm cả thẻ con
-            # normalize-space() giúp loại bỏ khoảng trắng thừa/xuống dòng
-            xpath = f"//*[contains(normalize-space(.), '{label_text}')]/following::*[1]"
-            
-            # Chờ một chút cho phần tử này xuất hiện
-            element = WebDriverWait(self._driver, 5).until(
-                EC.presence_of_element_located((By.XPATH, xpath))
+        except (NoSuchElementException, TimeoutException):
+            logger.info(
+                "Next button not found or not clickable - might be on the last page."
             )
-            return element.text.strip()
-        except (NoSuchElementException, TimeoutException, Exception):
-            return None
+            return False
+        except Exception as e:
+            logger.warning(f"Error navigating to next page: {e}")
+            return False
 
     def _cleanup_driver(self):
         """Clean up Selenium driver"""
@@ -359,11 +345,3 @@ class VietnamworksSpider(scrapy.Spider):
                 logger.error(f"Error cleaning up driver: {e}")
             finally:
                 self._driver = None
-
-    def _safe_get_text(self, selector, by=By.CSS_SELECTOR):
-        """Safely get text from element with fallback to empty string"""
-        try:
-            element = self._driver.find_element(by, selector)
-            return element.text.strip()
-        except (NoSuchElementException, Exception):
-            return None
