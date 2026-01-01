@@ -64,9 +64,9 @@ CONCURRENT_REQUESTS = 16
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    "CrawlJob.pipelines.ValidateItemPipeline": 200,
-    "CrawlJob.pipelines.QuarantinePipeline": 250,
-    "CrawlJob.pipelines.PostgreSQLPipeline": 300
+    # "CrawlJob.pipelines.ValidateItemPipeline": 200,
+    # "CrawlJob.pipelines.QuarantinePipeline": 250,
+    # "CrawlJob.pipelines.PostgreSQLPipeline": 300
 }
 
 
@@ -87,7 +87,7 @@ DOWNLOAD_DELAY = 2
 ROBOTSTXT_OBEY = False
 
 # User Agent
-USER_AGENT = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36"
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
