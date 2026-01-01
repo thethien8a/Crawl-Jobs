@@ -1,8 +1,8 @@
 import json
 from datetime import datetime
-
+import re
 import scrapy
-
+from datetime import timedelta
 from ..items import JobItem
 from ..utils import encode_input
 
@@ -95,10 +95,10 @@ class TopcvSpider(scrapy.Spider):
         # Title
         if "brand" in response.url:
             title = response.css(
-                'h2[class="premium-job-basic-information__content--title"] ::text'
+                'h2[class*="title"] ::text'
             ).getall()
             if not title:
-                title = response.css('h2[class*="title"] ::text').getall()
+                title = response.css('h2.premium-job-basic-information__content--title').getall()
             item["job_title"] = " ".join([t.strip() for t in title if t.strip()])
         else:
             # Job title - Extract from JavaScript object first
@@ -114,18 +114,18 @@ class TopcvSpider(scrapy.Spider):
         
         # If job title contains unwanted text, remove it
         if item["job_title"]:
-            unwanted_text = "Thông tin Địa điểm làm việc Mô tả công việc Yêu cầu ứng viên Quyền lợi được hưởng Phân tích mức độ phù hợp của bạn với công việc New"
-            if unwanted_text in item["job_title"]:
-                item["job_title"] = item["job_title"].replace(unwanted_text, "").strip()
-
+            unwanted_text_1 = "Thông tin Địa điểm làm việc Mô tả công việc Yêu cầu ứng viên Quyền lợi được hưởng Phân tích mức độ phù hợp của bạn với công việc New"
+            if unwanted_text_1 in item["job_title"]:
+                item["job_title"] = item["job_title"].replace(unwanted_text_1, "").strip()
+            unwanted_text_2 = "Thông tin Tóm tắt Địa điểm làm việc (đã được cập nhật theo Danh mục Hành chính mới) Mô tả công việc Yêu cầu ứng viên Thu nhập Quyền lợi được hưởng Thời gian làm việc Phân tích mức độ phù hợp của bạn với công việc New"
+            if unwanted_text_2 in item["job_title"]:
+                item["job_title"] = item["job_title"].replace(unwanted_text_2, "").strip()
         # Company name
         if "brand" in response.url:
-            company_name = response.xpath(
-                '//div[contains(@class, "company-content")]//text()'
-            ).getall()
-            item["company_name"] = " ".join(
-                [t.strip() for t in company_name if t.strip()]
-            )
+            company_name = response.css('div[class="footer-info-content footer-info-company-name"]::text').get()
+            if not company_name:
+                company_name = response.css('h1[class="company-content__title--name"]::text').get()
+            item["company_name"] = company_name.strip() if company_name else None
         else:
             # Company name - Extract from JavaScript object first
             company = self._extract_from_js_object(response, "recruiter_company")
@@ -145,13 +145,15 @@ class TopcvSpider(scrapy.Spider):
         # Salary
         if "brand" in response.url:
             salary = self._extract_important_info(response, "Mức lương")
+            if not salary:
+                salary = self._extract_important_info(response, "Thu nhập")
         else:
             # Salary - Extract from JavaScript object first
             salary = self._extract_from_js_object(response, "salary_range")
             if not salary:
                 # Fallback: HTML extraction
                 salary = response.css("h4.box-header-job__salary::text").get()
-            item["salary"] = salary.strip() if salary else None
+        item["salary"] = salary.strip() if salary else None
 
         if "brand" in response.url:
             # Location (brand pages can use label/value blocks)
@@ -174,7 +176,7 @@ class TopcvSpider(scrapy.Spider):
                 location = response.css("span.hight-light.city-name ::text").getall()
                 location = " ".join(t.strip() for t in location if t.strip())
                 location = location.replace("Địa điểm:", "").replace("&nbsp", "")
-            item["location"] = location.strip() if location else None
+        item["location"] = location.strip() if location else None
 
         # Job type
         if "brand" in response.url:
@@ -221,6 +223,19 @@ class TopcvSpider(scrapy.Spider):
         # Job deadline
         if "brand" in response.url:
             deadline = self._extract_important_info(response, "Hạn nộp hồ sơ")
+            if not deadline:
+                deadline_texts = response.css('span[class="deadline"] ::text').getall()
+                days_remaining = None
+                for text in deadline_texts:
+                    match = re.search(r'\d+', text)
+                    if match:
+                        days_remaining = int(match.group())
+                        break
+                if days_remaining is not None:
+                    deadline_date = datetime.now() + timedelta(days=days_remaining)
+                    deadline = deadline_date.strftime("%d/%m/%Y")
+                else:
+                    deadline = None
         else:
             deadline = response.xpath(
                 "//i[contains(@class, 'fa-clock')]/following-sibling::span//text()"
@@ -254,9 +269,9 @@ class TopcvSpider(scrapy.Spider):
 
     def _extract_important_info(self, response, label_text):
         text = response.xpath(
-            f'//*[contains(text(), "{label_text}")]/following-sibling::*[1]//text()'
-        ).get()
-        return text.strip() if text else None
+            f'//*[contains(text(), "{label_text}")]/following-sibling::*[position()<=2]//text()'
+        ).getall()
+        return " ".join([t.strip() for t in text if t.strip()])
 
     def _extract_paragraph(self, response, label_text):
         text = response.xpath(
@@ -306,9 +321,3 @@ class TopcvSpider(scrapy.Spider):
         if referer:
             headers["Referer"] = referer
         return headers
-
-    # Test method added by MCP tool
-    def test_tool_method(self):
-        """Updated test method to verify replace_symbol_body functionality"""
-        self.logger.info("Updated test method executed successfully")
-        return "Tool testing completed - UPDATED"

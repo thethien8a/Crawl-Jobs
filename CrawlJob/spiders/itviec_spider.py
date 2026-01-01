@@ -90,10 +90,20 @@ class ItviecSpider(scrapy.Spider):
         chrome_version = get_chrome_version()
         if chrome_version:
             self.logger.info(f"Using Chrome version: {chrome_version}")
-            driver = uc.Chrome(headless=True, options=options, version_main=chrome_version)
+            driver = uc.Chrome(
+                headless=True, 
+                options=options, 
+                version_main=chrome_version,
+                use_subprocess=True
+            )
         else:
             self.logger.info("Chrome version not detected, using auto-detection")
-            driver = uc.Chrome(headless=True, options=options, version_main=None)
+            driver = uc.Chrome(
+                headless=True, 
+                options=options, 
+                version_main=None,
+                use_subprocess=True
+            )
 
         # Additional stealth scripts (optional, as undetected-chromedriver already provides most stealth)
         stealth_scripts = [

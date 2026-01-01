@@ -2,6 +2,7 @@
 import logging
 import os
 import random
+import re
 import time
 from datetime import datetime
 from urllib.parse import urlencode
@@ -68,10 +69,20 @@ class LinkedinSpider(scrapy.Spider):
             chrome_version = get_chrome_version()
             if chrome_version:
                 self.logger.info(f"Using Chrome version: {chrome_version}")
-                self.driver = uc.Chrome(options=options, version_main=chrome_version)
+                self.driver = uc.Chrome(
+                    options=options, 
+                    version_main=chrome_version,
+                    headless=True,
+                    use_subprocess=True
+                )
             else:
                 self.logger.info("Chrome version not detected, using auto-detection")
-                self.driver = uc.Chrome(options=options, version_main=None)
+                self.driver = uc.Chrome(
+                    options=options, 
+                    version_main=None,
+                    headless=True,
+                    use_subprocess=True
+                )
             
             self.logger.info("undetected-chromedriver initialized successfully.")
         except Exception as e:
@@ -279,13 +290,26 @@ class LinkedinSpider(scrapy.Spider):
         item["education_level"] = None
 
         try:
-            # This div contains industry, employee count, etc
+            # Selector này linh hoạt hơn để lấy div chứa Industry, Size, v.v.
             info_div = self.driver.find_element(By.CSS_SELECTOR, "div.t-14.mt5")
-
-            # Use JS to get only the first text node, ignoring child spans
-            script = "return arguments[0].firstChild.textContent.trim();"
-            industry = self.driver.execute_script(script, info_div)
-            item["job_industry"] = industry
+            full_info = info_div.text.strip()
+            
+            if full_info:
+                # 1. Tách theo các ký tự phân cách phổ biến của LinkedIn (dấu chấm, xuống dòng, v.v.)
+                # Dùng regex để tách theo bullet (·), newline, hoặc 2 khoảng trắng trở lên
+                parts = re.split(r'[·\n\r\t●•|]|\s{2,}', full_info)
+                industry = parts[0].strip()
+                
+                # 2. Xử lý trường hợp không có dấu phân cách rõ ràng (ví dụ bị dính liền con số)
+                # "Software Development 5.001-10.000" -> "Software Development"
+                # Ta tìm vị trí của chữ số đầu tiên để cắt
+                digit_match = re.search(r'\d', industry)
+                if digit_match:
+                    industry = industry[:digit_match.start()].strip()
+                
+                item["job_industry"] = industry
+            else:
+                item["job_industry"] = None
         except Exception:
             item["job_industry"] = None
 
