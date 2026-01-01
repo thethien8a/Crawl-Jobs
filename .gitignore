@@ -54,7 +54,7 @@ node_modules/
 web/node_modules/
 .next/
 web/.next/
-*.json
+# *.json
 .cursor/
 
 # Rule files
@@ -71,3 +71,22 @@ gx/uncommitted/
 .github/instructions/
 
 test/display_data_dynamic.html
+
+# Data files
+*.parquet
+*.csv
+jobs.json
+scripts/extract_and_load/jobs.json
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# dbt & Elementary
+scripts/transform/edr_target/
+
+# Airflow
+airflow/logs/
+airflow/airflow.db
+airflow/airflow.cfg
+airflow/webserver_config.py
