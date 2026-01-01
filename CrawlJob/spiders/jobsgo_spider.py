@@ -106,7 +106,11 @@ class JobsgoSpider(scrapy.Spider):
         item["job_type"] = self._extract_common_section_value(response, "Loại hình")
 
         item["job_industry"] = self._extract_common_section_links(response, "Lĩnh vực")
-
+        
+        if not item["job_industry"]:
+            item["job_industry"] = response.xpath(
+                '//span[contains(@class, "text-muted") and contains(text(), "Lĩnh vực")]/following-sibling::span[contains(@class, "fw-500")]/text()'
+            ).get()
         # Chức danh (vị trí)
         item["job_position"] = self._extract_common_section_value(response, "Cấp bậc")
 

@@ -62,3 +62,6 @@ Sử dụng **dbt** để quản lý toàn bộ logic biến đổi SQL.
         *   `analytics_dw.dim_date` (Ngày tháng).
         *   `analytics_dw.dim_industry` (Ngành nghề).
         *   `analytics_dw.dim_skills` (Kỹ năng yêu cầu).
+
+## 5. Phát triển tương lai:
+- Lấy thêm dữ liệu "quy mô công ty" (company size) từ các trang web: joboko, topcv, linkedin, 123job, careerlink, itviec

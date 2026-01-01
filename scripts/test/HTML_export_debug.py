@@ -10,7 +10,7 @@ import requests
 from bs4 import BeautifulSoup
 
 # URL cần xuất
-url = "https://www.topcv.vn/brand/bpomatbao/tuyen-dung/nhan-vien-tu-van-tai-van-phong-fulltime-100-data-nong-thu-viec-nhan-100-luong-khong-yeu-cau-kinh-nghiem-nhan-vien-kinh-doanh-tu-van-telemarketing-sale-online-telesales-nhan-vien-sales-admin-cham-soc-khach-hang-cskh-j1999196.html?ta_source=JobSearchList_LinkDetail&u_sr_id=qTp1ApNJ121UhaOIWnbDP55QqATSDORA5cvnM87T_1767236934"
+url = "https://www.vietnamworks.com/nhan-vien-kinh-doanh-b2b-data-khach-hang-co-san--1997004-jv?source=searchResults&searchType=2&placement=1997004&sortBy=date"
 
 # Headers
 headers = {

@@ -5,3 +5,115 @@ sources:
     schema: public 
     tables:
       - name: staging_jobs 
+        columns:
+          - name: source_site
+            data_tests:
+              - check_source_site_has_today_data:
+                  config:
+                      severity: warn
+
+          - name: salary
+            data_tests:
+              - ratio_empty_multi:
+                  arguments:
+                    site_thresholds:
+                      'vn.joboko.com': 0.02
+                      'careerlink.vn': 0.01
+                      'topcv.vn': 0.01
+                      'careerviet.vn': 0.01
+                      '123job.vn': 0.01
+                      'jobsgo.vn': 0.01
+                      'itviec.com': 0.01
+                      'vietnamworks.com': 0.01
+                  config:
+                    severity: error
+        
+          - name: job_type
+            data_tests:
+              - ratio_empty_multi:
+                  arguments:
+                    site_thresholds:
+                      'vn.joboko.com': 0.01
+                      'careerlink.vn': 0.01
+                      'topcv.vn': 0.01
+                      'careerviet.vn': 0.01 
+                      '123job.vn': 0.01
+                      'jobsgo.vn': 0.01
+                      'vietnamworks.com': 0.04
+                  config:
+                    severity: error
+          
+
+          - name: experience_level
+            data_tests:
+              - ratio_empty_multi:
+                  arguments:
+                    site_thresholds:
+                      'vn.joboko.com': 0.4
+                      'careerlink.vn': 0.01
+                      'topcv.vn': 0.01
+                      'careerviet.vn': 0.2
+                      '123job.vn': 0.01
+                      'jobsgo.vn': 0.01
+                      'vietnamworks.com': 0.01
+                  config:
+                    severity: error
+
+          - name: education_level
+            data_tests:
+              - ratio_empty_multi:
+                  arguments:
+                    site_thresholds:
+                      'careerlink.vn': 0.01
+                      'topcv.vn': 0.01
+                      'careerviet.vn': 0.2
+                      '123job.vn': 0.8
+                      'jobsgo.vn': 0.01
+                      'vietnamworks.com': 0.01
+                  config:
+                    severity: error
+          
+          - name: job_industry
+            data_tests:
+              - ratio_empty_multi:
+                  arguments:
+                    site_thresholds:
+                      'careerlink.vn': 0.01
+                      'topcv.vn': 0.01
+                      'careerviet.vn': 0.01
+                      '123job.vn': 0.8
+                      'jobsgo.vn': 0.03
+                      'itviec.com': 0.05
+                      'vietnamworks.com': 0.01
+                  config:
+                    severity: error 
+
+          - name: job_position
+            data_tests:
+              - ratio_empty_multi:
+                  arguments:
+                    site_thresholds:
+                      'vn.joboko.com': 0.1
+                      'careerlink.vn': 0.01
+                      'topcv.vn': 0.01
+                      'careerviet.vn': 0.01
+                      '123job.vn': 0.8
+                      'jobsgo.vn': 0.01
+                      'vietnamworks.com': 0.01
+                  config:
+                    severity: error 
+          
+          - name: job_deadline
+            data_tests:
+              - ratio_empty_multi:
+                  arguments:
+                    site_thresholds:
+                      'vn.joboko.com': 0.01
+                      'careerlink.vn': 0.01
+                      'topcv.vn': 0.01
+                      'careerviet.vn': 0.01
+                      '123job.vn': 0.8
+                      'jobsgo.vn': 0.01
+                      'vietnamworks.com': 0.01
+                  config:
+                    severity: error
