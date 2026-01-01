@@ -74,6 +74,11 @@ class JobokoSpider(scrapy.Spider):
         item["job_position"] = self._xpath_text(response, "Chức vụ")
 
         item["job_description"] = self._xpath_paragraph(response, "Mô tả công việc")
+        if not item["job_description"]:
+            list_description = response.css('div[class="text-left job-desc-full"] ::text').getall()
+            if list_description:
+                item["job_description"] = " ".join(list_description)
+        
         item["requirements"] = self._xpath_paragraph(response, "Yêu cầu")
         item["benefits"] = self._xpath_paragraph(response, "Quyền lợi")
 
