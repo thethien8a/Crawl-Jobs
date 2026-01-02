@@ -21,6 +21,11 @@ models:
               value: 100000000
               config:
                 severity: warn
+      - name: company_name
+        data_tests:
+          - ratio_unknown_upgrade:
+              threshold: 0
+              unknown_value: ''
       - name: max_monthly_salary
         data_tests:
           - max_value:
