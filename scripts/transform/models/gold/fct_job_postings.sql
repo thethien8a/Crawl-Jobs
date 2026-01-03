@@ -24,6 +24,7 @@ final as (
         job_id as job_key,
         stg_id,
         {{ dbt_utils.generate_surrogate_key(['company_name']) }} as company_key,
+        {{ dbt_utils.generate_surrogate_key(['source_site']) }} as site_key,
         {{ dbt_utils.generate_surrogate_key(['location']) }} as location_key,
         {{ dbt_utils.generate_surrogate_key([
             'job_position',
@@ -72,7 +73,6 @@ final as (
         has_training_growth_benefits,
         has_lifestyle_culture_benefits,
         
-        -- Metadata
         source_site,
         scraped_at as posted_at
     from silver_jobs

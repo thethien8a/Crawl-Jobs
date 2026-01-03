@@ -11,7 +11,7 @@
                             '', 'g'
                         ),
                         -- 2. Xóa hậu tố doanh nghiệp & địa lý
-                        '\y(https?://[^\s]+|co\., ltd| và |ltd|jsc|số |jsc\.,|corp|corporation|inc|limited|group|vietnam|việt nam|co\.,? ltd|ltd\.?|member of viettel group)\y', 
+                        '\y(https?://[^\s]+|co\., ltd| và |\||ltd|jsc|số |jsc\.,|corp|corporation|inc|limited|group|vietnam|việt nam|co\.,? ltd|ltd\.?|member of viettel group)\y', 
                         ' ', 'g'
                     ),
                     -- 3. Xóa các ký tự đặc biệt thừa

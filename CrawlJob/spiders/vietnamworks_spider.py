@@ -1,348 +1,348 @@
 
-import logging
-import random
-import re
-import time
-from datetime import datetime, timedelta
+# import logging
+# import random
+# import re
+# import time
+# from datetime import datetime, timedelta
 
-import scrapy
-import undetected_chromedriver as uc
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+# import scrapy
+# import undetected_chromedriver as uc
+# from selenium.common.exceptions import NoSuchElementException, TimeoutException
+# from selenium.webdriver.common.by import By
+# from selenium.webdriver.support import expected_conditions as EC
+# from selenium.webdriver.support.ui import WebDriverWait
 
-from ..items import JobItem
-from ..utils import get_chrome_version
+# from ..items import JobItem
+# from ..utils import get_chrome_version
 
-# Suppress verbose Selenium and urllib3 logs
-logging.getLogger("selenium").setLevel(logging.WARNING)
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-logging.getLogger("selenium.webdriver.remote.remote_connection").setLevel(
-    logging.WARNING
-)
-logger = logging.getLogger(__name__)
+# # Suppress verbose Selenium and urllib3 logs
+# logging.getLogger("selenium").setLevel(logging.WARNING)
+# logging.getLogger("urllib3").setLevel(logging.WARNING)
+# logging.getLogger("selenium.webdriver.remote.remote_connection").setLevel(
+#     logging.WARNING
+# )
+# logger = logging.getLogger(__name__)
 
 
-class VietnamworksSpider(scrapy.Spider):
-    name = "vietnamworks"
-    allowed_domains = ["vietnamworks.com"]
-    custom_settings = {
-        "CONCURRENT_REQUESTS": 1,
-    }
+# class VietnamworksSpider(scrapy.Spider):
+#     name = "vietnamworks"
+#     allowed_domains = ["vietnamworks.com"]
+#     custom_settings = {
+#         "CONCURRENT_REQUESTS": 1,
+#     }
 
-    def __init__(self, keyword=None):
-        self.keyword = keyword or "data analyst"
-        self._max_page = 1
-        self._processed_urls = set()
-        self._driver = None
-        self._init_selenium_driver()
+#     def __init__(self, keyword=None):
+#         self.keyword = keyword or "data analyst"
+#         self._max_page = 1
+#         self._processed_urls = set()
+#         self._driver = None
+#         self._init_selenium_driver()
 
-    def _init_selenium_driver(self):
-        """Initialize undetected-chromedriver for URL collection"""
-        options = uc.ChromeOptions()
-        options.add_argument("--headless")
-        options.add_argument("--window-size=1920,1080")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36")
+#     def _init_selenium_driver(self):
+#         """Initialize undetected-chromedriver for URL collection"""
+#         options = uc.ChromeOptions()
+#         options.add_argument("--headless")
+#         options.add_argument("--window-size=1920,1080")
+#         options.add_argument("--no-sandbox")
+#         options.add_argument("--disable-dev-shm-usage")
+#         options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36")
         
-        try:
-            chrome_version = get_chrome_version()
-            self._driver = uc.Chrome(
-                options=options,
-                version_main=chrome_version,
-                headless=True,
-                use_subprocess=True
-            )
-            logger.info("undetected-chromedriver initialized successfully for VietnamWorks")
-        except Exception as e:
-            logger.error(f"Failed to initialize undetected-chromedriver: {e}")
-            raise
+#         try:
+#             chrome_version = get_chrome_version()
+#             self._driver = uc.Chrome(
+#                 options=options,
+#                 version_main=chrome_version,
+#                 headless=True,
+#                 use_subprocess=True
+#             )
+#             logger.info("undetected-chromedriver initialized successfully for VietnamWorks")
+#         except Exception as e:
+#             logger.error(f"Failed to initialize undetected-chromedriver: {e}")
+#             raise
 
-    def start_requests(self):
-        """Use Selenium to collect all job URLs, then yield Scrapy requests for parsing"""
-        while True:
-            try:
-                base_url = "https://www.vietnamworks.com/viec-lam"
-                search_url = f"{base_url}?q={self.keyword.replace(' ', '-')}"
-                self._driver.get(search_url)
+#     def start_requests(self):
+#         """Use Selenium to collect all job URLs, then yield Scrapy requests for parsing"""
+#         while True:
+#             try:
+#                 base_url = "https://www.vietnamworks.com/viec-lam"
+#                 search_url = f"{base_url}?q={self.keyword.replace(' ', '-')}"
+#                 self._driver.get(search_url)
 
-                # Wait for initial page load
-                WebDriverWait(self._driver, 15).until(
-                    lambda d: d.execute_script("return document.readyState")
-                    == "complete"
-                )
+#                 # Wait for initial page load
+#                 WebDriverWait(self._driver, 15).until(
+#                     lambda d: d.execute_script("return document.readyState")
+#                     == "complete"
+#                 )
 
-                # Wait for job listings to appear
-                try:
-                    WebDriverWait(self._driver, 10).until(
-                        EC.presence_of_element_located(
-                            (By.CSS_SELECTOR, 'a[href*="-jv?"]')
-                        )
-                    )
-                except TimeoutException:
-                    logger.warning(
-                        "No job listings found with primary selector, trying alternatives"
-                    )
+#                 # Wait for job listings to appear
+#                 try:
+#                     WebDriverWait(self._driver, 10).until(
+#                         EC.presence_of_element_located(
+#                             (By.CSS_SELECTOR, 'a[href*="-jv?"]')
+#                         )
+#                     )
+#                 except TimeoutException:
+#                     logger.warning(
+#                         "No job listings found with primary selector, trying alternatives"
+#                     )
 
-                current_page = 1
+#                 current_page = 1
 
-                while current_page <= self._max_page:
-                    # Scroll to load all content on current page
-                    self._scroll_to_load_content()
+#                 while current_page <= self._max_page:
+#                     # Scroll to load all content on current page
+#                     self._scroll_to_load_content()
 
-                    # Extract job URLs from current page
-                    page_urls = self._extract_job_urls_from_page()
+#                     # Extract job URLs from current page
+#                     page_urls = self._extract_job_urls_from_page()
 
-                    logger.info(f"Page {current_page}: Found {len(page_urls)} URLs")
+#                     logger.info(f"Page {current_page}: Found {len(page_urls)} URLs")
 
-                    for url in page_urls:
-                        if url not in self._processed_urls:
-                            self._processed_urls.add(url)
-                            yield scrapy.Request(
-                                url=url,
-                                callback=self.parse_job_detail,
-                                meta={"keyword": self.keyword},
-                            )
+#                     for url in page_urls:
+#                         if url not in self._processed_urls:
+#                             self._processed_urls.add(url)
+#                             yield scrapy.Request(
+#                                 url=url,
+#                                 callback=self.parse_job_detail,
+#                                 meta={"keyword": self.keyword},
+#                             )
 
-                    # Try to go to next page
-                    if not self._go_to_next_page():
-                        logger.info("No more pages available")
-                        break
+#                     # Try to go to next page
+#                     if not self._go_to_next_page():
+#                         logger.info("No more pages available")
+#                         break
 
-                    current_page += 1
-                    time.sleep(2)  # Brief pause between pages
+#                     current_page += 1
+#                     time.sleep(2)  # Brief pause between pages
 
-                # If we reach here, everything executed successfully, break the loop
-                break
+#                 # If we reach here, everything executed successfully, break the loop
+#                 break
 
-            except Exception as e:
-                logger.error(f"Error collecting job URLs with Selenium: {e}")
-                logger.info("Retrying start_requests...")
-                time.sleep(5)
+#             except Exception as e:
+#                 logger.error(f"Error collecting job URLs with Selenium: {e}")
+#                 logger.info("Retrying start_requests...")
+#                 time.sleep(5)
 
-    def closed(self, reason):
-        """Called when the spider is closed by Scrapy - clean up Selenium driver"""
-        try:
-            self._cleanup_driver()
-        except Exception as e:
-            logger.error(f"Error during driver cleanup on close: {e}")
+#     def closed(self, reason):
+#         """Called when the spider is closed by Scrapy - clean up Selenium driver"""
+#         try:
+#             self._cleanup_driver()
+#         except Exception as e:
+#             logger.error(f"Error during driver cleanup on close: {e}")
 
-    def parse_job_detail(self, response):
-        """Parse job detail page and yield JobItem to Scrapy pipeline"""
-        try:
-            # Render detail page with Selenium so hidden sections (e.g. after "Xem thêm") are visible
-            self._driver.get(response.url)
+#     def parse_job_detail(self, response):
+#         """Parse job detail page and yield JobItem to Scrapy pipeline"""
+#         try:
+#             # Render detail page with Selenium so hidden sections (e.g. after "Xem thêm") are visible
+#             self._driver.get(response.url)
 
-            # Wait for page ready
-            WebDriverWait(self._driver, 10).until(
-                lambda d: d.execute_script("return document.readyState") == "complete"
-            )
+#             # Wait for page ready
+#             WebDriverWait(self._driver, 10).until(
+#                 lambda d: d.execute_script("return document.readyState") == "complete"
+#             )
 
-            # Try to expand hidden content
-            try:
-                xem_them_btn = WebDriverWait(self._driver, 3).until(
-                    EC.element_to_be_clickable(
-                        (By.CSS_SELECTOR, "button[aria-label='Xem thêm']")
-                    )
-                )
-                xem_them_btn.click()
-                time.sleep(0.7)  # allow content to render
-            except TimeoutException:
-                pass
+#             # Try to expand hidden content
+#             try:
+#                 xem_them_btn = WebDriverWait(self._driver, 3).until(
+#                     EC.element_to_be_clickable(
+#                         (By.CSS_SELECTOR, "button[aria-label='Xem thêm']")
+#                     )
+#                 )
+#                 xem_them_btn.click()
+#                 time.sleep(0.7)  # allow content to render
+#             except TimeoutException:
+#                 pass
 
-            # Rebuild response with rendered HTML
-            rendered_response = response.replace(body=self._driver.page_source)
+#             # Rebuild response with rendered HTML
+#             rendered_response = response.replace(body=self._driver.page_source)
 
-            # Extract job data using rendered content
-            item = self._extract_job_data_from_response(rendered_response)
-            if item:
-                yield item
+#             # Extract job data using rendered content
+#             item = self._extract_job_data_from_response(rendered_response)
+#             if item:
+#                 yield item
 
-        except Exception as e:
-            logger.error(f"Error in parse_job_detail for {response.url}: {e}")
+#         except Exception as e:
+#             logger.error(f"Error in parse_job_detail for {response.url}: {e}")
 
-    def _extract_job_data_from_response(self, response):
-        """Extract job data using Scrapy selectors (faster than Selenium)"""
-        item = JobItem()
+#     def _extract_job_data_from_response(self, response):
+#         """Extract job data using Scrapy selectors (faster than Selenium)"""
+#         item = JobItem()
         
-        try:
-            # Job Title
-            item["job_title"] = response.css("h1[name='title']::text").get()
+#         try:
+#             # Job Title
+#             item["job_title"] = response.css("h1[name='title']::text").get()
 
-            # Company Name
-            item["company_name"] = response.css("a[href*='nha-tuyen-dung']::text").get()
+#             # Company Name
+#             item["company_name"] = response.css("a[href*='nha-tuyen-dung']::text").get()
 
-            # Salary
-            item["salary"] = response.css("span[class*='cVbwLK']::text").get()
+#             # Salary
+#             item["salary"] = response.css("span[class*='cVbwLK']::text").get()
 
-            # Location
-            item["location"] = response.css("div[class*='ebdjLi'] span::text").get()
+#             # Location
+#             item["location"] = response.css("div[class*='ebdjLi'] span::text").get()
 
-            # Job Type
-            item["job_type"] = self._get_text_by_label(response, "LOẠI HÌNH LÀM VIỆC")
+#             # Job Type
+#             item["job_type"] = self._get_text_by_label(response, "LOẠI HÌNH LÀM VIỆC")
 
-            # Experience Level
-            experience_raw = self._get_text_by_label(response, "SỐ NĂM KINH NGHIỆM TỐI THIỂU")
-            item["experience_level"] = f"{experience_raw} năm" if experience_raw else None
+#             # Experience Level
+#             experience_raw = self._get_text_by_label(response, "SỐ NĂM KINH NGHIỆM TỐI THIỂU")
+#             item["experience_level"] = f"{experience_raw} năm" if experience_raw else None
 
-            # Education Level
-            item["education_level"] = self._get_text_by_label(response, "TRÌNH ĐỘ HỌC VẤN TỐI THIỂU")
+#             # Education Level
+#             item["education_level"] = self._get_text_by_label(response, "TRÌNH ĐỘ HỌC VẤN TỐI THIỂU")
 
-            # Job Description
-            item["job_description"] = self._get_text_by_label(response, "Mô tả công việc")
+#             # Job Description
+#             item["job_description"] = self._get_text_by_label(response, "Mô tả công việc")
 
-            # Job Industry
-            item["job_industry"] = self._get_text_by_label(response, "LĨNH VỰC")
+#             # Job Industry
+#             item["job_industry"] = self._get_text_by_label(response, "LĨNH VỰC")
 
-            # Job Position
-            item["job_position"] = self._get_text_by_label(response, "CẤP BẬC")
+#             # Job Position
+#             item["job_position"] = self._get_text_by_label(response, "CẤP BẬC")
 
-            # Job Deadline
-            job_deadline_text = response.xpath("//span[contains(text(), 'Hết hạn trong')]//text()").get()
-            if job_deadline_text:
-                match = re.search(r"\d+", job_deadline_text)
-                number_in_text = int(match.group()) if match else 0
-                if "ngày" in job_deadline_text:
-                    item["job_deadline"] = (
-                        datetime.now() + timedelta(days=number_in_text)
-                    ).strftime("%Y-%m-%d")
-                else:
-                    item["job_deadline"] = (
-                        datetime.now() + timedelta(days=number_in_text * 30)
-                    ).strftime("%Y-%m-%d")
+#             # Job Deadline
+#             job_deadline_text = response.xpath("//span[contains(text(), 'Hết hạn trong')]//text()").get()
+#             if job_deadline_text:
+#                 match = re.search(r"\d+", job_deadline_text)
+#                 number_in_text = int(match.group()) if match else 0
+#                 if "ngày" in job_deadline_text:
+#                     item["job_deadline"] = (
+#                         datetime.now() + timedelta(days=number_in_text)
+#                     ).strftime("%Y-%m-%d")
+#                 else:
+#                     item["job_deadline"] = (
+#                         datetime.now() + timedelta(days=number_in_text * 30)
+#                     ).strftime("%Y-%m-%d")
 
-            # Requirements
-            item["requirements"] = self._get_text_by_label(response, "Yêu cầu")
+#             # Requirements
+#             item["requirements"] = self._get_text_by_label(response, "Yêu cầu")
 
-            # Benefits
-            benefits_section = response.xpath("//h2[contains(@class, 'sc-ab270149-0') and contains(@class, 'iJCYCD') and contains(text(), 'phúc lợi')]/following-sibling::*//text()").getall()
-            item["benefits"] = " ".join([t.strip() for t in benefits_section if t.strip()]) if benefits_section else None
+#             # Benefits
+#             benefits_section = response.xpath("//h2[contains(@class, 'sc-ab270149-0') and contains(@class, 'iJCYCD') and contains(text(), 'phúc lợi')]/following-sibling::*//text()").getall()
+#             item["benefits"] = " ".join([t.strip() for t in benefits_section if t.strip()]) if benefits_section else None
 
-            # Metadata
-            item["source_site"] = "vietnamworks.com"
-            item["job_url"] = response.url
-            item["search_keyword"] = self.keyword
-            item["scraped_at"] = datetime.now().isoformat()
+#             # Metadata
+#             item["source_site"] = "vietnamworks.com"
+#             item["job_url"] = response.url
+#             item["search_keyword"] = self.keyword
+#             item["scraped_at"] = datetime.now().isoformat()
 
-            # Clean up all fields
-            for key in item.fields:
-                if key in item and isinstance(item[key], str):
-                    item[key] = item[key].strip()
+#             # Clean up all fields
+#             for key in item.fields:
+#                 if key in item and isinstance(item[key], str):
+#                     item[key] = item[key].strip()
 
-            return item
+#             return item
 
-        except Exception as e:
-            logger.error(f"Error extracting job data with Scrapy for {response.url}: {e}")
-            return None
+#         except Exception as e:
+#             logger.error(f"Error extracting job data with Scrapy for {response.url}: {e}")
+#             return None
 
-    def _get_text_by_label(self, response, label_text):
-        """Find element by text and get the text of the following element"""
-        try:
-            # Similar logic to _get_text_by_xpath_text but for Scrapy response
-            xpath = f"//*[contains(normalize-space(.), '{label_text}')]/following::*[1]//text()"
-            texts = response.xpath(xpath).getall()
-            if texts:
-                return " ".join([t.strip() for t in texts if t.strip()]).strip()
-        except Exception:
-            pass
-        return None
+#     def _get_text_by_label(self, response, label_text):
+#         """Find element by text and get the text of the following element"""
+#         try:
+#             # Similar logic to _get_text_by_xpath_text but for Scrapy response
+#             xpath = f"//*[contains(normalize-space(.), '{label_text}')]/following::*[1]//text()"
+#             texts = response.xpath(xpath).getall()
+#             if texts:
+#                 return " ".join([t.strip() for t in texts if t.strip()]).strip()
+#         except Exception:
+#             pass
+#         return None
 
-    def _scroll_to_load_content(self, scroll_incre=1000):
-        """Scroll down to load dynamic content gradually like a human"""
-        try:
-            # Get initial page height
-            last_height = self._driver.execute_script(
-                "return document.body.scrollHeight"
-            )
+#     def _scroll_to_load_content(self, scroll_incre=1000):
+#         """Scroll down to load dynamic content gradually like a human"""
+#         try:
+#             # Get initial page height
+#             last_height = self._driver.execute_script(
+#                 "return document.body.scrollHeight"
+#             )
 
-            # Scroll down gradually
-            current_position = 0
-            while current_position < last_height:
-                # Scroll down by increment
-                current_position += scroll_incre
-                self._driver.execute_script(f"window.scrollTo(0, {current_position});")
+#             # Scroll down gradually
+#             current_position = 0
+#             while current_position < last_height:
+#                 # Scroll down by increment
+#                 current_position += scroll_incre
+#                 self._driver.execute_script(f"window.scrollTo(0, {current_position});")
 
-                # Random delay between 0.5-1.5 seconds to mimic human behavior
-                time.sleep(random.uniform(0.5, 1.5))
+#                 # Random delay between 0.5-1.5 seconds to mimic human behavior
+#                 time.sleep(random.uniform(0.5, 1.5))
 
-                # Check if new content loaded
-                new_height = self._driver.execute_script(
-                    "return document.body.scrollHeight"
-                )
-                if new_height > last_height:
-                    last_height = new_height
+#                 # Check if new content loaded
+#                 new_height = self._driver.execute_script(
+#                     "return document.body.scrollHeight"
+#                 )
+#                 if new_height > last_height:
+#                     last_height = new_height
 
-                # If we've reached the bottom, wait a bit for any lazy loading
-                if current_position >= last_height:
-                    time.sleep(2)
-                    # Check one more time for new content
-                    final_height = self._driver.execute_script(
-                        "return document.body.scrollHeight"
-                    )
-                    if final_height > last_height:
-                        last_height = final_height
-                    else:
-                        break
+#                 # If we've reached the bottom, wait a bit for any lazy loading
+#                 if current_position >= last_height:
+#                     time.sleep(2)
+#                     # Check one more time for new content
+#                     final_height = self._driver.execute_script(
+#                         "return document.body.scrollHeight"
+#                     )
+#                     if final_height > last_height:
+#                         last_height = final_height
+#                     else:
+#                         break
 
-        except Exception as e:
-            logger.warning(f"Error during scrolling: {e}")
+#         except Exception as e:
+#             logger.warning(f"Error during scrolling: {e}")
 
-    def _extract_job_urls_from_page(self):
-        """Extract job URLs from current page using multiple selectors"""
-        job_urls = set()
+#     def _extract_job_urls_from_page(self):
+#         """Extract job URLs from current page using multiple selectors"""
+#         job_urls = set()
 
-        try:
-            selector = self._driver.find_elements(By.CSS_SELECTOR, 'a[href*="-jv?"]')
-            for link in selector:
-                href = link.get_attribute("href")
-                if href:
-                    job_urls.add(href)
+#         try:
+#             selector = self._driver.find_elements(By.CSS_SELECTOR, 'a[href*="-jv?"]')
+#             for link in selector:
+#                 href = link.get_attribute("href")
+#                 if href:
+#                     job_urls.add(href)
 
-        except Exception as e:
-            logger.error(f"Error extracting job URLs from page: {e}")
+#         except Exception as e:
+#             logger.error(f"Error extracting job URLs from page: {e}")
 
-        return list(job_urls)
+#         return list(job_urls)
 
-    def _go_to_next_page(self):
-        """Navigate to next page, return True if successful"""
-        try:
-            xpath_next = "//ul[contains(@class, 'pagination')]//li[contains(@class, 'btn-default')]//button[text()='>']"
+#     def _go_to_next_page(self):
+#         """Navigate to next page, return True if successful"""
+#         try:
+#             xpath_next = "//ul[contains(@class, 'pagination')]//li[contains(@class, 'btn-default')]//button[text()='>']"
 
-            # Đợi nút xuất hiện và có thể click được
-            next_button = WebDriverWait(self._driver, 7).until(
-                EC.element_to_be_clickable((By.XPATH, xpath_next))
-            )
+#             # Đợi nút xuất hiện và có thể click được
+#             next_button = WebDriverWait(self._driver, 7).until(
+#                 EC.element_to_be_clickable((By.XPATH, xpath_next))
+#             )
 
-            # Scroll xuống để đảm bảo nút nằm trong khung nhìn (tránh bị banner che)
-            self._driver.execute_script(
-                "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});",
-                next_button,
-            )
-            time.sleep(1)  # Chờ một chút sau khi scroll
+#             # Scroll xuống để đảm bảo nút nằm trong khung nhìn (tránh bị banner che)
+#             self._driver.execute_script(
+#                 "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});",
+#                 next_button,
+#             )
+#             time.sleep(1)  # Chờ một chút sau khi scroll
 
-            next_button.click()
-            logger.info("Successfully navigated to the next page.")
-            time.sleep(3)  # Chờ trang mới load
-            return True
+#             next_button.click()
+#             logger.info("Successfully navigated to the next page.")
+#             time.sleep(3)  # Chờ trang mới load
+#             return True
 
-        except (NoSuchElementException, TimeoutException):
-            logger.info(
-                "Next button not found or not clickable - might be on the last page."
-            )
-            return False
-        except Exception as e:
-            logger.warning(f"Error navigating to next page: {e}")
-            return False
+#         except (NoSuchElementException, TimeoutException):
+#             logger.info(
+#                 "Next button not found or not clickable - might be on the last page."
+#             )
+#             return False
+#         except Exception as e:
+#             logger.warning(f"Error navigating to next page: {e}")
+#             return False
 
-    def _cleanup_driver(self):
-        """Clean up Selenium driver"""
-        if self._driver:
-            try:
-                self._driver.quit()
-                logger.info("Selenium driver cleaned up successfully")
-            except Exception as e:
-                logger.error(f"Error cleaning up driver: {e}")
-            finally:
-                self._driver = None
+#     def _cleanup_driver(self):
+#         """Clean up Selenium driver"""
+#         if self._driver:
+#             try:
+#                 self._driver.quit()
+#                 logger.info("Selenium driver cleaned up successfully")
+#             except Exception as e:
+#                 logger.error(f"Error cleaning up driver: {e}")
+#             finally:
+#                 self._driver = None
