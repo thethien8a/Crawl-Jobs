@@ -191,24 +191,61 @@ class PostgreSQLPipeline:
             "password": settings.get("POSTGRES_PASSWORD"),
         }
 
-        # Thử kết nối ngay khi khởi tạo
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls()
+
+    def open_spider(self, spider):
+        """Khi spider bắt đầu: Mở kết nối database"""
+        self._connect_to_db()
+
+    def _connect_to_db(self):
+        """Logic kết nối database tập trung để dễ dàng reconnect"""
         try:
+            # Đóng kết nối cũ nếu còn để dọn dẹp tài nguyên
+            if self.cursor:
+                try:
+                    self.cursor.close()
+                except:
+                    pass
+            if self.conn:
+                try:
+                    self.conn.close()
+                except:
+                    pass
+
             self.conn = psycopg2.connect(**self.db_params)
             self.conn.autocommit = False  # TẮT autocommit để sử dụng batch insert
             self.cursor = self.conn.cursor()
             logger.info(f"Connected to PostgreSQL successfully. Batch size: {self.batch_size}")
+
             self._create_table_if_not_exists(self.cursor)
             self.conn.commit()  # Commit sau khi tạo bảng
+            return True
         except psycopg2.Error as e:
             logger.error(f"Error connecting to PostgreSQL: {e}")
-            if self.conn:
-                self.conn.rollback()
             self.conn = None
             self.cursor = None
+            return False
 
-    @classmethod
-    def from_crawler(cls, crawler):
-        return cls()
+    def _ensure_connection(self):
+        """Kiểm tra kết nối và tự động reconnect nếu cần"""
+        # Kiểm tra xem connection/cursor có tồn tại và chưa bị đóng không
+        is_alive = True
+        if self.conn is None or self.cursor is None or self.conn.closed:
+            is_alive = False
+        else:
+            # Thử ping nhẹ để check nếu connection còn sống thực sự (tránh timeout)
+            try:
+                self.cursor.execute("SELECT 1")
+            except (psycopg2.OperationalError, psycopg2.InterfaceError):
+                is_alive = False
+
+        if not is_alive:
+            logger.info("Database connection lost or stale. Attempting to reconnect...")
+            return self._connect_to_db()
+
+        return True
 
     def _create_table_if_not_exists(self, cursor):
         # 1. Tạo bảng staging_jobs
@@ -254,10 +291,6 @@ class PostgreSQLPipeline:
         Thêm item vào buffer.
         Khi buffer đầy (đủ batch_size) → Flush toàn bộ buffer vào database.
         """
-        if not self.conn or not self.cursor:
-            logger.error("Database connection not available. Skipping item.")
-            return item
-
         adapter = ItemAdapter(item)
 
         # Bỏ qua item cần quarantine
@@ -303,6 +336,15 @@ class PostgreSQLPipeline:
         if not self.items_buffer:
             return  # Không có gì để insert
 
+        # Đảm bảo kết nối còn sống trước khi flush
+        if not self._ensure_connection():
+            logger.error(
+                f"Failed to flush {len(self.items_buffer)} items: Database connection lost."
+            )
+            # Clear buffer để tránh treo memory nếu DB chết hẳn
+            self.items_buffer.clear()
+            return
+
         insert_sql = """
         INSERT INTO staging_jobs (
             job_title, company_name, salary, location, job_type, job_industry,
@@ -328,7 +370,13 @@ class PostgreSQLPipeline:
 
         except psycopg2.Error as e:
             logger.error(f"Error batch inserting items to PostgreSQL: {e}")
-            self.conn.rollback()  # Rollback nếu có lỗi
+            # Thử rollback, nếu lỗi kết nối thì bỏ qua tránh crash dây chuyền
+            try:
+                if self.conn and not self.conn.closed:
+                    self.conn.rollback()
+            except Exception as rollback_err:
+                logger.warning(f"Failed to rollback after insertion error: {rollback_err}")
+
             self.items_buffer.clear()
 
     def close_spider(self, spider):

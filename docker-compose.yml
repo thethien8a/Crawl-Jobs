@@ -1,0 +1,79 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  webserver:
+    build: .
+    command: api-server
+    depends_on:
+      - postgres
+    environment:
+      - LOAD_EX=n
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+    env_file:
+      - ./.env
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./CrawlJob:/opt/airflow/CrawlJob
+      - ./scripts:/opt/airflow/scripts
+      - ./config:/opt/airflow/config
+      - ./scripts/transform/profiles:/home/airflow/.dbt
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  scheduler:
+    build: .
+    command: scheduler
+    depends_on:
+      - postgres
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+    env_file:
+      - ./.env
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./CrawlJob:/opt/airflow/CrawlJob
+      - ./scripts:/opt/airflow/scripts
+      - ./config:/opt/airflow/config
+      - ./scripts/transform/profiles:/home/airflow/.dbt
+
+  airflow-init:
+    build: .
+    depends_on:
+      - postgres
+    entrypoint: /bin/bash
+    command: -c "airflow db migrate && airflow users create --username admin --firstname admin --lastname admin --role Admin --email admin@example.com --password admin || true"
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+    env_file:
+      - ./.env
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./CrawlJob:/opt/airflow/CrawlJob
+      - ./scripts:/opt/airflow/scripts
+      - ./config:/opt/airflow/config
+      - ./scripts/transform/profiles:/home/airflow/.dbt
+
+volumes:
+  postgres_data:

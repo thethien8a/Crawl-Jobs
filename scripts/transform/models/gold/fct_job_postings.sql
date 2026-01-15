@@ -40,7 +40,6 @@ final as (
         -- Basic Info
         job_title,
         job_url,
-        job_deadline,
         
         -- Metrics
         min_monthly_salary,
@@ -73,8 +72,7 @@ final as (
         has_training_growth_benefits,
         has_lifestyle_culture_benefits,
         
-        source_site,
-        scraped_at as posted_at
+        source_site
     from silver_jobs
 )
 
