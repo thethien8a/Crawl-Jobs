@@ -1,67 +1,154 @@
-# Job Crawling & Analytics Data Pipeline Plan
+# CrawlJob — End-to-End Job Market Data Pipeline
 
-## 1. Tổng quan dự án (Project Overview)
-Dự án xây dựng hệ thống thu thập dữ liệu việc làm (Job Crawling), làm sạch và chuẩn hóa để phục vụ hai mục đích chính:
-1.  **Web App Job Search**: Cung cấp API dữ liệu sạch, chuẩn hóa cho ứng dụng tìm kiếm việc làm.
-2.  **Analytics Dashboard**: Cung cấp dữ liệu mô hình Dim/Fact để phân tích xu hướng thị trường lao động.
+> Thu thập dữ liệu tuyển dụng đa nguồn bằng Scrapy, chuẩn hóa bằng dbt theo Medallion, và điều phối bằng Airflow.
 
-## 2. Kiến trúc dữ liệu (Data Architecture)
-Dự án sử dụng kiến trúc **ELT (Extract - Load - Transform)** tập trung hoàn toàn trên **Supabase (PostgreSQL)**.
+## Tổng quan
+CrawlJob là pipeline ETL dành cho thị trường tuyển dụng Việt Nam, tập trung vào:
+- Crawl dữ liệu từ nhiều nền tảng tuyển dụng (Scrapy + Selenium/undetected-chromedriver)
+- Lưu dữ liệu thô vào PostgreSQL (staging) và tách dữ liệu lỗi (quarantine)
+- Chuẩn hóa, kiểm thử và mô hình hóa dữ liệu bằng dbt
+- Giám sát chất lượng dữ liệu với Elementary + báo cáo HTML
+- Phục vụ BI qua Power BI dashboard
 
-### Mô hình Medallion (Bronze -> Silver -> Gold)
-Dữ liệu sẽ được tổ chức thành 3 tầng (Schemas) riêng biệt trong cùng một Database Supabase:
+## Kiến trúc tổng thể
 
-| Tầng (Layer) | Schema Name | Vai trò | Mô tả |
-| :--- | :--- | :--- | :--- |
-| **Bronze** | `raw_data` | **Raw / Staging** | Chứa dữ liệu thô nguyên bản từ Scrapy. Chấp nhận duplicate, null, lỗi format. Là nơi đổ dữ liệu đầu vào. |
-| **Silver** | `app_layer` | **Clean / Serving** | Dữ liệu đã được làm sạch, deduplicate, chuẩn hóa (lương, địa điểm, kỹ năng). **Dùng cho Web App API**. |
-| **Gold** | `analytics_dw` | **Analytics / Mart** | Dữ liệu được mô hình hóa dạng **Star Schema** (Dim/Fact). Tối ưu cho truy vấn báo cáo. **Dùng cho Dashboard**. |
-
-## 3. Công nghệ sử dụng (Tech Stack)
-
-*   **Ingestion (Thu thập):** Python Scrapy.
-*   **Data Warehouse:** Supabase (PostgreSQL).
-*   **Transformation (Biến đổi):** **dbt (data build tool)**.
-*   **Orchestration (Điều phối):** Airflow (điều phối chỉnh) và GitHub Actions (chỉ để chạy scripts thu thập dữ liệu định kỳ)
-*   **Visualization:** PowerBI 
-
-## 4. Chi tiết triển khai (Implementation Plan)
-
-### Bước 1: Thiết lập Database (Supabase)
-Tạo các schema cần thiết để phân tách dữ liệu:
-```sql
-CREATE SCHEMA IF NOT EXISTS raw_data;
-CREATE SCHEMA IF NOT EXISTS app_layer;
-CREATE SCHEMA IF NOT EXISTS analytics_dw;
+```mermaid
+flowchart LR
+  A[Scrapy Spiders] --> B[(PostgreSQL: staging_jobs)]
+  A --> C[(PostgreSQL: quarantine_jobs)]
+  B --> D[dbt Transform: Silver/Gold]
+  D --> E[Power BI Dashboard]
+  B --> F[dbt Tests + Elementary]
+  F --> G[Elementary Report HTML]
+  B --> H[Quality Check Report HTML]
 ```
 
-### Bước 2: Ingestion (Scrapy -> Raw)
-*   Spider cào dữ liệu và lưu vào bảng trong schema `raw_data` (ví dụ: `raw_data.jobs_raw`).
-*   Giữ nguyên logic cào hiện tại, chỉ thay đổi đích đến là bảng raw.
+## Tech Stack
+- **Scraping:** Scrapy, Selenium, undetected-chromedriver
+- **Orchestration:** Apache Airflow 2.9.3 (Docker)
+- **Transform & Test:** dbt-postgres 1.9.1, Elementary 0.20.1
+- **Storage:** PostgreSQL 15
+- **BI:** Power BI (`dashboard/analysis_dashboard.pbix`)
 
-### Bước 3: Transformation (dbt)
-Sử dụng **dbt** để quản lý toàn bộ logic biến đổi SQL.
+## Cấu trúc thư mục chính
+```
+CrawlJob/                 # Scrapy project (spiders, items, pipelines)
+airflow/dags/             # DAG orchestration
+scripts/extract_and_load/ # Run spider (CLI)
+scripts/transform/        # dbt project (silver, gold, tests)
+scripts/quality_check/    # Quality check report (HTML)
+dashboard/                # Power BI + HTML reports
+config/                   # SQL scripts + paths
+```
 
-#### 3.1. Bronze to Silver (Raw -> App)
-*   **Mục tiêu:** Làm sạch dữ liệu để Web App sử dụng.
-*   **Các tác vụ:**
-    *   **Deduplication:** Loại bỏ tin tuyển dụng trùng lặp (dựa trên URL hoặc Title + Company).
-    *   **Standardization:**
-        *   Lương: Parse text "10-20 triệu" -> `min_salary: 10000000`, `max_salary: 20000000`.
-        *   Địa điểm: Map "TP.HCM", "Hồ Chí Minh" -> "Ho Chi Minh".
-    *   **Validation:** Loại bỏ các bản ghi rác, thiếu thông tin quan trọng.
-*   **Output:** Bảng `app_layer.jobs`.
+## Dữ liệu & bảng chính
+- **`staging_jobs`**: dữ liệu thô sau crawl (dành cho dbt test/transform)
+- **`quarantine_jobs`**: dữ liệu lỗi, lưu JSON gốc để debug
 
-#### 3.2. Silver to Gold (App -> Analytics)
-*   **Mục tiêu:** Xây dựng Data Mart cho Dashboard.
-*   **Mô hình Star Schema:**
-    *   **Fact Table:** `analytics_dw.fact_job_posts` (Chứa các metric, khóa ngoại).
-    *   **Dimension Tables:**
-        *   `analytics_dw.dim_company` (Thông tin công ty).
-        *   `analytics_dw.dim_location` (Địa điểm).
-        *   `analytics_dw.dim_date` (Ngày tháng).
-        *   `analytics_dw.dim_industry` (Ngành nghề).
-        *   `analytics_dw.dim_skills` (Kỹ năng yêu cầu).
+**Một số trường chính**: `job_title`, `company_name`, `salary`, `location`, `job_type`, `job_industry`,
+`experience_level`, `education_level`, `job_position`, `job_description`, `requirements`, `benefits`,
+`job_deadline`, `source_site`, `job_url`, `search_keyword`, `scraped_at`.
 
-## 5. Phát triển tương lai:
-- Lấy thêm dữ liệu "quy mô công ty" (company size) từ các trang web: joboko, topcv, linkedin, 123job, careerlink, itviec
+## Thiết lập nhanh (2 lựa chọn)
+
+### Lựa chọn A — Docker + Airflow (khuyến nghị)
+**Ưu:** đầy đủ pipeline, tái lập dễ, chạy như production.  
+**Nhược:** tốn tài nguyên hơn.
+
+1) Tạo `.env` từ `env.example` và sửa lại thông tin kết nối:
+   - Nếu dùng `docker-compose.yml` mặc định, nên set:
+     - `POSTGRES_HOST=postgres`
+     - `POSTGRES_USER=airflow`
+     - `POSTGRES_PASSWORD=airflow`
+     - `POSTGRES_DB=airflow`
+
+2) Build & chạy:
+```
+docker-compose up -d --build
+```
+
+3) Truy cập Airflow UI: `http://localhost:8080`  
+Tài khoản mặc định: `admin / admin`
+
+### Lựa chọn B — Local (Scrapy + dbt)
+**Ưu:** nhanh, dễ debug.  
+**Nhược:** không có orchestration tự động.
+
+1) Tạo môi trường Python và cài dependencies:
+```
+python -m venv .venv
+.\.venv\Scripts\activate
+python -m pip install -r requirements.txt
+```
+
+2) Tạo `.env` (tối thiểu `POSTGRES_*` và các credential nếu cần)
+
+3) Chạy spider:
+```
+python -m scripts.extract_and_load.run_spider --spider topcv --keyword data
+```
+
+4) Chạy dbt:
+```
+cd scripts/transform
+dbt deps
+dbt test --select source:scrapy_raw.staging_jobs --profiles-dir profiles
+dbt run --select int_jobs_cleaned --profiles-dir profiles
+dbt test --select int_jobs_cleaned --profiles-dir profiles
+dbt run --select silver_jobs+ --profiles-dir profiles
+```
+
+## Chạy spider (CLI)
+```
+python -m scripts.extract_and_load.run_spider \
+  --spider <jobsgo|joboko|123job|careerviet|linkedin|topcv|itviec|careerlink|all|local_version|githubactions_version> \
+  --keyword data \
+  --output jobs.json
+```
+Gợi ý:
+- `local_version` mặc định chạy `linkedin` + `topcv`
+- `all` sẽ chạy toàn bộ các spider chính
+
+## Orchestration (Airflow DAG)
+DAG: `crawl_and_transform_pipeline`  
+Lịch chạy: `0 15 * * *` (15:00 hàng ngày, Asia/Ho_Chi_Minh)
+
+Chuỗi nhiệm vụ chính:
+1) Extract & Load (Scrapy)
+2) dbt test nguồn `staging_jobs`
+3) dbt run `int_jobs_cleaned`
+4) dbt test `int_jobs_cleaned`
+5) Quality check
+6) Elementary report
+7) dbt run `silver_jobs+`
+
+## Data Quality
+- **dbt tests:** khai báo trong `scripts/transform/models/sources.yml`
+- **Elementary report:** `scripts/transform/edr_target/elementary_report.html`
+- **HTML dashboard quality:** chạy:
+```
+python -m scripts.quality_check.staging_check
+```
+Kết quả ở: `dashboard/quality_check_report.html`
+
+## Dashboard
+- Power BI: `dashboard/analysis_dashboard.pbix`
+- Báo cáo chất lượng: `dashboard/quality_check_report.html`
+
+## Cấu hình môi trường (`.env`)
+Tham khảo `env.example`:
+```
+POSTGRES_HOST=...
+POSTGRES_PORT=...
+POSTGRES_DB=...
+POSTGRES_USER=...
+POSTGRES_PASSWORD=...
+ITVIEC_EMAIL=...
+ITVIEC_PASS=...
+LINKEDIN_EMAIL=...
+LINKEDIN_PASS=...
+```
+Khuyến nghị dùng account test để tránh rủi ro khóa tài khoản khi crawl.
+
+## License
+Xem `LICENSE`.
