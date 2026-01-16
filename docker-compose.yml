@@ -31,6 +31,9 @@ services:
       - ./scripts:/opt/airflow/scripts
       - ./config:/opt/airflow/config
       - ./scripts/transform/profiles:/home/airflow/.dbt
+      - ./scrapy.cfg:/opt/airflow/scrapy.cfg
+      - ./.env:/opt/airflow/.env
+      - ./scripts/quality_check:/opt/airflow/scripts/quality_check
     ports:
       - "8080:8080"
     healthcheck:
@@ -57,6 +60,9 @@ services:
       - ./scripts:/opt/airflow/scripts
       - ./config:/opt/airflow/config
       - ./scripts/transform/profiles:/home/airflow/.dbt
+      - ./scrapy.cfg:/opt/airflow/scrapy.cfg
+      - ./.env:/opt/airflow/.env
+      - ./scripts/quality_check:/opt/airflow/scripts/quality_check
 
   airflow-init:
     build: .
@@ -75,6 +81,7 @@ services:
       - ./scripts:/opt/airflow/scripts
       - ./config:/opt/airflow/config
       - ./scripts/transform/profiles:/home/airflow/.dbt
+      - ./scripts/quality_check:/opt/airflow/scripts/quality_check
 
 volumes:
   postgres_data:
