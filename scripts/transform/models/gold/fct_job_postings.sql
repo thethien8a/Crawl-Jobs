@@ -15,7 +15,7 @@
 with silver_jobs as (
     select * from {{ ref('silver_jobs') }}
     {% if is_incremental() %}
-    where scraped_at > (select max(posted_at) from {{ this }})
+    where scraped_at > (select max(date_key) from {{ this }})
     {% endif %}
 ),
 
