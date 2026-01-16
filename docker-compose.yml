@@ -10,9 +10,10 @@ services:
 
   webserver:
     build: .
-    command: api-server
+    command: webserver
     depends_on:
-      - postgres
+      airflow-init:
+        condition: service_completed_successfully
     environment:
       - LOAD_EX=n
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
@@ -42,7 +43,8 @@ services:
     build: .
     command: scheduler
     depends_on:
-      - postgres
+      airflow-init:
+        condition: service_completed_successfully
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
@@ -60,8 +62,7 @@ services:
     build: .
     depends_on:
       - postgres
-    entrypoint: /bin/bash
-    command: -c "airflow db migrate && airflow users create --username admin --firstname admin --lastname admin --role Admin --email admin@example.com --password admin || true"
+    command: bash -c "airflow db migrate && airflow users create --username admin --firstname admin --lastname admin --role Admin --email admin@example.com --password admin || true"
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
