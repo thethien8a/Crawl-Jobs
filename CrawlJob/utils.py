@@ -5,7 +5,9 @@ from selenium.webdriver.chrome.options import Options
 
 
 import logging
+import os
 import platform
+import shutil
 import subprocess
 
 
@@ -20,7 +22,7 @@ def get_chrome_version():
     Supports:
         - Windows (registry query)
         - macOS (Google Chrome.app)
-        - Linux (google-chrome --version)
+        - Linux (google-chrome/chromium --version)
     """
     system = platform.system()
     logger = logging.getLogger(__name__)
@@ -76,34 +78,25 @@ def get_chrome_version():
                 pass
         
         elif system == "Linux":
-            # Try google-chrome command
-            try:
-                output = subprocess.check_output(
-                    ['google-chrome', '--version'],
-                    stderr=subprocess.DEVNULL
-                ).decode('utf-8')
-                
-                # Extract major version from "Google Chrome 140.0.7339.208"
-                match = re.search(r'Google Chrome (\d+)\.', output)
-                if match:
-                    version = int(match.group(1))
-                    logger.info(f"Detected Chrome version: {version}")
-                    return version
-            except (subprocess.CalledProcessError, FileNotFoundError):
-                # Try chromium-browser as alternative
+            candidates = [
+                (['google-chrome', '--version'], r'Google Chrome (\d+)\.'),
+                (['google-chrome-stable', '--version'], r'Google Chrome (\d+)\.'),
+                (['chromium', '--version'], r'Chromium (\d+)\.'),
+                (['chromium-browser', '--version'], r'Chromium (\d+)\.'),
+            ]
+            for cmd, pattern in candidates:
                 try:
                     output = subprocess.check_output(
-                        ['chromium-browser', '--version'],
+                        cmd,
                         stderr=subprocess.DEVNULL
                     ).decode('utf-8')
-                    
-                    match = re.search(r'Chromium (\d+)\.', output)
+                    match = re.search(pattern, output)
                     if match:
                         version = int(match.group(1))
-                        logger.info(f"Detected Chromium version: {version}")
+                        logger.info(f"Detected Chrome/Chromium version: {version}")
                         return version
                 except (subprocess.CalledProcessError, FileNotFoundError):
-                    pass
+                    continue
         
         # If all methods fail
         logger.warning(f"Could not detect Chrome version on {system}. Will use undetected-chromedriver auto-detection.")
@@ -112,6 +105,58 @@ def get_chrome_version():
     except Exception as e:
         logger.error(f"Error detecting Chrome version: {e}")
         return None
+
+
+def get_chrome_binary_path():
+    """
+    Auto-detect Chrome/Chromium executable path.
+
+    Returns:
+        str: Path to Chrome/Chromium binary
+        None: If no binary is found
+    """
+    logger = logging.getLogger(__name__)
+
+    env_candidates = [
+        os.getenv("CHROME_BINARY"),
+        os.getenv("CHROME_BIN"),
+        os.getenv("CHROMIUM_BINARY"),
+        os.getenv("CHROMIUM_BIN"),
+    ]
+    for path in env_candidates:
+        if path and os.path.exists(path):
+            logger.info(f"Using Chrome binary from env: {path}")
+            return path
+
+    candidates = [
+        "chromium",
+        "chromium-browser",
+        "google-chrome",
+        "google-chrome-stable",
+        "chrome",
+        "google-chrome-beta",
+        "google-chrome-dev",
+    ]
+    for name in candidates:
+        path = shutil.which(name)
+        if path:
+            logger.info(f"Detected Chrome binary: {path}")
+            return path
+
+    known_paths = [
+        "/usr/bin/chromium",
+        "/usr/bin/chromium-browser",
+        "/usr/bin/google-chrome",
+        "/opt/google/chrome/google-chrome",
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    ]
+    for path in known_paths:
+        if os.path.exists(path):
+            logger.info(f"Detected Chrome binary: {path}")
+            return path
+
+    logger.warning("Could not locate Chrome/Chromium binary.")
+    return None
 
 
 def encode_input(search_word):

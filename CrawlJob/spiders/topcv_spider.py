@@ -16,7 +16,6 @@ class TopcvSpider(scrapy.Spider):
         "DOWNLOAD_DELAY": 6,
         "RANDOMIZE_DOWNLOAD_DELAY": True,
         "CONCURRENT_REQUESTS_PER_DOMAIN": 1,
-        "CONCURRENT_REQUESTS_PER_IP": 1,
         "AUTOTHROTTLE_ENABLED": True,
         "AUTOTHROTTLE_START_DELAY": 4,
         "AUTOTHROTTLE_MAX_DELAY": 75,

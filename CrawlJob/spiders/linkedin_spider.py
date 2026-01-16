@@ -16,7 +16,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from ..items import JobItem
-from ..utils import get_chrome_version
+from ..utils import get_chrome_version, get_chrome_binary_path
 
 logging.getLogger("selenium").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
@@ -65,24 +65,33 @@ class LinkedinSpider(scrapy.Spider):
         options.add_argument("--window-size=1920,1080")
 
         try:
+            chrome_bin = get_chrome_binary_path()
+            if chrome_bin:
+                self.logger.info(f"Using Chrome binary: {chrome_bin}")
+                options.binary_location = chrome_bin
+            else:
+                self.logger.warning(
+                    "Chrome binary not found in PATH; relying on uc auto-detection."
+                )
+
             # Auto-detect Chrome version to match ChromeDriver
             chrome_version = get_chrome_version()
+            uc_kwargs = {
+                "options": options,
+                "headless": True,
+                "use_subprocess": True,
+            }
             if chrome_version:
                 self.logger.info(f"Using Chrome version: {chrome_version}")
-                self.driver = uc.Chrome(
-                    options=options, 
-                    version_main=chrome_version,
-                    headless=True,
-                    use_subprocess=True
-                )
+                uc_kwargs["version_main"] = chrome_version
             else:
                 self.logger.info("Chrome version not detected, using auto-detection")
-                self.driver = uc.Chrome(
-                    options=options, 
-                    version_main=None,
-                    headless=True,
-                    use_subprocess=True
-                )
+                uc_kwargs["version_main"] = None
+
+            if chrome_bin:
+                uc_kwargs["browser_executable_path"] = chrome_bin
+
+            self.driver = uc.Chrome(**uc_kwargs)
             
             self.logger.info("undetected-chromedriver initialized successfully.")
         except Exception as e:
