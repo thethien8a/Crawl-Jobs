@@ -150,5 +150,7 @@ LINKEDIN_PASS=...
 ```
 Khuyến nghị dùng account test để tránh rủi ro khóa tài khoản khi crawl.
 
+## LƯU Ý
+- Folder .github/workflows/ chỉ dùng để chạy pipeline trên Github Actions, không dùng để chạy pipeline trên local. Tôi hiện vẫn giữ lại vì chưa có server để deploy pipeline.
 ## License
 Xem `LICENSE`.
