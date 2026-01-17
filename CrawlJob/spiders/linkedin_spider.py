@@ -54,15 +54,23 @@ class LinkedinSpider(scrapy.Spider):
 
     def _init_driver(self):
         """Initializes the undetected-chromedriver"""
+        os.environ["DBUS_SESSION_BUS_ADDRESS"] = "/dev/null"
+        
         options = uc.ChromeOptions()
-        # Setting headless=True is the correct way for undetected-chromedriver
-        options.add_argument("--headless")
+        options.add_argument("--headless=new")
         options.add_argument(
             f"--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
         )
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--single-process")
+        options.add_argument("--disable-setuid-sandbox")
+        options.add_argument("--remote-debugging-port=9222")
         options.add_argument("--window-size=1920,1080")
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("--disable-infobars")
+        options.add_argument("--disable-extensions")
 
         try:
             chrome_bin = get_chrome_binary_path()
@@ -74,7 +82,6 @@ class LinkedinSpider(scrapy.Spider):
                     "Chrome binary not found in PATH; relying on uc auto-detection."
                 )
 
-            # Auto-detect Chrome version to match ChromeDriver
             chrome_version = get_chrome_version()
             uc_kwargs = {
                 "options": options,
@@ -111,7 +118,10 @@ class LinkedinSpider(scrapy.Spider):
             return False
 
         self.driver.get("https://www.linkedin.com/login")
-        wait = WebDriverWait(self.driver, 20)
+        time.sleep(3)  # Wait for page to fully load
+        self.logger.info(f"Current URL after navigation: {self.driver.current_url}")
+        self.logger.info(f"Page title: {self.driver.title}")
+        wait = WebDriverWait(self.driver, 30)
 
         try:
             # Wait for login form to be ready
