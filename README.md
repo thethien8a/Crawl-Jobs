@@ -10,18 +10,6 @@ CrawlJob là pipeline ETL dành cho thị trường tuyển dụng Việt Nam, t
 - Giám sát chất lượng dữ liệu với Elementary + báo cáo HTML
 - Phục vụ BI qua Power BI dashboard
 
-## Kiến trúc tổng thể
-
-```mermaid
-flowchart LR
-  A[Scrapy Spiders] --> B[(PostgreSQL: staging_jobs)]
-  A --> C[(PostgreSQL: quarantine_jobs)]
-  B --> D[dbt Transform: Silver/Gold]
-  D --> E[Power BI Dashboard]
-  B --> F[dbt Tests + Elementary]
-  F --> G[Elementary Report HTML]
-  B --> H[Quality Check Report HTML]
-```
 
 ## Tech Stack
 - **Scraping:** Scrapy, Selenium, undetected-chromedriver
@@ -56,11 +44,12 @@ config/                   # SQL scripts + paths
 **Nhược:** tốn tài nguyên hơn.
 
 1) Tạo `.env` từ `env.example` và sửa lại thông tin kết nối:
-   - Nếu dùng `docker-compose.yml` mặc định, nên set:
+   - Ở project này, tôi có sử dụng Supabase để lưu trữ dữ liệu. Còn nếu các bạn không dùng Supabase thì có thể tận dụng PostgreSQL container đã có sẵn mà có cài đặt để lưu metadata cho airflow. Bạn có thể tận dụng nó để lưu dữ liệu cũng được với cấu hình như sau:
      - `POSTGRES_HOST=postgres`
      - `POSTGRES_USER=airflow`
      - `POSTGRES_PASSWORD=airflow`
-     - `POSTGRES_DB=airflow`
+     - `POSTGRES_DB=airflow`  
+   
 
 2) Build & chạy:
 ```
@@ -70,7 +59,7 @@ docker-compose up -d --build
 3) Truy cập Airflow UI: `http://localhost:8080`  
 Tài khoản mặc định: `admin / admin`
 
-### Lựa chọn B — Local (Scrapy + dbt)
+### Lựa chọn B — Local (Scrapy + dbt) (Không khuyến nghị nhưng vẫn có thể sử dụng)
 **Ưu:** nhanh, dễ debug.  
 **Nhược:** không có orchestration tự động.
 
@@ -111,7 +100,7 @@ Gợi ý:
 
 ## Orchestration (Airflow DAG)
 DAG: `crawl_and_transform_pipeline`  
-Lịch chạy: `0 15 * * *` (15:00 hàng ngày, Asia/Ho_Chi_Minh)
+Lịch chạy: `0 15 * * *` (15:00 hàng ngày, Asia/Ho_Chi_Minh) (Bạn có thể sửa lại lịch chạy theo nhu cầu của bạn)
 
 Chuỗi nhiệm vụ chính:
 1) Extract & Load (Scrapy)
@@ -136,7 +125,6 @@ Kết quả ở: `dashboard/quality_check_report.html`
 - Báo cáo chất lượng: `dashboard/quality_check_report.html`
 
 ## Cấu hình môi trường (`.env`)
-Tham khảo `env.example`:
 ```
 POSTGRES_HOST=...
 POSTGRES_PORT=...
@@ -148,9 +136,7 @@ ITVIEC_PASS=...
 LINKEDIN_EMAIL=...
 LINKEDIN_PASS=...
 ```
-Khuyến nghị dùng account test để tránh rủi ro khóa tài khoản khi crawl.
+Khuyến nghị dùng account test (account mới lập/không sử dụng) để tránh rủi ro khóa tài khoản khi crawl.
 
 ## LƯU Ý
 - Folder .github/workflows/ chỉ dùng để chạy pipeline trên Github Actions, không dùng để chạy pipeline trên local. Tôi hiện vẫn giữ lại vì chưa có server để deploy pipeline.
-## License
-Xem `LICENSE`.
