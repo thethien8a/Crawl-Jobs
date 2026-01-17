@@ -236,9 +236,7 @@ class TopcvSpider(scrapy.Spider):
                 else:
                     deadline = None
         else:
-            deadline = response.xpath(
-                "//i[contains(@class, 'fa-clock')]/following-sibling::span//text()"
-            ).get()
+            deadline = response.css('div[class="job-detail__info--deadline-date"]::text').get()
         item["job_deadline"] = deadline.strip() if deadline else None
         # Job description
         description = self._extract_paragraph(response, "Mô tả công việc")
@@ -262,7 +260,7 @@ class TopcvSpider(scrapy.Spider):
 
     def _extract_important_info_no_brand(self, response, label_text):
         text = response.xpath(
-            f'//*[contains(text(), "{label_text}") and contains(@class,"box-item--title")]/following-sibling::*[position()<=2]//text()'
+            f'//*[contains(text(), "{label_text}") and contains(@class,"box-general-group-info-title")]/following-sibling::*[position()<=2]//text()'
         ).getall()
         return " ".join([t.strip() for t in text if t.strip()])
 
