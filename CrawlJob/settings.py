@@ -64,9 +64,9 @@ CONCURRENT_REQUESTS = 16
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    # "CrawlJob.pipelines.ValidateItemPipeline": 200,
-    # "CrawlJob.pipelines.QuarantinePipeline": 250,
-    # "CrawlJob.pipelines.PostgreSQLPipeline": 300
+    "CrawlJob.pipelines.ValidateItemPipeline": 200,
+    "CrawlJob.pipelines.QuarantinePipeline": 250,
+    "CrawlJob.pipelines.PostgreSQLPipeline": 300
 }
 
 

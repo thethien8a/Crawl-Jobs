@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 
 import scrapy
 import undetected_chromedriver as uc
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, StaleElementReferenceException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -130,38 +130,56 @@ class VietnamworksSpider(scrapy.Spider):
             logger.error(f"Error during driver cleanup on close: {e}")
 
     def parse_job_detail(self, response):
-        """Parse job detail page and yield JobItem to Scrapy pipeline"""
-        try:
-            # Render detail page with Selenium so hidden sections (e.g. after "Xem thêm") are visible
-            self._driver.get(response.url)
-
-            # Wait for page ready
-            WebDriverWait(self._driver, 10).until(
-                lambda d: d.execute_script("return document.readyState") == "complete"
-            )
-
-            # Try to expand hidden content
+        """Parse job detail page and yield JobItem to Scrapy pipeline
+        
+        Includes retry logic to handle StaleElementReferenceException
+        """
+        max_retries = 2
+        
+        for attempt in range(max_retries):
             try:
-                xem_them_btn = WebDriverWait(self._driver, 3).until(
-                    EC.element_to_be_clickable(
-                        (By.CSS_SELECTOR, "button[aria-label='Xem thêm']")
-                    )
+                if not self._driver:
+                    logger.error("Driver not initialized")
+                    return
+                    
+                # Render detail page with Selenium
+                self._driver.get(response.url)
+
+                # Wait for page ready
+                WebDriverWait(self._driver, 10).until(
+                    lambda d: d.execute_script("return document.readyState") == "complete"
                 )
-                xem_them_btn.click()
-                time.sleep(0.7)  # allow content to render
-            except TimeoutException:
-                pass
+                
+                # Đợi thêm cho dynamic content load
+                time.sleep(1)
 
-            # Rebuild response with rendered HTML
-            rendered_response = response.replace(body=self._driver.page_source)
+                # Try to expand hidden content using safe_click
+                if self._safe_click("button[aria-label='Xem thêm']", timeout=3):
+                    time.sleep(0.7)  # allow content to render
 
-            # Extract job data using rendered content
-            item = self._extract_job_data_from_response(rendered_response)
-            if item:
-                yield item
+                # Rebuild response with rendered HTML
+                rendered_response = response.replace(body=self._driver.page_source)
 
-        except Exception as e:
-            logger.error(f"Error in parse_job_detail for {response.url}: {e}")
+                # Extract job data using rendered content
+                item = self._extract_job_data_from_response(rendered_response)
+                if item:
+                    yield item
+                return  # Thành công, thoát khỏi function
+
+            except StaleElementReferenceException as e:
+                if attempt < max_retries - 1:
+                    logger.warning(
+                        f"Stale element on attempt {attempt + 1} for {response.url}, retrying..."
+                    )
+                    time.sleep(1)
+                else:
+                    logger.error(
+                        f"Failed after {max_retries} attempts for {response.url}: {e}"
+                    )
+                    
+            except Exception as e:
+                logger.error(f"Error in parse_job_detail for {response.url}: {e}")
+                return
 
     def _extract_job_data_from_response(self, response):
         """Extract job data using Scrapy selectors (faster than Selenium)"""
@@ -217,8 +235,9 @@ class VietnamworksSpider(scrapy.Spider):
             item["requirements"] = self._get_descrip_require_benefits(response, "Yêu cầu")
 
             # Benefits
-
-            item["benefits"] = self._get_descrip_require_benefits(response, "Các phúc lợi dành cho bạn")
+            # benefits_section = response.xpath("//h2[contains(@class, 'sc-ab270149-0') and contains(@class, 'iJCYCD') and contains(text(), 'phúc lợi')]/following-sibling::*//text()").getall()
+            # item["benefits"] = " ".join([t.strip() for t in benefits_section if t.strip()]) if benefits_section else None
+            item["benefits"] = self._get_descrip_require_benefits(response, "phúc lợi dành cho bạn")
             # Metadata
             item["source_site"] = "vietnamworks.com"
             item["job_url"] = response.url
@@ -259,6 +278,41 @@ class VietnamworksSpider(scrapy.Spider):
         except Exception:
             pass
         return None
+
+    def _safe_click(self, selector, by=By.CSS_SELECTOR, timeout=3):
+        """Click element một cách an toàn, tự động re-fetch nếu stale
+        
+        Args:
+            selector: CSS selector hoặc XPath của element
+            by: Loại selector (By.CSS_SELECTOR hoặc By.XPATH)
+            timeout: Thời gian chờ tối đa
+            
+        Returns:
+            bool: True nếu click thành công, False nếu thất bại
+        """
+        if not self._driver:
+            return False
+            
+        try:
+            # Đợi element có thể click được
+            element = WebDriverWait(self._driver, timeout).until(
+                EC.element_to_be_clickable((by, selector))
+            )
+            
+            # Scroll element vào view trước khi click
+            self._driver.execute_script(
+                "arguments[0].scrollIntoView({block: 'center'});", element
+            )
+            time.sleep(0.3)
+            
+            # Re-fetch element sau khi scroll (tránh stale)
+            element = self._driver.find_element(by, selector)
+            element.click()
+            return True
+            
+        except (TimeoutException, StaleElementReferenceException, NoSuchElementException) as e:
+            logger.debug(f"Safe click failed for {selector}: {e}")
+            return False
 
     def _scroll_to_load_content(self, scroll_incre=1000):
         """Scroll down to load dynamic content gradually like a human"""

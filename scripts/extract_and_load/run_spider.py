@@ -25,7 +25,7 @@ from CrawlJob.spiders.joboko_spider import JobokoSpider
 from CrawlJob.spiders.jobsgo_spider import JobsgoSpider
 from CrawlJob.spiders.linkedin_spider import LinkedinSpider
 from CrawlJob.spiders.topcv_spider import TopcvSpider
-# from CrawlJob.spiders.vietnamworks_spider import VietnamworksSpider
+from CrawlJob.spiders.vietnamworks_spider import VietnamworksSpider
 
 def main():
     # Common practices advice of Scrapy
@@ -42,7 +42,7 @@ def main():
             "topcv",
             "itviec",
             "careerlink",
-            # "vietnamworks",
+            "vietnamworks",
             "all",
             "githubactions_version",
             "local_version"
@@ -95,12 +95,12 @@ def main():
             process.crawl(ItviecSpider, keyword=args.keyword)
         elif args.spider == "careerlink":
             process.crawl(CareerlinkSpider, keyword=args.keyword)
-        # elif args.spider == "vietnamworks":
-        #     process.crawl(VietnamworksSpider, keyword=args.keyword)
+        elif args.spider == "vietnamworks":
+            process.crawl(VietnamworksSpider, keyword=args.keyword)
         elif args.spider == "githubactions_version":
             process.crawl(JobsgoSpider, keyword=args.keyword)
             process.crawl(CareerlinkSpider, keyword=args.keyword)
-            # process.crawl(VietnamworksSpider, keyword=args.keyword)
+            process.crawl(VietnamworksSpider, keyword=args.keyword)
             process.crawl(JobokoSpider, keyword=args.keyword)
             process.crawl(Job123Spider, keyword=args.keyword)
             process.crawl(CareervietSpider, keyword=args.keyword)
@@ -109,15 +109,16 @@ def main():
             process.crawl(LinkedinSpider, keyword=args.keyword)
             process.crawl(TopcvSpider, keyword=args.keyword) 
         elif args.spider == "all":
+            process.crawl(ItviecSpider, keyword=args.keyword)
+            process.crawl(CareerlinkSpider, keyword=args.keyword)
             process.crawl(JobsgoSpider, keyword=args.keyword)
             process.crawl(JobokoSpider, keyword=args.keyword)
             process.crawl(Job123Spider, keyword=args.keyword)
             process.crawl(CareervietSpider, keyword=args.keyword)
             process.crawl(LinkedinSpider, keyword=args.keyword)
             process.crawl(TopcvSpider, keyword=args.keyword)
-            process.crawl(ItviecSpider, keyword=args.keyword)
-            process.crawl(CareerlinkSpider, keyword=args.keyword)
-            # process.crawl(VietnamworksSpider, keyword=args.keyword)
+
+            process.crawl(VietnamworksSpider, keyword=args.keyword)
 
         process.start()
 
