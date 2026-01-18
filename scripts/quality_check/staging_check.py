@@ -4,6 +4,7 @@ from config.sql_script import CREATE_VIEW_QUALITY_CHECK_STAGING_ZONE, SELECT_QUA
 import pandas as pd
 import plotly.express as px
 from config.path import DASHBOARD_DIR
+import os
 
 def get_quality_data():
     connection = connect_to_postgres()
@@ -275,6 +276,9 @@ if __name__ == "__main__":
         </body>
         </html>
         """
+        
+        # Tạo folder nếu chưa có
+        os.makedirs(DASHBOARD_DIR, exist_ok=True)
         
         output_file = f"{DASHBOARD_DIR}/quality_check_report.html"
         with open(output_file, "w", encoding="utf-8") as f:

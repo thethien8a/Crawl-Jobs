@@ -29,7 +29,7 @@ with DAG(
     extract_and_load = BashOperator(
         task_id='extract_and_load_data',
         # Có thể chạy tất cả spider bằng cách thêm --spider all ví dụ: python -m scripts.extract_and_load.run_spider --spider all
-        bash_command='python -m scripts.extract_and_load.run_spider --spider local_version', 
+        bash_command='python -m scripts.extract_and_load.run_spider --spider vietnamworks', 
         cwd='/opt/airflow',
         env={'PYTHONPATH': '/opt/airflow'}
     )
@@ -38,7 +38,8 @@ with DAG(
     test_source_staging = BashOperator(
         task_id='dbt_test_source_staging',
         bash_command='dbt test --select source:scrapy_raw.staging_jobs --profiles-dir profiles',
-        cwd=DBT_PROJECT_DIR
+        cwd=DBT_PROJECT_DIR,
+        retries=0, # Task fail cái thì thôi luôn
     )
 
     run_int_jobs_cleaned = BashOperator(
@@ -50,7 +51,8 @@ with DAG(
     test_int_jobs_cleaned = BashOperator(
         task_id='dbt_test_int_jobs_cleaned',
         bash_command='dbt test --select int_jobs_cleaned --profiles-dir profiles',
-        cwd=DBT_PROJECT_DIR
+        cwd=DBT_PROJECT_DIR,
+        retries=0, # Task fail cái thì thôi luôn
     )
 
     run_quality_check = BashOperator(

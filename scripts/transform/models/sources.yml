@@ -83,7 +83,7 @@ sources:
                       'careerviet.vn': 0.01
                       '123job.vn': 0.8
                       'jobsgo.vn': 0.03
-                      'itviec.com': 0.05
+                      'itviec.com': 0.8
                       'vietnamworks.com': 0.01
                   config:
                     severity: error 

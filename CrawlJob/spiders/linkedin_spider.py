@@ -144,7 +144,6 @@ class LinkedinSpider(scrapy.Spider):
             wait.until(EC.presence_of_element_located((By.ID, "global-nav-search")))
             self.logger.info("Successfully logged in to LinkedIn.")
             return True
-            return False
         except Exception as e:
             self.logger.error(f"An unexpected error occurred during login: {e}")
             self.driver.save_screenshot("linkedin_login_error.png")
@@ -302,7 +301,9 @@ class LinkedinSpider(scrapy.Spider):
         item["requirements"] = None
         item["benefits"] = None
 
+        # Trường này có thể truy xuất nhưng thôi tôi lười !
         item["job_type"] = None
+        
         item["experience_level"] = None
         item["education_level"] = None
 

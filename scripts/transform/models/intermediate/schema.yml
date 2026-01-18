@@ -56,6 +56,13 @@ models:
           - ratio_unknown_upgrade:
               threshold: 0.02
               unknown_value: 'Không đề cập'
-              except_source_site: ['itviec.com','linkedin.com']
+              except_source_site: ['itviec.com','linkedin.com', 'topcv.vn']
               config:
                 severity: error
+          - ratio_unknown_source:
+              threshold: 0.20
+              unknown_value: 'Không đề cập'
+              source_site: 'topcv.vn'
+              config:
+                severity: error
+          

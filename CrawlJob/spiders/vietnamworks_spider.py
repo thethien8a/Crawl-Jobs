@@ -12,6 +12,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from ..utils import get_chrome_version, get_chrome_binary_path
 from ..items import JobItem
 from ..utils import get_chrome_version
 
@@ -48,13 +49,33 @@ class VietnamworksSpider(scrapy.Spider):
         options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36")
         
         try:
+            chrome_bin = get_chrome_binary_path()
+            if chrome_bin:
+                self.logger.info(f"Using Chrome binary: {chrome_bin}")
+                options.binary_location = chrome_bin
+            else:
+                self.logger.warning(
+                    "Chrome binary not found in PATH; relying on uc auto-detection."
+                )
+
             chrome_version = get_chrome_version()
-            self._driver = uc.Chrome(
-                options=options,
-                version_main=chrome_version,
-                headless=True,
-                use_subprocess=True
-            )
+            uc_kwargs = {
+                "options": options,
+                "headless": True,
+                "use_subprocess": True,
+            }
+            if chrome_version:
+                self.logger.info(f"Using Chrome version: {chrome_version}")
+                uc_kwargs["version_main"] = chrome_version
+            else:
+                self.logger.info("Chrome version not detected, using auto-detection")
+                uc_kwargs["version_main"] = None
+
+            if chrome_bin:
+                uc_kwargs["browser_executable_path"] = chrome_bin
+
+            self._driver = uc.Chrome(**uc_kwargs)
+
             logger.info("undetected-chromedriver initialized successfully for VietnamWorks")
         except Exception as e:
             logger.error(f"Failed to initialize undetected-chromedriver: {e}")
