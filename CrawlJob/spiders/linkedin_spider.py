@@ -57,7 +57,7 @@ class LinkedinSpider(scrapy.Spider):
         os.environ["DBUS_SESSION_BUS_ADDRESS"] = "/dev/null"
         
         options = uc.ChromeOptions()
-        options.add_argument("--headless=new")
+        options.add_argument("--headless")
         options.add_argument(
             f"--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
         )
@@ -119,8 +119,6 @@ class LinkedinSpider(scrapy.Spider):
 
         self.driver.get("https://www.linkedin.com/login")
         time.sleep(3)  # Wait for page to fully load
-        self.logger.info(f"Current URL after navigation: {self.driver.current_url}")
-        self.logger.info(f"Page title: {self.driver.title}")
         wait = WebDriverWait(self.driver, 30)
 
         try:
