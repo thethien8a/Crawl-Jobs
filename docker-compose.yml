@@ -34,6 +34,7 @@ services:
       - ./scrapy.cfg:/opt/airflow/scrapy.cfg
       - ./.env:/opt/airflow/.env
       - ./scripts/quality_check:/opt/airflow/scripts/quality_check
+      - ./dashboard:/opt/airflow/dashboard
     ports:
       - "8080:8080"
     healthcheck:
@@ -63,7 +64,7 @@ services:
       - ./scrapy.cfg:/opt/airflow/scrapy.cfg
       - ./.env:/opt/airflow/.env
       - ./scripts/quality_check:/opt/airflow/scripts/quality_check
-
+      - ./dashboard:/opt/airflow/dashboard
   airflow-init:
     build: .
     depends_on:
@@ -82,6 +83,7 @@ services:
       - ./config:/opt/airflow/config
       - ./scripts/transform/profiles:/home/airflow/.dbt
       - ./scripts/quality_check:/opt/airflow/scripts/quality_check
-
+      - ./dashboard:/opt/airflow/dashboard
+      
 volumes:
   postgres_data:

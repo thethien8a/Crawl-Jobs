@@ -34,7 +34,7 @@ class VietnamworksSpider(scrapy.Spider):
 
     def __init__(self, keyword=None):
         self.keyword = keyword or "data analyst"
-        self._max_page = 1
+        self._max_page = 3
         self._processed_urls = set()
         self._driver = None
         self._init_selenium_driver()
