@@ -10,12 +10,14 @@ CrawlJob là pipeline ETL dành cho thị trường tuyển dụng Việt Nam, t
 - Giám sát chất lượng dữ liệu với Elementary + báo cáo HTML
 - Phục vụ BI qua Power BI dashboard
 
+## Kiến trúc tổng thể hệ thống:
+image.png
 
 ## Tech Stack
 - **Scraping:** Scrapy, Selenium, undetected-chromedriver
 - **Orchestration:** Apache Airflow 2.9.3 (Docker)
 - **Transform & Test:** dbt-postgres 1.9.1, Elementary 0.20.1
-- **Storage:** PostgreSQL 15
+- **Storage:** PostgreSQL 15 (On Supabase)
 - **BI:** Power BI (`dashboard/analysis_dashboard.pbix`)
 
 ## Cấu trúc thư mục chính
@@ -27,15 +29,9 @@ scripts/transform/        # dbt project (silver, gold, tests)
 scripts/quality_check/    # Quality check report (HTML)
 dashboard/                # Power BI + HTML reports
 config/                   # SQL scripts + paths
+docs/                     # Documentation
 ```
 
-## Dữ liệu & bảng chính
-- **`staging_jobs`**: dữ liệu thô sau crawl (dành cho dbt test/transform)
-- **`quarantine_jobs`**: dữ liệu lỗi, lưu JSON gốc để debug
-
-**Một số trường chính**: `job_title`, `company_name`, `salary`, `location`, `job_type`, `job_industry`,
-`experience_level`, `education_level`, `job_position`, `job_description`, `requirements`, `benefits`,
-`job_deadline`, `source_site`, `job_url`, `search_keyword`, `scraped_at`.
 
 ## Thiết lập nhanh (2 lựa chọn)
 
