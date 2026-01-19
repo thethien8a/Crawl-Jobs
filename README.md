@@ -11,7 +11,12 @@ CrawlJob là pipeline ETL dành cho thị trường tuyển dụng Việt Nam, t
 - Phục vụ BI qua Power BI dashboard
 
 ## Kiến trúc tổng thể hệ thống:
-![Kiến trúc tổng thể hệ thống](docs/architecture.png)
+![Kiến trúc tổng thể hệ thống](images/architecture.png)
+
+## Dashboard:
+![Dashboard tổng quan](images/dash_tong_quan.png)
+![Dashboard phân tích các kỹ năng và yêu cầu](images/dash_skill_requirement.png)
+![Dashboard phân tích về lương](images/dash_salary.png)
 
 ## Tech Stack
 - **Scraping:** Scrapy, Selenium, undetected-chromedriver
