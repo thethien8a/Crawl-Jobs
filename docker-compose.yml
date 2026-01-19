@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:15
-    restart: unless-stopped
+    restart: always
     environment:
       - POSTGRES_USER=airflow
       - POSTGRES_PASSWORD=airflow
@@ -11,7 +11,7 @@ services:
 
   webserver:
     build: .
-    restart: unless-stopped
+    restart: always
     command: webserver
     depends_on:
       airflow-init:
@@ -47,7 +47,7 @@ services:
 
   scheduler:
     build: .
-    restart: unless-stopped
+    restart: always
     command: scheduler
     depends_on:
       airflow-init:
