@@ -29,7 +29,7 @@ with DAG(
     extract_and_load = BashOperator(
         task_id='extract_and_load_data',
         # Có thể chạy tất cả spider bằng cách thêm --spider all ví dụ: python -m scripts.extract_and_load.run_spider --spider all
-        bash_command='python -m scripts.extract_and_load.run_spider --spider local_version', 
+        bash_command='python -m scripts.extract_and_load.run_spider --spider linkedin', 
         cwd='/opt/airflow',
         env={'PYTHONPATH': '/opt/airflow'}
     )

@@ -58,15 +58,10 @@ class LinkedinSpider(scrapy.Spider):
         
         options = uc.ChromeOptions()
         options.add_argument("--headless")
-        options.add_argument(
-            f"--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
-        )
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
-        options.add_argument("--single-process")
         options.add_argument("--disable-setuid-sandbox")
-        options.add_argument("--remote-debugging-port=9222")
         options.add_argument("--window-size=1920,1080")
         options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_argument("--disable-infobars")
@@ -85,7 +80,6 @@ class LinkedinSpider(scrapy.Spider):
             chrome_version = get_chrome_version()
             uc_kwargs = {
                 "options": options,
-                "headless": True,
                 "use_subprocess": True,
             }
             if chrome_version:
@@ -225,9 +219,13 @@ class LinkedinSpider(scrapy.Spider):
 
         time.sleep(1.5)
         
-        job_container = self.driver.find_element(
-            By.XPATH, "//ul[li[starts-with(@id, 'ember')]]"
-        )
+        try:
+            job_container = self.driver.find_element(
+                By.XPATH, "//ul[li[starts-with(@id, 'ember')]]"
+            )
+        except Exception as e:
+            self.logger.error(f"Error finding job container: {e}")
+            return
         
         job_elements = job_container.find_elements(By.CSS_SELECTOR, "li[id*='ember']")
         for job in job_elements:
