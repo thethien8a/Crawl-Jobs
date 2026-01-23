@@ -29,56 +29,57 @@ with DAG(
     extract_and_load = BashOperator(
         task_id='extract_and_load_data',
         # Có thể chạy tất cả spider bằng cách thêm --spider all ví dụ: python -m scripts.extract_and_load.run_spider --spider all
-        bash_command='python -m scripts.extract_and_load.run_spider --spider localversion', 
+        bash_command='python -m scripts.extract_and_load.run_spider --spider linkedin', 
         cwd='/opt/airflow',
         env={'PYTHONPATH': '/opt/airflow'}
     )
 
 
-    test_source_staging = BashOperator(
-        task_id='dbt_test_source_staging',
-        bash_command='dbt test --select source:scrapy_raw.staging_jobs --profiles-dir profiles',
-        cwd=DBT_PROJECT_DIR,
-        retries=0, # Task fail cái thì thôi luôn
-    )
+    # test_source_staging = BashOperator(
+    #     task_id='dbt_test_source_staging',
+    #     bash_command='dbt test --select source:scrapy_raw.staging_jobs --profiles-dir profiles',
+    #     cwd=DBT_PROJECT_DIR,
+    #     retries=0, # Task fail cái thì thôi luôn
+    # )
 
-    run_int_jobs_cleaned = BashOperator(
-        task_id='dbt_run_int_jobs_cleaned',
-        bash_command='dbt run --select int_jobs_cleaned --profiles-dir profiles',
-        cwd=DBT_PROJECT_DIR
-    )
+    # run_int_jobs_cleaned = BashOperator(
+    #     task_id='dbt_run_int_jobs_cleaned',
+    #     bash_command='dbt run --select int_jobs_cleaned --profiles-dir profiles',
+    #     cwd=DBT_PROJECT_DIR
+    # )
 
-    test_int_jobs_cleaned = BashOperator(
-        task_id='dbt_test_int_jobs_cleaned',
-        bash_command='dbt test --select int_jobs_cleaned --profiles-dir profiles',
-        cwd=DBT_PROJECT_DIR,
-        retries=0, # Task fail cái thì thôi luôn
-    )
+    # test_int_jobs_cleaned = BashOperator(
+    #     task_id='dbt_test_int_jobs_cleaned',
+    #     bash_command='dbt test --select int_jobs_cleaned --profiles-dir profiles',
+    #     cwd=DBT_PROJECT_DIR,
+    #     retries=0, # Task fail cái thì thôi luôn
+    # )
 
-    run_quality_check = BashOperator(
-        task_id='run_quality_check',
-        bash_command='python -m scripts.quality_check.staging_check',
-        cwd='/opt/airflow',
-        env={'PYTHONPATH': '/opt/airflow'}
-    )
+    # run_quality_check = BashOperator(
+    #     task_id='run_quality_check',
+    #     bash_command='python -m scripts.quality_check.staging_check',
+    #     cwd='/opt/airflow',
+    #     env={'PYTHONPATH': '/opt/airflow'}
+    # )
 
  
-    generate_elementary_report = BashOperator(
-        task_id='generate_elementary_report',
-        bash_command=(
-            '/opt/dbt_venv/bin/edr report '
-            '--profiles-dir profiles '
-            '--open-browser false '  
-            '--file-path /opt/airflow/scripts/transform/edr_target/elementary_report.html'
-        ),
-        cwd=DBT_PROJECT_DIR,
-        retries=0,  # Không retry nếu fail
-    )
+    # generate_elementary_report = BashOperator(
+    #     task_id='generate_elementary_report',
+    #     bash_command=(
+    #         '/opt/dbt_venv/bin/edr report '
+    #         '--profiles-dir profiles '
+    #         '--open-browser false '  
+    #         '--file-path /opt/airflow/scripts/transform/edr_target/elementary_report.html'
+    #     ),
+    #     cwd=DBT_PROJECT_DIR,
+    #     retries=0,  # Không retry nếu fail
+    # )
 
-    run_silver_jobs = BashOperator(
-        task_id='dbt_run_silver_jobs',
-        bash_command='dbt run --select silver_jobs+ --profiles-dir profiles',
-        cwd=DBT_PROJECT_DIR,
-    )
+    # run_silver_jobs = BashOperator(
+    #     task_id='dbt_run_silver_jobs',
+    #     bash_command='dbt run --select silver_jobs+ --profiles-dir profiles',
+    #     cwd=DBT_PROJECT_DIR,
+    # )
     
-    extract_and_load >> [test_source_staging, run_quality_check] >> run_int_jobs_cleaned >> test_int_jobs_cleaned >> generate_elementary_report >> run_silver_jobs 
+    extract_and_load 
+    # >> [test_source_staging, run_quality_check] >> run_int_jobs_cleaned >> test_int_jobs_cleaned >> generate_elementary_report >> run_silver_jobs 

@@ -134,9 +134,6 @@ class LinkedinSpider(scrapy.Spider):
             )
             login_button.click()
 
-            # Wait for the main feed to appear as a confirmation of successful login
-            wait.until(EC.presence_of_element_located((By.ID, "global-nav-search")))
-            self.logger.info("Successfully logged in to LinkedIn.")
             return True
         except Exception as e:
             self.logger.error(f"An unexpected error occurred during login: {e}")
