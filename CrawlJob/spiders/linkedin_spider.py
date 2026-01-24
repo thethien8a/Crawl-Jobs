@@ -53,19 +53,38 @@ class LinkedinSpider(scrapy.Spider):
         self.__password = os.getenv("LINKEDIN_PASS")
 
     def _init_driver(self):
-        """Initializes the undetected-chromedriver"""
+        """Initializes the undetected-chromedriver with anti-detection for Docker"""
         os.environ["DBUS_SESSION_BUS_ADDRESS"] = "/dev/null"
         
         options = uc.ChromeOptions()
-        options.add_argument("--headless")
+        
+        # Essential for Docker
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--disable-gpu")
         options.add_argument("--disable-setuid-sandbox")
-        options.add_argument("--window-size=1920,1080")
+        
+        # Anti-detection flags
         options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_argument("--disable-infobars")
         options.add_argument("--disable-extensions")
+        options.add_argument("--disable-plugins-discovery")
+        options.add_argument("--disable-popup-blocking")
+        
+        # Fake real browser environment
+        viewports = [(1366, 768), (1920, 1080), (1440, 900), (1536, 864)]
+        width, height = random.choice(viewports)
+        options.add_argument(f"--window-size={width},{height}")
+        options.add_argument("--start-maximized")
+        options.add_argument("--lang=vi,en;q=0.9,fr-FR;q=0.8,fr;q=0.7,en-US;q=0.6")
+        options.add_argument("--disable-gpu")
+        
+        # Realistic user-agent (latest Chrome versions - Jan 2026)
+        user_agents = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+        ]
+        options.add_argument(f"--user-agent={random.choice(user_agents)}")
 
         try:
             chrome_bin = get_chrome_binary_path()
@@ -81,6 +100,7 @@ class LinkedinSpider(scrapy.Spider):
             uc_kwargs = {
                 "options": options,
                 "use_subprocess": True,
+                "headless": True,  # Use uc's built-in headless (more stealthy)
             }
             if chrome_version:
                 self.logger.info(f"Using Chrome version: {chrome_version}")
@@ -94,11 +114,78 @@ class LinkedinSpider(scrapy.Spider):
 
             self.driver = uc.Chrome(**uc_kwargs)
             
+            # Inject stealth JavaScript to hide automation traces
+            self._inject_stealth_js()
+            
             self.logger.info("undetected-chromedriver initialized successfully.")
         except Exception as e:
             self.logger.error(f"Failed to initialize undetected-chromedriver: {e}")
             self.driver = None
         return self.driver
+
+    def _inject_stealth_js(self):
+        """Inject JavaScript to hide automation traces from bot detection"""
+        if not self.driver:
+            return
+            
+        stealth_js = """
+        // Hide webdriver property
+        Object.defineProperty(navigator, 'webdriver', {
+            get: () => undefined
+        });
+        
+        // Fake plugins array
+        Object.defineProperty(navigator, 'plugins', {
+            get: () => [1, 2, 3, 4, 5]
+        });
+        
+        // Fake languages
+        Object.defineProperty(navigator, 'languages', {
+            get: () => ['en-US', 'en', 'vi']
+        });
+        
+        // Fake chrome runtime
+        window.chrome = {
+            runtime: {},
+            loadTimes: function() {},
+            csi: function() {},
+            app: {}
+        };
+        
+        // Hide automation-related properties
+        const originalQuery = window.navigator.permissions.query;
+        window.navigator.permissions.query = (parameters) => (
+            parameters.name === 'notifications' ?
+                Promise.resolve({ state: Notification.permission }) :
+                originalQuery(parameters)
+        );
+        
+        // Fake connection type
+        Object.defineProperty(navigator, 'connection', {
+            get: () => ({
+                effectiveType: '4g',
+                rtt: 50,
+                downlink: 10,
+                saveData: false
+            })
+        });
+        
+        // Fake hardware concurrency (CPU cores)
+        Object.defineProperty(navigator, 'hardwareConcurrency', {
+            get: () => 8
+        });
+        
+        // Fake device memory
+        Object.defineProperty(navigator, 'deviceMemory', {
+            get: () => 8
+        });
+        """
+        
+        try:
+            self.driver.execute_script(stealth_js)
+            self.logger.debug("Stealth JavaScript injected successfully")
+        except Exception as e:
+            self.logger.warning(f"Failed to inject stealth JS: {e}")
 
     def _human_like_typing(self, element, text: str):
         """Types a string character by character with random delays."""
@@ -133,8 +220,25 @@ class LinkedinSpider(scrapy.Spider):
                 By.XPATH, "//button[@type='submit']"
             )
             login_button.click()
-
+            
+            # Wait for login to complete (redirect to feed or challenge)
+            time.sleep(random.uniform(3, 5))
+            
+            # Check for various challenge/verification pages
+            current_url = self.driver.current_url.lower()
+            if any(x in current_url for x in ['challenge', 'checkpoint', 'security-verification', 'authwall']):
+                self.logger.error(f"Login blocked by security challenge: {current_url}")
+                self.driver.save_screenshot("linkedin_challenge.png")
+                return False
+            
+            # Verify we're actually logged in (feed page or similar)
+            if 'feed' in current_url or 'mynetwork' in current_url or 'jobs' in current_url:
+                self.logger.info("Login successful!")
+                return True
+            
+            self.logger.warning(f"Unexpected URL after login: {current_url}")
             return True
+        
         except Exception as e:
             self.logger.error(f"An unexpected error occurred during login: {e}")
             self.driver.save_screenshot("linkedin_login_error.png")
