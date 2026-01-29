@@ -5,6 +5,7 @@ __pycache__/
 *$py.class
 
 quality_check_report.html
+quality_check_gate.html
 
 # Virtual environments
 .venv/

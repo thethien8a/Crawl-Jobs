@@ -115,11 +115,9 @@ if __name__ == "__main__":
             fig.update_layout(template=template, legend_title_text='Source Site')
             
             null_charts_html += f"""
-            <div class="col-md-6 mb-5">
-                <div class="card chart-card">
-                    <div class="card-body">
-                        {fig.to_html(full_html=False, include_plotlyjs=False)}
-                    </div>
+            <div class="col-lg-6 mb-5">
+                <div class="chart-card">
+                    {fig.to_html(full_html=False, include_plotlyjs=False)}
                 </div>
             </div>
             """
@@ -135,119 +133,472 @@ if __name__ == "__main__":
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Quality Check Dashboard</title>
-            <!-- Bootswatch Flatly Theme -->
-            <link rel="stylesheet" href="https://bootswatch.com/4/flatly/bootstrap.min.css">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
-            <link rel="stylesheet" href="https://cdn.datatables.net/1.10.22/css/dataTables.bootstrap4.min.css">
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
             <style>
-                body {{ background-color: #ecf0f1; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }}
-                .navbar {{ margin-bottom: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-                .card {{ border: none; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s; }}
-                .card:hover {{ transform: translateY(-5px); }}
-                .stat-card .card-body {{ display: flex; align-items: center; justify-content: space-between; }}
-                .stat-icon {{ font-size: 2.5rem; opacity: 0.3; }}
-                .chart-card {{ height: 100%; }}
-                footer {{ margin-top: 50px; padding: 20px 0; color: #7f8c8d; text-align: center; }}
-                .mb-5 {{ margin-bottom: 3rem !important; }}
+                :root {{
+                    --bg-primary: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                    --bg-card: rgba(255, 255, 255, 0.05);
+                    --text-primary: #ffffff;
+                    --text-secondary: #a0aec0;
+                    --accent-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+                    --warning-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                    --info-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+                    --border-radius: 16px;
+                    --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                }}
+                
+                * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+                
+                body {{
+                    background: var(--bg-primary);
+                    min-height: 100vh;
+                    font-family: 'Inter', sans-serif;
+                    color: var(--text-primary);
+                    padding: 0;
+                }}
+                
+                .navbar {{
+                    background: rgba(255, 255, 255, 0.05) !important;
+                    backdrop-filter: blur(20px);
+                    -webkit-backdrop-filter: blur(20px);
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                    padding: 1rem 2rem;
+                    margin-bottom: 2rem;
+                }}
+                
+                .navbar-brand {{
+                    font-weight: 700;
+                    font-size: 1.5rem;
+                    background: var(--accent-gradient);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;
+                }}
+                
+                .navbar-brand i {{
+                    background: var(--accent-gradient);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    margin-right: 0.5rem;
+                }}
+                
+                .navbar-text {{
+                    color: var(--text-secondary) !important;
+                    font-size: 0.875rem;
+                }}
+                
+                .container-fluid {{
+                    padding: 0 2rem;
+                    max-width: 1800px;
+                    margin: 0 auto;
+                }}
+                
+                .section-header {{
+                    display: flex;
+                    align-items: center;
+                    margin-bottom: 1.5rem;
+                    padding-bottom: 0.75rem;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                }}
+                
+                .section-header i {{
+                    font-size: 1.25rem;
+                    margin-right: 0.75rem;
+                    background: var(--accent-gradient);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }}
+                
+                .section-header h2 {{
+                    font-size: 1.25rem;
+                    font-weight: 600;
+                    margin: 0;
+                }}
+                
+                .stat-card {{
+                    background: var(--bg-card);
+                    backdrop-filter: blur(20px);
+                    -webkit-backdrop-filter: blur(20px);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: var(--border-radius);
+                    padding: 1.5rem;
+                    position: relative;
+                    overflow: hidden;
+                    transition: all 0.3s ease;
+                    height: 100%;
+                }}
+                
+                .stat-card:hover {{
+                    transform: translateY(-5px);
+                    box-shadow: var(--shadow);
+                    border-color: rgba(255, 255, 255, 0.2);
+                }}
+                
+                .stat-card::before {{
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    height: 4px;
+                    border-radius: var(--border-radius) var(--border-radius) 0 0;
+                }}
+                
+                .stat-card.accent::before {{ background: var(--accent-gradient); }}
+                .stat-card.success::before {{ background: var(--success-gradient); }}
+                .stat-card.info::before {{ background: var(--info-gradient); }}
+                .stat-card.warning::before {{ background: var(--warning-gradient); }}
+                
+                .stat-card-content {{
+                    display: flex;
+                    align-items: flex-start;
+                    justify-content: space-between;
+                }}
+                
+                .stat-card-info h6 {{
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                    color: var(--text-secondary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    margin-bottom: 0.5rem;
+                }}
+                
+                .stat-card-info h3 {{
+                    font-size: 1.75rem;
+                    font-weight: 700;
+                    margin: 0;
+                }}
+                
+                .stat-card.accent .stat-card-info h3 {{
+                    background: var(--accent-gradient);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }}
+                
+                .stat-card.success .stat-card-info h3 {{
+                    background: var(--success-gradient);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }}
+                
+                .stat-card.info .stat-card-info h3 {{
+                    background: var(--info-gradient);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }}
+                
+                .stat-card.warning .stat-card-info h3 {{
+                    background: var(--warning-gradient);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }}
+                
+                .stat-icon {{
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.25rem;
+                }}
+                
+                .stat-card.accent .stat-icon {{
+                    background: var(--accent-gradient);
+                    color: white;
+                }}
+                
+                .stat-card.success .stat-icon {{
+                    background: var(--success-gradient);
+                    color: white;
+                }}
+                
+                .stat-card.info .stat-icon {{
+                    background: var(--info-gradient);
+                    color: white;
+                }}
+                
+                .stat-card.warning .stat-icon {{
+                    background: var(--warning-gradient);
+                    color: white;
+                }}
+                
+                .chart-card {{
+                    background: var(--bg-card);
+                    backdrop-filter: blur(20px);
+                    -webkit-backdrop-filter: blur(20px);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: var(--border-radius);
+                    padding: 1.5rem;
+                    transition: all 0.3s ease;
+                    height: 100%;
+                }}
+                
+                .chart-card:hover {{
+                    box-shadow: var(--shadow);
+                    border-color: rgba(255, 255, 255, 0.2);
+                }}
+                
+                .table-card {{
+                    background: var(--bg-card);
+                    backdrop-filter: blur(20px);
+                    -webkit-backdrop-filter: blur(20px);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: var(--border-radius);
+                    overflow: hidden;
+                    margin-bottom: 2rem;
+                }}
+                
+                .table-card-header {{
+                    background: rgba(255, 255, 255, 0.03);
+                    padding: 1rem 1.5rem;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                    display: flex;
+                    align-items: center;
+                }}
+                
+                .table-card-header i {{
+                    margin-right: 0.75rem;
+                    background: var(--accent-gradient);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }}
+                
+                .table-card-header span {{
+                    font-weight: 600;
+                }}
+                
+                .table-card-body {{
+                    padding: 1.5rem;
+                }}
+                
+                .table {{
+                    color: var(--text-primary) !important;
+                    margin-bottom: 0;
+                }}
+                
+                .table thead th {{
+                    background: rgba(255, 255, 255, 0.05);
+                    border-color: rgba(255, 255, 255, 0.1) !important;
+                    color: var(--text-secondary);
+                    font-weight: 600;
+                    font-size: 0.75rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    padding: 1rem;
+                }}
+                
+                .table tbody td {{
+                    border-color: rgba(255, 255, 255, 0.05) !important;
+                    padding: 0.875rem 1rem;
+                    vertical-align: middle;
+                }}
+                
+                .table-striped tbody tr:nth-of-type(odd) {{
+                    background-color: rgba(255, 255, 255, 0.02);
+                }}
+                
+                .table-hover tbody tr:hover {{
+                    background-color: rgba(255, 255, 255, 0.05);
+                }}
+                
+                .dataTables_wrapper .dataTables_length,
+                .dataTables_wrapper .dataTables_filter,
+                .dataTables_wrapper .dataTables_info,
+                .dataTables_wrapper .dataTables_paginate {{
+                    color: var(--text-secondary) !important;
+                    padding: 0.5rem 0;
+                }}
+                
+                .dataTables_wrapper .dataTables_filter input,
+                .dataTables_wrapper .dataTables_length select {{
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: 8px;
+                    color: var(--text-primary);
+                    padding: 0.5rem 1rem;
+                }}
+                
+                .dataTables_wrapper .dataTables_filter input:focus {{
+                    outline: none;
+                    border-color: rgba(102, 126, 234, 0.5);
+                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                }}
+                
+                .dataTables_wrapper .dataTables_paginate .paginate_button {{
+                    color: var(--text-secondary) !important;
+                    background: transparent !important;
+                    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                    border-radius: 8px !important;
+                    margin: 0 2px;
+                }}
+                
+                .dataTables_wrapper .dataTables_paginate .paginate_button:hover {{
+                    background: rgba(255, 255, 255, 0.05) !important;
+                    color: var(--text-primary) !important;
+                }}
+                
+                .dataTables_wrapper .dataTables_paginate .paginate_button.current {{
+                    background: var(--accent-gradient) !important;
+                    color: white !important;
+                    border: none !important;
+                }}
+                
+                .row {{ margin-bottom: 1.5rem; }}
+                .mb-4 {{ margin-bottom: 1.5rem !important; }}
+                .mb-5 {{ margin-bottom: 2rem !important; }}
+                
+                footer {{
+                    margin-top: 3rem;
+                    padding: 2rem;
+                    text-align: center;
+                    border-top: 1px solid rgba(255, 255, 255, 0.1);
+                    background: linear-gradient(180deg, transparent 0%, rgba(102, 126, 234, 0.05) 100%);
+                }}
+                
+                footer p {{
+                    color: var(--text-secondary);
+                    font-size: 0.875rem;
+                    margin: 0;
+                }}
+                
+                .plotly-graph-div {{
+                    border-radius: 8px;
+                }}
+                
+                @media (max-width: 768px) {{
+                    .container-fluid {{ padding: 0 1rem; }}
+                    .stat-card {{ margin-bottom: 1rem; }}
+                    .navbar {{ padding: 1rem; }}
+                }}
             </style>
         </head>
         <body>
-            <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-                <div class="container-fluid">
-                    <a class="navbar-brand" href="#"><i class="fas fa-chart-line mr-2"></i>Data Quality Dashboard</a>
-                    <span class="navbar-text text-white">
-                        Generated: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}
+            <nav class="navbar">
+                <div class="container-fluid d-flex justify-content-between align-items-center">
+                    <a class="navbar-brand" href="#"><i class="fas fa-chart-line"></i>Data Quality Dashboard</a>
+                    <span class="navbar-text">
+                        <i class="fas fa-clock me-1"></i> Generated: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}
                     </span>
                 </div>
             </nav>
 
             <div class="container-fluid">
-                <!-- Summary Stats -->
-                <div class="row mb-4">
-                    <div class="col-md-3">
-                        <div class="card stat-card bg-primary text-white">
-                            <div class="card-body">
-                                <div>
-                                    <h6 class="card-title mb-0">Latest Date</h6>
-                                    <h3 class="font-weight-bold">{latest_date.strftime('%Y-%m-%d')}</h3>
+                <div class="section-header">
+                    <i class="fas fa-chart-pie"></i>
+                    <h2>Summary Statistics</h2>
+                </div>
+                
+                <div class="row mb-5">
+                    <div class="col-md-6 col-lg-3 mb-4">
+                        <div class="stat-card accent">
+                            <div class="stat-card-content">
+                                <div class="stat-card-info">
+                                    <h6>Latest Date</h6>
+                                    <h3>{latest_date.strftime('%Y-%m-%d')}</h3>
                                 </div>
-                                <i class="fas fa-calendar-alt stat-icon"></i>
+                                <div class="stat-icon">
+                                    <i class="fas fa-calendar-alt"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card stat-card bg-success text-white">
-                            <div class="card-body">
-                                <div>
-                                    <h6 class="card-title mb-0">Total Records (Latest Date)</h6>
-                                    <h3 class="font-weight-bold">{total_records_latest:,.0f}</h3>
+                    <div class="col-md-6 col-lg-3 mb-4">
+                        <div class="stat-card success">
+                            <div class="stat-card-content">
+                                <div class="stat-card-info">
+                                    <h6>Total Records</h6>
+                                    <h3>{total_records_latest:,.0f}</h3>
                                 </div>
-                                <i class="fas fa-database stat-icon"></i>
+                                <div class="stat-icon">
+                                    <i class="fas fa-database"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card stat-card bg-info text-white">
-                            <div class="card-body">
-                                <div>
-                                    <h6 class="card-title mb-0">Distinct Source Sites (Latest Date)</h6>
-                                    <h3 class="font-weight-bold">{source_count_latest}</h3>
+                    <div class="col-md-6 col-lg-3 mb-4">
+                        <div class="stat-card info">
+                            <div class="stat-card-content">
+                                <div class="stat-card-info">
+                                    <h6>Source Sites</h6>
+                                    <h3>{source_count_latest}</h3>
                                 </div>
-                                <i class="fas fa-network-wired stat-icon"></i>
+                                <div class="stat-icon">
+                                    <i class="fas fa-network-wired"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card stat-card bg-warning text-white">
-                            <div class="card-body">
-                                <div>
-                                    <h6 class="card-title mb-0">Avg Pass Rate (Latest Date)</h6>
-                                    <h3 class="font-weight-bold">{weighted_pass_rate:.2f}%</h3>
+                    <div class="col-md-6 col-lg-3 mb-4">
+                        <div class="stat-card warning">
+                            <div class="stat-card-content">
+                                <div class="stat-card-info">
+                                    <h6>Avg Pass Rate</h6>
+                                    <h3>{weighted_pass_rate:.2f}%</h3>
                                 </div>
-                                <i class="fas fa-check-circle stat-icon"></i>
+                                <div class="stat-icon">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Charts Grid -->
+                <div class="section-header">
+                    <i class="fas fa-chart-bar"></i>
+                    <h2>Data Volume</h2>
+                </div>
+                
                 <div class="row">
-                    <div class="col-md-12 mb-5">
-                        <div class="card chart-card">
-                            <div class="card-body">
-                                {fig_volume.to_html(full_html=False, include_plotlyjs='cdn')}
-                            </div>
+                    <div class="col-12 mb-5">
+                        <div class="chart-card">
+                            {fig_volume.to_html(full_html=False, include_plotlyjs='cdn')}
                         </div>
                     </div>
                 </div>
 
+                <div class="section-header">
+                    <i class="fas fa-chart-line"></i>
+                    <h2>Quality Metrics</h2>
+                </div>
+                
                 <div class="row">
-                    <div class="col-md-6 mb-5">
-                        <div class="card chart-card">
-                            <div class="card-body">
-                                {fig_pass.to_html(full_html=False, include_plotlyjs=False)}
-                            </div>
+                    <div class="col-lg-6 mb-5">
+                        <div class="chart-card">
+                            {fig_pass.to_html(full_html=False, include_plotlyjs=False)}
                         </div>
                     </div>
-                    <div class="col-md-6 mb-5">
-                        <div class="card chart-card">
-                            <div class="card-body">
-                                {fig_quarantine.to_html(full_html=False, include_plotlyjs=False)}
-                            </div>
+                    <div class="col-lg-6 mb-5">
+                        <div class="chart-card">
+                            {fig_quarantine.to_html(full_html=False, include_plotlyjs=False)}
                         </div>
                     </div>
+                </div>
+                
+                <div class="section-header">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h2>Null Rate Analysis</h2>
                 </div>
                 
                 <div class="row">
                     {null_charts_html}
                 </div>
 
-                <!-- Data Table -->
-                <div class="card table-card">
-                    <div class="card-header bg-white">
-                        <i class="fas fa-table mr-2"></i> Detailed Quality Data (Latest Date: {latest_date.strftime('%Y-%m-%d')})
+                <div class="section-header">
+                    <i class="fas fa-table"></i>
+                    <h2>Detailed Data</h2>
+                </div>
+                
+                <div class="table-card">
+                    <div class="table-card-header">
+                        <i class="fas fa-table"></i>
+                        <span>Quality Data (Latest Date: {latest_date.strftime('%Y-%m-%d')})</span>
                     </div>
-                    <div class="card-body">
+                    <div class="table-card-body">
                         <div class="table-responsive">
                             {html_table}
                         </div>
@@ -256,19 +607,20 @@ if __name__ == "__main__":
             </div>
             
             <footer>
-                <p>Data Quality Monitoring System &copy; {pd.Timestamp.now().year}</p>
+                <p><i class="fas fa-shield-halved me-2"></i>Data Quality Monitoring System &copy; {pd.Timestamp.now().year}</p>
             </footer>
 
-            <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-            <script src="https://cdn.datatables.net/1.10.22/js/jquery.dataTables.min.js"></script>
-            <script src="https://cdn.datatables.net/1.10.22/js/dataTables.bootstrap4.min.js"></script>
+            <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+            <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+            <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
             <script>
                 $(document).ready(function() {{
                     $('#dataTable').DataTable({{
                         "order": [[ 1, "desc" ]],
                         "pageLength": 25,
                         "language": {{
-                            "search": "Filter records:"
+                            "search": "<i class='fas fa-search me-2'></i>",
+                            "searchPlaceholder": "Filter records..."
                         }}
                     }});
                 }});
