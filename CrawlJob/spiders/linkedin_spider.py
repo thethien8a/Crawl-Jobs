@@ -70,6 +70,26 @@ class LinkedinSpider(scrapy.Spider):
         options.add_argument("--disable-plugins-discovery")
         options.add_argument("--disable-popup-blocking")
         
+        # Docker-specific anti-detection
+        options.add_argument("--disable-features=IsolateOrigins,site-per-process")
+        options.add_argument("--disable-site-isolation-trials")
+        options.add_argument("--ignore-certificate-errors")
+        options.add_argument("--allow-running-insecure-content")
+        options.add_argument("--disable-web-security")
+        options.add_argument("--disable-features=CrossSiteDocumentBlockingIfIsolating")
+        options.add_argument("--disable-features=TranslateUI")
+        
+        # WebGL/GPU spoofing for Docker (no real GPU)
+        options.add_argument("--use-gl=swiftshader")
+        options.add_argument("--enable-webgl")
+        options.add_argument("--ignore-gpu-blocklist")
+        
+        # Prevent font fingerprinting differences in Docker
+        options.add_argument("--font-render-hinting=none")
+        
+        # Timezone spoofing (must match JS injection)
+        os.environ["TZ"] = "Asia/Ho_Chi_Minh"
+        
         # Fake real browser environment
         viewports = [(1366, 768), (1920, 1080), (1440, 900), (1536, 864)]
         width, height = random.choice(viewports)
@@ -124,61 +144,326 @@ class LinkedinSpider(scrapy.Spider):
         return self.driver
 
     def _inject_stealth_js(self):
-        """Inject JavaScript to hide automation traces from bot detection"""
+        """Inject JavaScript to hide automation traces from bot detection (Docker-optimized)"""
         if not self.driver:
             return
             
         stealth_js = """
-        // Hide webdriver property
-        Object.defineProperty(navigator, 'webdriver', {
-            get: () => undefined
-        });
+        // ========== DOCKER-SPECIFIC STEALTH (uc already handles webdriver/cdc_) ==========
+        // NOTE: undetected_chromedriver already patches webdriver and cdc_ properties
+        // This script focuses on Docker-specific fingerprinting issues
         
-        // Fake plugins array
+        // ========== HEADLESS DETECTION BYPASS ==========
+        // Override headless-specific properties
         Object.defineProperty(navigator, 'plugins', {
-            get: () => [1, 2, 3, 4, 5]
+            get: () => {
+                const plugins = [
+                    { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+                    { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
+                    { name: 'Native Client', filename: 'internal-nacl-plugin', description: '' }
+                ];
+                plugins.length = 3;
+                return plugins;
+            },
+            configurable: true
         });
         
-        // Fake languages
-        Object.defineProperty(navigator, 'languages', {
-            get: () => ['en-US', 'en', 'vi']
+        Object.defineProperty(navigator, 'mimeTypes', {
+            get: () => {
+                const mimeTypes = [
+                    { type: 'application/pdf', suffixes: 'pdf', description: 'Portable Document Format' },
+                    { type: 'application/x-google-chrome-pdf', suffixes: 'pdf', description: 'Portable Document Format' }
+                ];
+                mimeTypes.length = 2;
+                return mimeTypes;
+            },
+            configurable: true
         });
         
-        // Fake chrome runtime
-        window.chrome = {
-            runtime: {},
-            loadTimes: function() {},
-            csi: function() {},
-            app: {}
+        // ========== WEBGL FINGERPRINTING (Critical for Docker) ==========
+        const getParameterProxyHandler = {
+            apply: function(target, ctx, args) {
+                const param = args[0];
+                const gl = ctx;
+                // UNMASKED_VENDOR_WEBGL
+                if (param === 37445) {
+                    return 'Intel Inc.';
+                }
+                // UNMASKED_RENDERER_WEBGL
+                if (param === 37446) {
+                    return 'Intel Iris OpenGL Engine';
+                }
+                return Reflect.apply(target, ctx, args);
+            }
         };
         
-        // Hide automation-related properties
-        const originalQuery = window.navigator.permissions.query;
-        window.navigator.permissions.query = (parameters) => (
-            parameters.name === 'notifications' ?
-                Promise.resolve({ state: Notification.permission }) :
-                originalQuery(parameters)
-        );
+        const getContextProxyHandler = {
+            apply: function(target, ctx, args) {
+                const context = Reflect.apply(target, ctx, args);
+                if (context && (args[0] === 'webgl' || args[0] === 'webgl2' || args[0] === 'experimental-webgl')) {
+                    const originalGetParameter = context.getParameter.bind(context);
+                    context.getParameter = new Proxy(originalGetParameter, getParameterProxyHandler);
+                }
+                return context;
+            }
+        };
         
-        // Fake connection type
+        HTMLCanvasElement.prototype.getContext = new Proxy(HTMLCanvasElement.prototype.getContext, getContextProxyHandler);
+        
+        // ========== CANVAS FINGERPRINTING ==========
+        const originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
+        HTMLCanvasElement.prototype.toDataURL = function(type) {
+            if (this.width === 0 || this.height === 0) {
+                return originalToDataURL.apply(this, arguments);
+            }
+            const context = this.getContext('2d');
+            if (context) {
+                const imageData = context.getImageData(0, 0, this.width, this.height);
+                for (let i = 0; i < imageData.data.length; i += 4) {
+                    imageData.data[i] = imageData.data[i] ^ (Math.random() * 0.01);
+                }
+                context.putImageData(imageData, 0, 0);
+            }
+            return originalToDataURL.apply(this, arguments);
+        };
+        
+        // ========== AUDIO FINGERPRINTING ==========
+        const originalGetChannelData = AudioBuffer.prototype.getChannelData;
+        AudioBuffer.prototype.getChannelData = function(channel) {
+            const array = originalGetChannelData.call(this, channel);
+            for (let i = 0; i < array.length; i += 100) {
+                array[i] = array[i] + Math.random() * 0.0001;
+            }
+            return array;
+        };
+        
+        // ========== CHROME RUNTIME OBJECT ==========
+        window.chrome = {
+            runtime: {
+                connect: function() {},
+                sendMessage: function() {},
+                onMessage: { addListener: function() {} },
+                PlatformOs: { MAC: 'mac', WIN: 'win', ANDROID: 'android', CROS: 'cros', LINUX: 'linux', OPENBSD: 'openbsd' },
+                PlatformArch: { ARM: 'arm', X86_32: 'x86-32', X86_64: 'x86-64' },
+                PlatformNaclArch: { ARM: 'arm', X86_32: 'x86-32', X86_64: 'x86-64' },
+                RequestUpdateCheckStatus: { THROTTLED: 'throttled', NO_UPDATE: 'no_update', UPDATE_AVAILABLE: 'update_available' },
+                OnInstalledReason: { INSTALL: 'install', UPDATE: 'update', CHROME_UPDATE: 'chrome_update', SHARED_MODULE_UPDATE: 'shared_module_update' },
+                OnRestartRequiredReason: { APP_UPDATE: 'app_update', OS_UPDATE: 'os_update', PERIODIC: 'periodic' }
+            },
+            loadTimes: function() {
+                return {
+                    requestTime: Date.now() * 0.001 - Math.random() * 100,
+                    startLoadTime: Date.now() * 0.001 - Math.random() * 50,
+                    commitLoadTime: Date.now() * 0.001 - Math.random() * 30,
+                    finishDocumentLoadTime: Date.now() * 0.001 - Math.random() * 10,
+                    finishLoadTime: Date.now() * 0.001,
+                    firstPaintTime: Date.now() * 0.001 - Math.random() * 5,
+                    firstPaintAfterLoadTime: 0,
+                    navigationType: 'Other',
+                    wasFetchedViaSpdy: false,
+                    wasNpnNegotiated: true,
+                    npnNegotiatedProtocol: 'h2',
+                    wasAlternateProtocolAvailable: false,
+                    connectionInfo: 'h2'
+                };
+            },
+            csi: function() {
+                return {
+                    startE: Date.now() - Math.floor(Math.random() * 1000),
+                    onloadT: Date.now(),
+                    pageT: Math.floor(Math.random() * 5000),
+                    tran: 15
+                };
+            },
+            app: {
+                isInstalled: false,
+                InstallState: { DISABLED: 'disabled', INSTALLED: 'installed', NOT_INSTALLED: 'not_installed' },
+                RunningState: { CANNOT_RUN: 'cannot_run', READY_TO_RUN: 'ready_to_run', RUNNING: 'running' }
+            }
+        };
+        
+        // ========== PERMISSIONS API ==========
+        const originalQuery = window.navigator.permissions.query;
+        window.navigator.permissions.query = (parameters) => {
+            if (parameters.name === 'notifications') {
+                return Promise.resolve({ state: Notification.permission });
+            }
+            if (parameters.name === 'midi' || parameters.name === 'camera' || parameters.name === 'microphone') {
+                return Promise.resolve({ state: 'prompt' });
+            }
+            return originalQuery(parameters);
+        };
+        
+        // ========== NAVIGATOR PROPERTIES ==========
+        Object.defineProperty(navigator, 'languages', {
+            get: () => ['en-US', 'en', 'vi'],
+            configurable: true
+        });
+        
+        Object.defineProperty(navigator, 'language', {
+            get: () => 'en-US',
+            configurable: true
+        });
+        
+        Object.defineProperty(navigator, 'platform', {
+            get: () => 'Win32',
+            configurable: true
+        });
+        
+        Object.defineProperty(navigator, 'vendor', {
+            get: () => 'Google Inc.',
+            configurable: true
+        });
+        
+        Object.defineProperty(navigator, 'maxTouchPoints', {
+            get: () => 0,
+            configurable: true
+        });
+        
+        Object.defineProperty(navigator, 'hardwareConcurrency', {
+            get: () => 8,
+            configurable: true
+        });
+        
+        Object.defineProperty(navigator, 'deviceMemory', {
+            get: () => 8,
+            configurable: true
+        });
+        
         Object.defineProperty(navigator, 'connection', {
             get: () => ({
                 effectiveType: '4g',
-                rtt: 50,
-                downlink: 10,
+                rtt: 50 + Math.floor(Math.random() * 50),
+                downlink: 10 + Math.random() * 5,
                 saveData: false
-            })
+            }),
+            configurable: true
         });
         
-        // Fake hardware concurrency (CPU cores)
-        Object.defineProperty(navigator, 'hardwareConcurrency', {
-            get: () => 8
+        // ========== SCREEN PROPERTIES (Docker often has unusual values) ==========
+        Object.defineProperty(screen, 'availWidth', { get: () => window.innerWidth, configurable: true });
+        Object.defineProperty(screen, 'availHeight', { get: () => window.innerHeight, configurable: true });
+        Object.defineProperty(screen, 'width', { get: () => 1920, configurable: true });
+        Object.defineProperty(screen, 'height', { get: () => 1080, configurable: true });
+        Object.defineProperty(screen, 'colorDepth', { get: () => 24, configurable: true });
+        Object.defineProperty(screen, 'pixelDepth', { get: () => 24, configurable: true });
+        
+        // ========== TIMEZONE (Docker often uses UTC) ==========
+        const originalDateToString = Date.prototype.toString;
+        Date.prototype.toString = function() {
+            return originalDateToString.call(this).replace(/GMT[+-]\\d{4}.*$/, 'GMT+0700 (Indochina Time)');
+        };
+        
+        const originalGetTimezoneOffset = Date.prototype.getTimezoneOffset;
+        Date.prototype.getTimezoneOffset = function() {
+            return -420; // GMT+7 (Vietnam)
+        };
+        
+        // Intl timezone
+        const originalDateTimeFormat = Intl.DateTimeFormat;
+        Intl.DateTimeFormat = function(locales, options) {
+            if (!options) options = {};
+            if (!options.timeZone) options.timeZone = 'Asia/Ho_Chi_Minh';
+            return new originalDateTimeFormat(locales, options);
+        };
+        Intl.DateTimeFormat.prototype = originalDateTimeFormat.prototype;
+        
+        // ========== BATTERY API ==========
+        if (navigator.getBattery) {
+            navigator.getBattery = () => Promise.resolve({
+                charging: true,
+                chargingTime: 0,
+                dischargingTime: Infinity,
+                level: 1.0,
+                onchargingchange: null,
+                onchargingtimechange: null,
+                ondischargingtimechange: null,
+                onlevelchange: null
+            });
+        }
+        
+        // ========== IFRAME DETECTION ==========
+        Object.defineProperty(HTMLIFrameElement.prototype, 'contentWindow', {
+            get: function() {
+                return null;
+            }
         });
         
-        // Fake device memory
-        Object.defineProperty(navigator, 'deviceMemory', {
-            get: () => 8
+        // ========== PREVENT AUTOMATION DETECTION VIA FUNCTION.TOSTRING ==========
+        const nativeToString = Function.prototype.toString;
+        Function.prototype.toString = function() {
+            if (this === navigator.permissions.query) {
+                return 'function query() { [native code] }';
+            }
+            if (this === HTMLCanvasElement.prototype.toDataURL) {
+                return 'function toDataURL() { [native code] }';
+            }
+            return nativeToString.call(this);
+        };
+        
+        // ========== HISTORY LENGTH (Bots often have short history) ==========
+        Object.defineProperty(window.history, 'length', {
+            get: () => Math.floor(Math.random() * 10) + 3,
+            configurable: true
         });
+        
+        // ========== MOUSE/TOUCH EVENTS (Docker has no real input devices) ==========
+        // Add realistic mouse movement tracking
+        let mouseX = 0, mouseY = 0;
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+        
+        // ========== MEDIA DEVICES (Docker often has none) ==========
+        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+            navigator.mediaDevices.enumerateDevices = () => Promise.resolve([
+                { deviceId: 'default', kind: 'audioinput', label: 'Default', groupId: 'default' },
+                { deviceId: 'default', kind: 'audiooutput', label: 'Default', groupId: 'default' },
+                { deviceId: 'default', kind: 'videoinput', label: 'Integrated Camera', groupId: 'camera' }
+            ]);
+        }
+        
+        // ========== SPEECHSYNTHESIS (May not exist in Docker) ==========
+        if (!window.speechSynthesis) {
+            window.speechSynthesis = {
+                getVoices: () => [],
+                speak: () => {},
+                cancel: () => {},
+                pause: () => {},
+                resume: () => {},
+                pending: false,
+                speaking: false,
+                paused: false
+            };
+        }
+        
+        // ========== WEBRTC LEAK PREVENTION ==========
+        // Prevent WebRTC from leaking real IP (important for Docker/VPN)
+        const originalRTCPeerConnection = window.RTCPeerConnection;
+        if (originalRTCPeerConnection) {
+            window.RTCPeerConnection = function(...args) {
+                const pc = new originalRTCPeerConnection(...args);
+                const originalAddIceCandidate = pc.addIceCandidate.bind(pc);
+                pc.addIceCandidate = function(candidate) {
+                    if (candidate && candidate.candidate && candidate.candidate.includes('srflx')) {
+                        return Promise.resolve();
+                    }
+                    return originalAddIceCandidate(candidate);
+                };
+                return pc;
+            };
+            window.RTCPeerConnection.prototype = originalRTCPeerConnection.prototype;
+        }
+        
+        // ========== FEATURE DETECTION CONSISTENCY ==========
+        // Ensure consistent feature detection
+        Object.defineProperty(window, 'outerWidth', { get: () => window.innerWidth + 100, configurable: true });
+        Object.defineProperty(window, 'outerHeight', { get: () => window.innerHeight + 100, configurable: true });
+        Object.defineProperty(window, 'screenX', { get: () => 0, configurable: true });
+        Object.defineProperty(window, 'screenY', { get: () => 0, configurable: true });
+        
+        console.log('Stealth mode activated for Docker environment');
         """
         
         try:
@@ -186,6 +471,17 @@ class LinkedinSpider(scrapy.Spider):
             self.logger.debug("Stealth JavaScript injected successfully")
         except Exception as e:
             self.logger.warning(f"Failed to inject stealth JS: {e}")
+    
+    def _reinject_stealth_on_navigation(self):
+        """Re-inject stealth JS after page navigation (important for SPAs)"""
+        try:
+            # Quick check if stealth is still active
+            result = self.driver.execute_script("return window.__stealthActive || false;")
+            if not result:
+                self._inject_stealth_js()
+                self.driver.execute_script("window.__stealthActive = true;")
+        except Exception:
+            pass
 
     def _human_like_typing(self, element, text: str):
         """Types a string character by character with random delays."""

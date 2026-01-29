@@ -29,7 +29,7 @@ with DAG(
     extract_and_load = BashOperator(
         task_id='extract_and_load_data',
         # Có thể chạy tất cả spider bằng cách thêm --spider all ví dụ: python -m scripts.extract_and_load.run_spider --spider all
-        bash_command='python -m scripts.extract_and_load.run_spider --spider local_version', 
+        bash_command='python -m scripts.extract_and_load.run_spider --spider linkedin', 
         cwd='/opt/airflow',
         env={'PYTHONPATH': '/opt/airflow'}
     )
@@ -73,6 +73,7 @@ with DAG(
         ),
         cwd=DBT_PROJECT_DIR,
         retries=0,  # Không retry nếu fail
+        trigger_rule='all_done'
     )
 
     run_silver_jobs = BashOperator(
@@ -81,4 +82,4 @@ with DAG(
         cwd=DBT_PROJECT_DIR,
     )
     
-    extract_and_load >> [test_source_staging, run_quality_check] >> run_int_jobs_cleaned >> test_int_jobs_cleaned >> generate_elementary_report >> run_silver_jobs 
+    extract_and_load >> [test_source_staging, run_quality_check] >> run_int_jobs_cleaned >> test_int_jobs_cleaned >> [generate_elementary_report, run_silver_jobs] 
