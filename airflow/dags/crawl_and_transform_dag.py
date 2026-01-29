@@ -62,7 +62,13 @@ with DAG(
         env={'PYTHONPATH': '/opt/airflow'}
     )
 
- 
+    generate_quality_check_gate = BashOperator(
+        task_id='generate_quality_check_gate',
+        bash_command='python -m scripts.quality_check.gate_check',
+        cwd='/opt/airflow',
+        env={'PYTHONPATH': '/opt/airflow'}
+    )
+    
     generate_elementary_report = BashOperator(
         task_id='generate_elementary_report',
         bash_command=(
@@ -82,4 +88,7 @@ with DAG(
         cwd=DBT_PROJECT_DIR,
     )
     
-    extract_and_load >> [test_source_staging, run_quality_check] >> run_int_jobs_cleaned >> test_int_jobs_cleaned >> [generate_elementary_report, run_silver_jobs] 
+    extract_and_load >> [test_source_staging, run_quality_check]
+    [test_source_staging, run_quality_check] >> run_int_jobs_cleaned
+    run_int_jobs_cleaned >> [test_int_jobs_cleaned, generate_quality_check_gate]
+    test_int_jobs_cleaned >> [generate_elementary_report, run_silver_jobs]
