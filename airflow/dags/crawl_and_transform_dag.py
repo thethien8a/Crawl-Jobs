@@ -92,3 +92,4 @@ with DAG(
     [test_source_staging, run_quality_check] >> run_int_jobs_cleaned
     run_int_jobs_cleaned >> [test_int_jobs_cleaned, generate_quality_check_gate]
     test_int_jobs_cleaned >> [generate_elementary_report, run_silver_jobs]
+    
