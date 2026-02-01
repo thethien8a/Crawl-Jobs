@@ -703,26 +703,40 @@ class LinkedinSpider(scrapy.Spider):
         item["education_level"] = None
 
         try:
-            # Selector này linh hoạt hơn để lấy div chứa Industry, Size, v.v.
-            info_div = self.driver.find_element(By.CSS_SELECTOR, "div.t-14.mt5")
-            full_info = info_div.text.strip()
+            # Chờ cho phần thông tin job load xong (chứa industry, size, v.v.)
+            # LinkedIn đôi khi render title/company trước, còn phần info này render sau một chút
+            wait = WebDriverWait(self.driver, 7)
+            info_div = wait.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div.t-14.mt5"))
+            )
             
-            if full_info:
-                # 1. Tách theo các ký tự phân cách phổ biến của LinkedIn (dấu chấm, xuống dòng, v.v.)
-                # Dùng regex để tách theo bullet (·), newline, hoặc 2 khoảng trắng trở lên
-                parts = re.split(r'[·\n\r\t●•|]|\s{2,}', full_info)
-                industry = parts[0].strip()
-                
-                # 2. Xử lý trường hợp không có dấu phân cách rõ ràng (ví dụ bị dính liền con số)
-                # "Software Development 5.001-10.000" -> "Software Development"
-                # Ta tìm vị trí của chữ số đầu tiên để cắt
-                digit_match = re.search(r'\d', industry)
-                if digit_match:
-                    industry = industry[:digit_match.start()].strip()
-                
-                item["job_industry"] = industry
-            else:
-                item["job_industry"] = None
+            # 1. Thử lấy Industry từ text trực tiếp của div (thường là phần tử đầu tiên không nằm trong span)
+            # Dựa trên cấu trúc: <div class="t-14 mt5"> "Banking" <span>...</span> </div>
+            
+            # Dùng JavaScript để lấy text trực tiếp của div mà không bao gồm text trong các thẻ con (span)
+            industry = self.driver.execute_script(
+                "return Array.from(arguments[0].childNodes)"
+                ".filter(node => node.nodeType === Node.TEXT_NODE)"
+                ".map(node => node.textContent.trim())"
+                ".filter(text => text.length > 0)[0];", 
+                info_div
+            )
+
+            # 2. Nếu JS không lấy được (do cấu trúc khác), fallback sang logic duyệt span
+            if not industry:
+                full_info = info_div.text.strip()
+                if full_info:
+                    parts = [p.strip() for p in re.split(r'[·\n\r\t●•|]', full_info) if p.strip()]
+                    for part in parts:
+                        p_lower = part.lower()
+                        if any(k in p_lower for k in ["employees", "on linkedin", "followers", "connections"]):
+                            continue
+                        # Nếu không chứa số lượng lớn (quy mô), thì khả năng cao là Industry
+                        if not re.search(r'\d{2,}', part):
+                            industry = part
+                            break
+
+            item["job_industry"] = industry if industry else None
         except Exception:
             item["job_industry"] = None
 
